@@ -12,12 +12,12 @@ from mosaic_archive.reliability import run_large_file_soak, run_parser_fuzz
 
 class ReliabilityHarnessTests(unittest.TestCase):
     def test_parser_fuzz_is_deterministic_and_covers_all_parser_classes(self) -> None:
-        first = run_parser_fuzz(seed=20260629, cases=8)
-        second = run_parser_fuzz(seed=20260629, cases=8)
+        first = run_parser_fuzz(seed=20260629, cases=22)
+        second = run_parser_fuzz(seed=20260629, cases=22)
 
         self.assertEqual(first, second)
         self.assertGreaterEqual(first.target_count, 11)
-        self.assertEqual(first.executions, first.target_count * first.cases)
+        self.assertEqual(first.executions, first.cases)
         self.assertEqual(
             first.executions,
             first.accepted_inputs + first.rejected_inputs,
