@@ -143,7 +143,7 @@ class CliTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(inspected.returncode, 0, inspected.stderr)
-            self.assertEqual(json.loads(inspected.stdout)["format_version"], 5)
+            self.assertEqual(json.loads(inspected.stdout)["format_version"], 6)
 
             decoded = self.run_cli(
                 "decode",
@@ -173,7 +173,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(benchmark.returncode, 0, benchmark.stderr)
             report = json.loads(benchmark.stdout)
             self.assertEqual(report["archive_kind"], "folder")
-            self.assertEqual(report["format_version"], 5)
+            self.assertEqual(report["format_version"], 6)
             self.assertTrue(report["round_trip_verified"])
             self.assertTrue(report["comparisons"]["zip"]["verified"])
             self.assertFalse(report["comparisons"]["gzip"]["supported"])

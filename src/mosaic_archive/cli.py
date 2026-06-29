@@ -41,6 +41,12 @@ def _add_common_encode_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cdc-min-size", type=int)
     parser.add_argument("--cdc-max-size", type=int)
     parser.add_argument(
+        "--profile",
+        choices=("fast", "balanced", "research"),
+        default="balanced",
+        help="codec search profile (default: balanced)",
+    )
+    parser.add_argument(
         "--padding-size",
         type=int,
         default=1024,
@@ -153,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.5.0")
+    parser.add_argument("--version", action="version", version="msc 0.6.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")
@@ -211,6 +217,7 @@ def _run(arguments: argparse.Namespace) -> None:
             kdf_log_n=arguments.kdf_log_n,
             cdc_min_size=arguments.cdc_min_size,
             cdc_max_size=arguments.cdc_max_size,
+            profile=arguments.profile,
             progress=progress,
         )
     elif arguments.command == "decode":
@@ -228,6 +235,7 @@ def _run(arguments: argparse.Namespace) -> None:
             kdf_log_n=arguments.kdf_log_n,
             cdc_min_size=arguments.cdc_min_size,
             cdc_max_size=arguments.cdc_max_size,
+            profile=arguments.profile,
             compare=arguments.compare,
         )
     else:

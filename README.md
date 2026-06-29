@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.5 does
+## What v0.6 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -23,6 +23,9 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - adds a normalized byte-histogram rANS entropy mode for skewed symbol streams;
 - adds a fast C-backed DEFLATE baseline and a feature router that avoids the
   quadratic teaching LZ mode in normal encoding;
+- adds an experimental LZ parser with separately rANS-coded token, literal,
+  length, and distance streams;
+- provides `fast`, `balanced`, and `research` codec-search profiles;
 - tries `RAW`, `RLE`, `DELTA8`, and `LZ_SIMPLE` independently on every block;
 - selects the smallest actual encoding, without relying on file extensions;
 - stores portable relative paths, file metadata, and per-file SHA-256 restoration
@@ -67,6 +70,7 @@ uv run msc benchmark report.pdf
 uv run msc encode project-folder project.msc
 uv run msc decode project.msc restored-project
 uv run msc benchmark project-folder --compare
+uv run msc benchmark project-folder --profile research
 ```
 
 For scripts, read the password from an environment variable:
@@ -104,10 +108,12 @@ file/folder tree
   -> ChaCha20-Poly1305 ciphertext + tag per frame
 ```
 
-The v0.5 router always tries RAW, RLE, and DEFLATE, adds DELTA8 for smooth
+The balanced router always tries RAW, RLE, and DEFLATE, adds DELTA8 for smooth
 signals, and adds BYTE_RANS for lower-entropy symbol distributions. The final
 choice still uses exact encoded size. LZ_SIMPLE remains decodable and available
-for exhaustive research comparisons, but is skipped by the default encoder.
+for exhaustive research comparisons, and LZ_RANS provides split entropy-coded
+streams. Both are skipped by the default encoder. `fast` tries RAW/DEFLATE only;
+`research` tries every registered codec.
 
 ## Development checks
 

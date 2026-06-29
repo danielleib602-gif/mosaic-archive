@@ -1,6 +1,6 @@
 # MSC format specification
 
-Status: experimental, version 0.5. Integer fields are unsigned and big-endian
+Status: experimental, version 0.6. Integer fields are unsigned and big-endian
 unless stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and
@@ -45,6 +45,12 @@ MSC5 retains all MSC4 semantics and permits compression mode 5. The default
 encoder uses a file-agnostic feature router to avoid expensive candidates, but
 the on-disk mode remains explicit and decoding never depends on classifier
 behavior.
+
+## MSC6 split-stream LZ+rANS format
+
+MSC6 retains MSC5 semantics and permits compression mode 6. Encoder profiles
+affect which candidates are attempted but are not required for decoding and are
+not trusted archive metadata.
 
 ## MSC2 framed file/folder format
 
@@ -278,6 +284,14 @@ stream consumption and the final state.
 The payload is a zlib-wrapped DEFLATE stream. Decoding is output-bounded to the
 authenticated chunk size and rejects malformed streams, excess expansion, and
 unused/trailing bytes.
+
+### 6 — LZ_RANS
+
+LZ tokens are split into token-kind, literal-byte, literal-length,
+match-length, and match-distance streams. Lengths and distances use bounded
+varints; each stream is independently BYTE_RANS encoded with authenticated raw
+and encoded lengths. Decoding rejects unknown tokens, invalid matches, trailing
+varints/streams, and output beyond the authenticated chunk size.
 
 ## Verification
 

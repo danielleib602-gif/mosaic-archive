@@ -7,6 +7,7 @@ from mosaic_archive.features import analyze_block
 from mosaic_archive.modes.base import CompressionMode, ModeId
 from mosaic_archive.modes.deflate import DeflateMode
 from mosaic_archive.modes.delta import Delta8Mode
+from mosaic_archive.modes.lz_rans import LzRansMode
 from mosaic_archive.modes.lz_simple import LzSimpleMode
 from mosaic_archive.modes.rans import ByteRansMode
 from mosaic_archive.modes.raw import RawMode
@@ -19,6 +20,7 @@ ALL_MODES: tuple[CompressionMode, ...] = (
     LzSimpleMode(),
     ByteRansMode(),
     DeflateMode(),
+    LzRansMode(),
 )
 _MODE_BY_ID = {mode.id: mode for mode in ALL_MODES}
 
@@ -43,14 +45,21 @@ def choose_best_mode(block: bytes) -> EncodedBlock:
     return min(candidates, key=lambda candidate: len(candidate.payload))
 
 
-def choose_routed_mode(block: bytes) -> EncodedBlock:
+def choose_routed_mode(block: bytes, *, profile: str = "balanced") -> EncodedBlock:
     """Try a cheap, feature-routed candidate set for the default encoder."""
+    if profile not in {"fast", "balanced", "research"}:
+        raise ValueError(f"unknown compression profile: {profile}")
     features = analyze_block(block)
-    candidate_ids = {ModeId.RAW, ModeId.RLE, ModeId.DEFLATE}
-    if features.delta_smoothness_ratio >= 0.55:
-        candidate_ids.add(ModeId.DELTA8)
-    if len(block) >= 256 and features.entropy_bits_per_byte < 7.75:
-        candidate_ids.add(ModeId.BYTE_RANS)
+    if profile == "fast":
+        candidate_ids = {ModeId.RAW, ModeId.DEFLATE}
+    elif profile == "research":
+        candidate_ids = {mode.id for mode in ALL_MODES}
+    else:
+        candidate_ids = {ModeId.RAW, ModeId.RLE, ModeId.DEFLATE}
+        if features.delta_smoothness_ratio >= 0.55:
+            candidate_ids.add(ModeId.DELTA8)
+        if len(block) >= 256 and features.entropy_bits_per_byte < 7.75:
+            candidate_ids.add(ModeId.BYTE_RANS)
     candidates = (
         EncodedBlock(mode, mode.encode(block))
         for mode in ALL_MODES

@@ -162,6 +162,7 @@ def benchmark_path(
     kdf_log_n: int = 15,
     cdc_min_size: int | None = None,
     cdc_max_size: int | None = None,
+    profile: str = "balanced",
     compare: bool = False,
 ) -> BenchmarkReport:
     source = Path(input_path)
@@ -180,6 +181,7 @@ def benchmark_path(
             kdf_log_n=kdf_log_n,
             cdc_min_size=cdc_min_size,
             cdc_max_size=cdc_max_size,
+            profile=profile,
         )
         encode_seconds = time.perf_counter() - encode_started
         decode_started = time.perf_counter()
@@ -200,6 +202,7 @@ def benchmark_path(
             kdf_log_n=kdf_log_n,
             cdc_min_size=cdc_min_size,
             cdc_max_size=cdc_max_size,
+            profile=profile,
         )
         _, encode_peak = tracemalloc.get_traced_memory()
         tracemalloc.reset_peak()

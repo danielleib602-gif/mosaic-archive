@@ -1,0 +1,23 @@
+{
+  "corpus": "src/",
+  "version": "0.6.0",
+  "balanced": {
+    "compression_ratio": 0.4456554897,
+    "archive_ratio": 0.5183024767,
+    "encode_seconds": 0.9297574,
+    "mode_distribution": {
+      "DEFLATE": 78,
+      "RAW": 1
+    }
+  },
+  "research": {
+    "compression_ratio": 0.4456554897,
+    "archive_ratio": 0.5183024767,
+    "encode_seconds": 1.8865647,
+    "mode_distribution": {
+      "DEFLATE": 78,
+      "RAW": 1
+    }
+  },
+  "conclusion": "LZ_RANS is valid but did not beat DEFLATE on this corpus; keep it opt-in."
+}
