@@ -1,0 +1,68 @@
+from __future__ import annotations
+
+import hashlib
+import io
+import random
+import unittest
+
+from mosaic_archive.cdc import ChunkingConfig, iter_content_defined_chunks
+
+
+def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
+    return [
+        hashlib.sha256(chunk).digest()
+        for chunk in iter_content_defined_chunks(io.BytesIO(data), config)
+    ]
+
+
+class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_round_trip_and_size_bounds(self) -> None:
+        data = random.Random(20260629).randbytes(200_000)
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+
+        chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
+
+        self.assertEqual(b"".join(chunks), data)
+        self.assertTrue(all(len(chunk) >= config.min_size for chunk in chunks[:-1]))
+        self.assertTrue(all(len(chunk) <= config.max_size for chunk in chunks))
+
+    def test_chunking_is_deterministic(self) -> None:
+        data = (bytes(range(256)) * 1000) + b"tail"
+        config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
+        first = list(iter_content_defined_chunks(io.BytesIO(data), config))
+        second = list(iter_content_defined_chunks(io.BytesIO(data), config))
+        self.assertEqual(first, second)
+
+    def test_inserted_prefix_recovers_chunk_alignment(self) -> None:
+        original = random.Random(42).randbytes(300_000)
+        modified = original[:1000] + (b"inserted-prefix-" * 17) + original[1000:]
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+
+        original_chunks = set(chunk_digests(original, config))
+        modified_chunks = set(chunk_digests(modified, config))
+        overlap = len(original_chunks & modified_chunks) / len(original_chunks)
+
+        self.assertGreater(overlap, 0.85)
+
+    def test_empty_input_has_no_chunks(self) -> None:
+        config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
+        self.assertEqual(list(iter_content_defined_chunks(io.BytesIO(b""), config)), [])
+
+    def test_rejects_unsafe_configuration(self) -> None:
+        invalid = (
+            (0, 1024, 4096),
+            (1024, 512, 4096),
+            (256, 1000, 4096),
+            (256, 1024, 512),
+            (256, 1024, 32 * 1024 * 1024),
+        )
+        for minimum, average, maximum in invalid:
+            with self.subTest(config=(minimum, average, maximum)), self.assertRaises(
+                ValueError
+            ):
+                ChunkingConfig(minimum, average, maximum)
+
+
+if __name__ == "__main__":
+    unittest.main()
+

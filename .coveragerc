@@ -1,0 +1,12 @@
+[run]
+source = src/mosaic_archive
+omit =
+    src/mosaic_archive/__main__.py
+    src/mosaic_archive/benchmark.py
+    src/mosaic_archive/cli.py
+    src/mosaic_archive/comparisons.py
+
+[report]
+fail_under = 80
+show_missing = true
+
