@@ -124,7 +124,9 @@ cross-platform CI, coverage and dependency-audit gates, and scheduled benchmark
 artifacts. The archive format remains MSC6 because these changes do not alter
 the decoder contract. Package v0.8 adds permanent decoder fixtures for every
 claimed archive generation from MSC1 through MSC6, making compatibility
-regressions visible in normal test runs.
+regressions visible in normal test runs. Package v0.9 adds a deterministic
+11-target parser/decoder mutation harness plus a bounded weekly 256 MiB
+streaming soak round trip.
 
 Parallel research tracks:
 
@@ -145,15 +147,16 @@ decoders retain compatibility.
 
 Dependencies: B and C; selected D work only when proven.
 
-Status: foundation started. The public corpus, cross-platform automation, and
-permanent MSC1-through-MSC6 decoder fixtures are in place; sustained fuzzing,
-soak tests, independent review, and signed binaries remain.
+Status: foundation started. The public corpus, cross-platform automation,
+permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
+fuzzing, and scheduled large-file soak coverage are in place; coverage-guided
+fuzzing, independent review, and signed binaries remain.
 
 Tasks:
 
 - freeze a versioned format and compatibility policy;
-- complete parser fuzzing, large-file soak tests, and independent security
-  review;
+- [x] add deterministic parser fuzzing and scheduled large-file soak tests;
+- complete coverage-guided fuzzing and independent security review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder
   version;

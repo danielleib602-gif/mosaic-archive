@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.8 does
+## What v0.9 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -52,9 +52,13 @@ compressor finds a cheaper description of repeated or predictable bytes.
   and macOS, with separate lint, type, coverage, dependency-audit, and build
   gates;
 - records a scheduled benchmark artifact each month so performance changes can
-  be compared against an identical generated corpus.
+  be compared against an identical generated corpus;
 - commits permanent encrypted decoder fixtures for MSC1 through MSC6 so current
-  releases must keep restoring every claimed archive generation.
+  releases must keep restoring every claimed archive generation;
+- provides a deterministic mutation-fuzz harness for every public header parser,
+  frame parser, and compression-mode decoder;
+- runs a bounded 10,000-case fuzz campaign and streaming 256 MiB archive
+  round trip on a weekly scheduled workflow.
 
 ## Install for development
 
@@ -83,6 +87,8 @@ uv run msc benchmark project-folder --compare
 uv run msc benchmark project-folder --profile research
 uv run python -m mosaic_archive.corpus benchmark-corpus
 uv run msc benchmark benchmark-corpus --json
+uv run python -m mosaic_archive.reliability fuzz --cases 1000
+uv run python -m mosaic_archive.reliability soak --size-mib 256
 ```
 
 For scripts, read the password from an environment variable:
