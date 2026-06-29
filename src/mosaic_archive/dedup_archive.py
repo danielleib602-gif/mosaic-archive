@@ -20,7 +20,7 @@ from mosaic_archive.crypto import AEAD_TAG_LENGTH, SALT_LENGTH, decrypt, derive_
 from mosaic_archive.dedup_format import (
     MSC3_FLAGS,
     MSC3_HEADER,
-    MSC3_VERSION,
+    MSC4_VERSION,
     Msc3Header,
     parse_msc3_header,
 )
@@ -448,7 +448,7 @@ def encode_dedup_archive(
         raise ValueError("input produces too many unique MSC3 chunks")
     salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
     header = Msc3Header(
-        MSC3_VERSION,
+        MSC4_VERSION,
         MSC3_FLAGS,
         KDF_SCRYPT,
         AEAD_CHACHA20_POLY1305,
@@ -571,7 +571,7 @@ def encode_dedup_archive(
         if owners[index] != owners[manifest.chunks[index].source_index]
     ]
     return DedupEncodeStats(
-        MSC3_VERSION,
+        MSC4_VERSION,
         "file" if manifest.kind == KIND_FILE else "folder",
         original_size,
         compressed,
@@ -779,7 +779,7 @@ def _decode(
     )
     mode_distribution = dict(sorted(distribution.items()))
     stats = DedupDecodeStats(
-        format_version=MSC3_VERSION,
+        format_version=header.version,
         archive_kind=kind,
         original_size=original_size,
         block_count=unique,
@@ -796,7 +796,7 @@ def _decode(
         elapsed_seconds=time.perf_counter() - started,
     )
     info = DedupArchiveInfo(
-        format_version=MSC3_VERSION,
+        format_version=header.version,
         archive_kind=kind,
         root_name=manifest.root_name,
         original_size=original_size,

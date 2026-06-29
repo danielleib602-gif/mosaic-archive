@@ -6,6 +6,7 @@ from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.modes.base import CompressionMode, ModeId
 from mosaic_archive.modes.delta import Delta8Mode
 from mosaic_archive.modes.lz_simple import LzSimpleMode
+from mosaic_archive.modes.rans import ByteRansMode
 from mosaic_archive.modes.raw import RawMode
 from mosaic_archive.modes.rle import RleMode
 
@@ -14,6 +15,7 @@ ALL_MODES: tuple[CompressionMode, ...] = (
     RleMode(),
     Delta8Mode(),
     LzSimpleMode(),
+    ByteRansMode(),
 )
 _MODE_BY_ID = {mode.id: mode for mode in ALL_MODES}
 
@@ -46,4 +48,3 @@ __all__ = [
     "choose_best_mode",
     "get_mode",
 ]
-

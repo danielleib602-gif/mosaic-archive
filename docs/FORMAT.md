@@ -1,6 +1,6 @@
 # MSC format specification
 
-Status: experimental, version 0.2. Integer fields are unsigned and big-endian
+Status: experimental, version 0.4. Integer fields are unsigned and big-endian
 unless stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and
@@ -8,7 +8,7 @@ decoded blocks that do not match their declared sizes.
 
 ## MSC3 content-defined deduplicating format
 
-MSC3 is the default encoder format. Its 55-byte public header contains `MSC3`,
+MSC3 was the v0.3 encoder format. Its 55-byte public header contains `MSC3`,
 version `3`, flags `0x07`, the KDF/AEAD IDs, minimum/average/maximum chunk
 sizes, padding size, 16-byte salt, four-byte nonce prefix, scrypt parameters,
 and frame count. The nonce and frame AAD construction are identical to MSC2.
@@ -33,9 +33,15 @@ uncompressed size, one-byte compression mode, and mode payload. Duplicate
 occurrences have no data frame. File SHA-256 digests remain authoritative
 end-to-end restoration checks.
 
+## MSC4 rANS-capable format
+
+MSC4 retains MSC3 framing, manifests, chunking, deduplication, and cryptography,
+but permits compression mode 4. Its distinct magic/version prevents an older
+v0.3 decoder from encountering a newly emitted mode.
+
 ## MSC2 framed file/folder format
 
-MSC2 is the default encoder format. It keeps folder metadata encrypted and
+MSC2 was the v0.2 encoder format. It keeps folder metadata encrypted and
 processes file content in bounded-memory, independently authenticated frames.
 
 ### MSC2 public header
@@ -252,6 +258,13 @@ The payload is a token sequence:
 Literal and match lengths are non-zero. Match distance must reference already
 decoded output. v0.1 emits matches of at least six bytes and supports overlap
 copying.
+
+### 4 — BYTE_RANS
+
+The payload stores a sparse normalized byte-frequency table whose frequencies
+sum to 4096, followed by a 32-bit rANS state and byte renormalization stream.
+Symbols and frequencies must be unique and nonzero; decoding verifies complete
+stream consumption and the final state.
 
 ## Verification
 

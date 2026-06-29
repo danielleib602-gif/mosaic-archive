@@ -21,7 +21,7 @@ from mosaic_archive.dedup_archive import (
     encode_dedup_archive,
     inspect_dedup_archive,
 )
-from mosaic_archive.dedup_format import MSC3_MAGIC
+from mosaic_archive.dedup_format import MSC3_MAGIC, MSC4_MAGIC
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.stream_archive import (
     ProgressCallback,
@@ -75,7 +75,7 @@ def decode_path(
     progress: ProgressCallback | None = None,
 ) -> DecodeStats | StreamDecodeStats | DedupDecodeStats:
     magic = _magic(archive_path)
-    if magic == MSC3_MAGIC:
+    if magic in {MSC3_MAGIC, MSC4_MAGIC}:
         return decode_dedup_archive(
             archive_path, output_path, password, progress=progress
         )
@@ -93,7 +93,7 @@ def inspect_path(
     password: str | bytes,
 ) -> ArchiveInfo | StreamArchiveInfo | DedupArchiveInfo:
     magic = _magic(archive_path)
-    if magic == MSC3_MAGIC:
+    if magic in {MSC3_MAGIC, MSC4_MAGIC}:
         return inspect_dedup_archive(archive_path, password)
     if magic == MSC2_MAGIC:
         return inspect_stream_archive(archive_path, password)
