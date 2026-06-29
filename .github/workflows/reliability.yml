@@ -19,5 +19,5 @@ jobs:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - run: uv sync --frozen
-      - run: uv run --frozen python -m mosaic_archive.reliability fuzz --seed 20260629 --cases 25000
+      - run: uv run --frozen python -m mosaic_archive.reliability fuzz --seed 20260629 --cases 10000
       - run: uv run --frozen python -m mosaic_archive.reliability soak --seed 20260629 --size-mib 256

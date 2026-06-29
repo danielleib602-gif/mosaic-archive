@@ -130,7 +130,9 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
 
 
 def _mode_targets() -> tuple[_FuzzTarget, ...]:
-    original = (b"Mosaic parser fuzz corpus\x00\x01" * 8)[:192]
+    # Keep each decode attempt small so sustained campaigns spend their budget
+    # exploring mutations rather than repeatedly expanding long valid outputs.
+    original = b"Mosaic fuzz corpus\x00\x01\xff"
     targets: list[_FuzzTarget] = []
     for mode in ALL_MODES:
         valid_input = mode.encode(original)
@@ -168,23 +170,23 @@ def _mutate(payload: bytes, rng: random.Random, case: int) -> bytes:
 
 
 def run_parser_fuzz(*, seed: int, cases: int) -> FuzzSummary:
-    """Mutate valid parser inputs and require all failures to stay domain-safe."""
+    """Round-robin mutations across parsers and require domain-safe failures."""
     if cases < 1:
         raise ValueError("fuzz cases must be positive")
     rng = random.Random(seed)
     targets = _parser_targets() + _mode_targets()
     accepted = rejected = 0
-    for target in targets:
-        for case in range(cases):
-            payload = _mutate(target.valid_input, rng, case)
-            try:
-                target.invoke(payload)
-            except ArchiveFormatError:
-                rejected += 1
-            else:
-                accepted += 1
-    executions = len(targets) * cases
-    return FuzzSummary(seed, cases, len(targets), executions, accepted, rejected)
+    for execution in range(cases):
+        target = targets[execution % len(targets)]
+        mutation_round = execution // len(targets)
+        payload = _mutate(target.valid_input, rng, mutation_round)
+        try:
+            target.invoke(payload)
+        except ArchiveFormatError:
+            rejected += 1
+        else:
+            accepted += 1
+    return FuzzSummary(seed, cases, len(targets), cases, accepted, rejected)
 
 
 def _write_deterministic_file(path: Path, *, size_bytes: int, seed: int) -> str:

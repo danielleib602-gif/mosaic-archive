@@ -72,7 +72,7 @@ class ReliabilityWorkflowTests(unittest.TestCase):
         self.assertIn("timeout-minutes:", workflow)
         self.assertIn("mosaic_archive.reliability fuzz", workflow)
         self.assertIn("mosaic_archive.reliability soak", workflow)
-        self.assertIn("--cases 25000", workflow)
+        self.assertIn("--cases 10000", workflow)
         self.assertIn("--size-mib 256", workflow)
 
 
