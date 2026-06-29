@@ -14,6 +14,8 @@ MSC3_MAGIC = b"MSC3"
 MSC3_VERSION = 3
 MSC4_MAGIC = b"MSC4"
 MSC4_VERSION = 4
+MSC5_MAGIC = b"MSC5"
+MSC5_VERSION = 5
 MSC3_FLAGS = 0x07  # framed, padded, content-defined/deduplicated
 MSC3_HEADER = struct.Struct(">4sBBBBIIII16s4sBBBQ")
 
@@ -36,7 +38,11 @@ class Msc3Header:
     frame_count: int
 
     def pack(self) -> bytes:
-        magic = MSC4_MAGIC if self.version == MSC4_VERSION else MSC3_MAGIC
+        magic = {
+            MSC3_VERSION: MSC3_MAGIC,
+            MSC4_VERSION: MSC4_MAGIC,
+            MSC5_VERSION: MSC5_MAGIC,
+        }.get(self.version, MSC5_MAGIC)
         return MSC3_HEADER.pack(
             magic,
             self.version,
@@ -60,10 +66,14 @@ def parse_msc3_header(data: bytes) -> Msc3Header:
     if len(data) != MSC3_HEADER.size:
         raise ArchiveFormatError("MSC3 public header is truncated")
     values = MSC3_HEADER.unpack(data)
-    if values[0] not in {MSC3_MAGIC, MSC4_MAGIC}:
+    if values[0] not in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC}:
         raise ArchiveFormatError("not a deduplicating Mosaic Archive")
     header = Msc3Header(*values[1:])
-    expected_version = MSC4_VERSION if values[0] == MSC4_MAGIC else MSC3_VERSION
+    expected_version = {
+        MSC3_MAGIC: MSC3_VERSION,
+        MSC4_MAGIC: MSC4_VERSION,
+        MSC5_MAGIC: MSC5_VERSION,
+    }[values[0]]
     if header.version != expected_version:
         raise UnsupportedVersionError("dedup archive magic/version mismatch")
     if header.flags != MSC3_FLAGS:

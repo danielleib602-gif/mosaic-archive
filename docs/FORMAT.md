@@ -1,6 +1,6 @@
 # MSC format specification
 
-Status: experimental, version 0.4. Integer fields are unsigned and big-endian
+Status: experimental, version 0.5. Integer fields are unsigned and big-endian
 unless stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and
@@ -38,6 +38,13 @@ end-to-end restoration checks.
 MSC4 retains MSC3 framing, manifests, chunking, deduplication, and cryptography,
 but permits compression mode 4. Its distinct magic/version prevents an older
 v0.3 decoder from encountering a newly emitted mode.
+
+## MSC5 routed DEFLATE format
+
+MSC5 retains all MSC4 semantics and permits compression mode 5. The default
+encoder uses a file-agnostic feature router to avoid expensive candidates, but
+the on-disk mode remains explicit and decoding never depends on classifier
+behavior.
 
 ## MSC2 framed file/folder format
 
@@ -265,6 +272,12 @@ The payload stores a sparse normalized byte-frequency table whose frequencies
 sum to 4096, followed by a 32-bit rANS state and byte renormalization stream.
 Symbols and frequencies must be unique and nonzero; decoding verifies complete
 stream consumption and the final state.
+
+### 5 — DEFLATE
+
+The payload is a zlib-wrapped DEFLATE stream. Decoding is output-bounded to the
+authenticated chunk size and rejects malformed streams, excess expansion, and
+unused/trailing bytes.
 
 ## Verification
 

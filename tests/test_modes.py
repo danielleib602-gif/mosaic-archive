@@ -24,7 +24,9 @@ class ModeRoundTripTests(unittest.TestCase):
                     self.assertEqual(mode.decode(encoded, len(sample)), sample)
 
     def test_rle_wins_for_long_runs(self) -> None:
-        block = b"".join(bytes((value,)) * 5 for value in range(100))
+        block = b"".join(
+            bytes((value,)) * 20 for value in random.Random(12).randbytes(100)
+        )
         chosen = choose_best_mode(block)
         self.assertEqual(chosen.mode.id, ModeId.RLE)
         self.assertLess(len(chosen.payload), len(block))

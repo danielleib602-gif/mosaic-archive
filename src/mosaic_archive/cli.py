@@ -40,7 +40,12 @@ def _add_common_encode_options(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--cdc-min-size", type=int)
     parser.add_argument("--cdc-max-size", type=int)
-    parser.add_argument("--padding-size", type=int, default=4096)
+    parser.add_argument(
+        "--padding-size",
+        type=int,
+        default=1024,
+        help="per-frame length-hiding bucket (default: 1024; use 4096+ for more privacy)",
+    )
     parser.add_argument(
         "--kdf-log-n",
         type=int,
@@ -148,7 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.4.0")
+    parser.add_argument("--version", action="version", version="msc 0.5.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")

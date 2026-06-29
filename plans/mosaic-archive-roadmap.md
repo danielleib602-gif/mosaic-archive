@@ -113,9 +113,9 @@ Rollback: retain fixed-size chunk profile as the portable baseline.
 
 Dependencies: A for isolated experiments, C for the integrated archive.
 
-Status: in progress. MSC4 now adds a normalized byte-histogram rANS mode with
-exact-size adaptive selection and strict frequency/state validation while
-retaining MSC1–MSC3 decoding.
+Status: in progress. MSC4 added normalized byte-histogram rANS. MSC5 adds a
+bounded C-backed DEFLATE baseline and a rule-based feature router that skips the
+quadratic teaching LZ path while preserving exact-size final selection.
 
 Parallel research tracks:
 

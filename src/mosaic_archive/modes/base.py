@@ -12,6 +12,7 @@ class ModeId(IntEnum):
     DELTA8 = 2
     LZ_SIMPLE = 3
     BYTE_RANS = 4
+    DEFLATE = 5
 
 
 class CompressionMode(ABC):

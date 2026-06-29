@@ -47,7 +47,7 @@ class DedupArchiveTests(unittest.TestCase):
         decoded = decode_path(archive, restored, PASSWORD)
         info = inspect_path(archive, PASSWORD)
 
-        self.assertEqual(stats.format_version, 4)
+        self.assertEqual(stats.format_version, 5)
         self.assertEqual(tree_contents(restored), tree_contents(source))
         self.assertTrue(decoded.hash_verified)
         self.assertEqual(stats.logical_chunk_count, stats.unique_chunk_count * 2)
