@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.7 does
+## What v0.8 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -53,6 +53,8 @@ compressor finds a cheaper description of repeated or predictable bytes.
   gates;
 - records a scheduled benchmark artifact each month so performance changes can
   be compared against an identical generated corpus.
+- commits permanent encrypted decoder fixtures for MSC1 through MSC6 so current
+  releases must keep restoring every claimed archive generation.
 
 ## Install for development
 
@@ -143,6 +145,15 @@ digest; `verify_corpus` also rejects undeclared files. CI regenerates a small
 smoke corpus on every pull request, while the scheduled benchmark uses the
 default corpus and uploads both its manifest and machine-readable result.
 
+Permanent compatibility fixtures live under `tests/fixtures/compat`. Each
+fixture is a tiny encrypted archive with a manifest-recorded SHA-256 digest,
+format version, mode, and restored-content hash. Regenerate them only for an
+intentional compatibility-policy change:
+
+```console
+uv run python tools/generate_compatibility_fixtures.py
+```
+
 The binary layout is documented in [docs/FORMAT.md](docs/FORMAT.md), and the
 security boundaries are explicit in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
@@ -160,7 +171,9 @@ security boundaries are explicit in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
   size;
 - the simple codecs prioritize clarity and correctness over mature-compressor
   performance;
-- format compatibility is not promised until a future stable release.
+- the format is still pre-1.0, but committed MSC1 through MSC6 decoder fixtures
+  must keep restoring unless the roadmap records an explicit compatibility
+  decision.
 
 The near-term roadmap is in
 [plans/mosaic-archive-roadmap.md](plans/mosaic-archive-roadmap.md).

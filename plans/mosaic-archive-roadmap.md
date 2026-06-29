@@ -122,7 +122,9 @@ LZ_RANS research-only because it did not beat DEFLATE and doubled encode time.
 Package v0.7 adds a deterministic, self-verifying general-purpose corpus,
 cross-platform CI, coverage and dependency-audit gates, and scheduled benchmark
 artifacts. The archive format remains MSC6 because these changes do not alter
-the decoder contract.
+the decoder contract. Package v0.8 adds permanent decoder fixtures for every
+claimed archive generation from MSC1 through MSC6, making compatibility
+regressions visible in normal test runs.
 
 Parallel research tracks:
 
@@ -143,9 +145,9 @@ decoders retain compatibility.
 
 Dependencies: B and C; selected D work only when proven.
 
-Status: foundation started. The public corpus and cross-platform automation are
-in place; sustained fuzzing, soak tests, compatibility fixtures, independent
-review, and signed binaries remain.
+Status: foundation started. The public corpus, cross-platform automation, and
+permanent MSC1-through-MSC6 decoder fixtures are in place; sustained fuzzing,
+soak tests, independent review, and signed binaries remain.
 
 Tasks:
 
@@ -153,6 +155,8 @@ Tasks:
 - complete parser fuzzing, large-file soak tests, and independent security
   review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
+- [x] commit permanent backward-compatibility fixtures for every claimed decoder
+  version;
 - publish versioned benchmark results and comparisons with mature compressors;
 - ship signed cross-platform binaries and an upgrade/deprecation policy.
 
