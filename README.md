@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.6 does
+## What v0.7 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -45,6 +45,14 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - optionally compares against ZIP, gzip, zstd, and 7-Zip, reporting unavailable
   or unsupported tools honestly;
 - provides `inspect` to authenticate, decode, hash-check, and explain an archive.
+- generates a deterministic, SHA-256-verified public benchmark corpus spanning
+  text, structured records, numeric data, duplicates, random bytes,
+  precompressed bytes, and empty inputs;
+- runs the complete test suite across Python 3.11 and 3.13 on Linux, Windows,
+  and macOS, with separate lint, type, coverage, dependency-audit, and build
+  gates;
+- records a scheduled benchmark artifact each month so performance changes can
+  be compared against an identical generated corpus.
 
 ## Install for development
 
@@ -71,6 +79,8 @@ uv run msc encode project-folder project.msc
 uv run msc decode project.msc restored-project
 uv run msc benchmark project-folder --compare
 uv run msc benchmark project-folder --profile research
+uv run python -m mosaic_archive.corpus benchmark-corpus
+uv run msc benchmark benchmark-corpus --json
 ```
 
 For scripts, read the password from an environment variable:
@@ -121,7 +131,17 @@ streams. Both are skipped by the default encoder. `fast` tries RAW/DEFLATE only;
 uv run python -m unittest discover -s tests -v
 uv run ruff check .
 uv run mypy src
+uv run --with coverage coverage run -m unittest discover -s tests
+uv run --with coverage coverage report --fail-under=80
+uv run --with pip-audit pip-audit --local
+uv build
 ```
+
+The generated benchmark corpus is deterministic for a given seed and unit
+size. Its manifest records every file's category, byte count, and SHA-256
+digest; `verify_corpus` also rejects undeclared files. CI regenerates a small
+smoke corpus on every pull request, while the scheduled benchmark uses the
+default corpus and uploads both its manifest and machine-readable result.
 
 The binary layout is documented in [docs/FORMAT.md](docs/FORMAT.md), and the
 security boundaries are explicit in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).

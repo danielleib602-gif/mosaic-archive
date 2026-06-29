@@ -119,6 +119,10 @@ quadratic teaching LZ path while preserving exact-size final selection.
 MSC6 adds separately entropy-coded LZ token/literal/length/distance streams and
 explicit fast/balanced/research profiles. Current source-corpus evidence keeps
 LZ_RANS research-only because it did not beat DEFLATE and doubled encode time.
+Package v0.7 adds a deterministic, self-verifying general-purpose corpus,
+cross-platform CI, coverage and dependency-audit gates, and scheduled benchmark
+artifacts. The archive format remains MSC6 because these changes do not alter
+the decoder contract.
 
 Parallel research tracks:
 
@@ -139,12 +143,17 @@ decoders retain compatibility.
 
 Dependencies: B and C; selected D work only when proven.
 
+Status: foundation started. The public corpus and cross-platform automation are
+in place; sustained fuzzing, soak tests, compatibility fixtures, independent
+review, and signed binaries remain.
+
 Tasks:
 
 - freeze a versioned format and compatibility policy;
 - complete parser fuzzing, large-file soak tests, and independent security
   review;
-- publish reproducible corpora, benchmark scripts, and full results;
+- [x] publish a reproducible generated corpus and scheduled benchmark workflow;
+- publish versioned benchmark results and comparisons with mature compressors;
 - ship signed cross-platform binaries and an upgrade/deprecation policy.
 
 Exit criteria: backward-compatibility fixtures are permanent, threat-model

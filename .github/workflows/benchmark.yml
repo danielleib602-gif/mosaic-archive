@@ -1,0 +1,32 @@
+name: Reproducible benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 1 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: uv sync --frozen
+      - run: uv run --frozen python -m mosaic_archive.corpus benchmark-corpus
+      - run: >
+          uv run --frozen python -m mosaic_archive benchmark benchmark-corpus
+          --password synthetic-public-corpus --kdf-log-n 14 --compare --json
+          > benchmark-result.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mosaic-benchmark-${{ github.sha }}
+          path: |
+            benchmark-corpus/manifest.json
+            benchmark-result.json
+          if-no-files-found: error
