@@ -30,6 +30,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
             self.assertEqual(report["release"], "0.12.0")
+            self.assertEqual(report["package_version"], "0.12.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])
