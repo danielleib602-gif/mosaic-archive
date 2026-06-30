@@ -18,9 +18,11 @@ class ComparisonArchiveSafetyTests(unittest.TestCase):
             with zipfile.ZipFile(archive, "w") as output:
                 output.writestr("../escape.txt", "escaped")
 
-            with zipfile.ZipFile(archive, "r") as compressed:
-                with self.assertRaises(zipfile.BadZipFile):
-                    safe_extract_zip(compressed, destination)
+            with (
+                zipfile.ZipFile(archive, "r") as compressed,
+                self.assertRaises(zipfile.BadZipFile),
+            ):
+                safe_extract_zip(compressed, destination)
 
             self.assertFalse((root / "escape.txt").exists())
 

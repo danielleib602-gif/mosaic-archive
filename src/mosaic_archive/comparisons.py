@@ -72,6 +72,23 @@ def _result(
     )
 
 
+def safe_extract_zip(compressed: zipfile.ZipFile, destination: Path) -> None:
+    """Extract a ZIP while rejecting members outside the destination."""
+    root = destination.resolve()
+    for member in compressed.infolist():
+        target = (destination / member.filename).resolve()
+        if not target.is_relative_to(root):
+            raise zipfile.BadZipFile(
+                f"ZIP member escapes the extraction root: {member.filename}"
+            )
+        if member.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with compressed.open(member, "r") as source, target.open("wb") as output:
+            shutil.copyfileobj(source, output)
+
+
 def _compare_zip(source: Path, root: Path) -> ComparisonResult:
     archive = root / "comparison.zip"
     restored = root / "zip-restored"
@@ -92,7 +109,7 @@ def _compare_zip(source: Path, root: Path) -> ComparisonResult:
     restored.mkdir()
     started = time.perf_counter()
     with zipfile.ZipFile(archive, "r") as compressed:
-        compressed.extractall(restored)
+        safe_extract_zip(compressed, restored)
     decode_seconds = time.perf_counter() - started
     restored_input = restored / source.name if source.is_file() else restored
     return _result(
