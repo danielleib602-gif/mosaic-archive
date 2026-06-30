@@ -1,5 +1,5 @@
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 
 class ReleaseBinaryTests(unittest.TestCase):
@@ -13,8 +13,9 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("pyinstaller==6.21.0", workflow)
         self.assertIn("--onefile", workflow)
         self.assertIn("--noupx", workflow)
-        self.assertIn("--version", workflow)
         self.assertIn("actions/upload-artifact@", workflow)
+        helper = Path("scripts/prepare_release_binary.py").read_text(encoding="utf-8")
+        self.assertIn('"--version"', helper)
 
     def test_tag_release_has_checksums_and_keyless_signed_provenance(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
