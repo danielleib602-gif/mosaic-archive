@@ -10,6 +10,19 @@ from mosaic_archive.corpus import generate_corpus
 
 
 class VersionedBenchmarkPublicationTests(unittest.TestCase):
+    def test_committed_v0_12_report_is_complete_and_verified(self) -> None:
+        report = json.loads(
+            Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(report["release"], "0.12.0")
+        self.assertEqual(report["schema_version"], 1)
+        self.assertTrue(report["mosaic"]["round_trip_verified"])
+        self.assertEqual(set(report["comparisons"]), {"zip", "gzip", "zstd", "7z"})
+        self.assertTrue(
+            all(result["verified"] for result in report["comparisons"].values())
+        )
+
     def test_publication_is_versioned_verified_and_machine_readable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
