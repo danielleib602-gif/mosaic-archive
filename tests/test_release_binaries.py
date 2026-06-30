@@ -1,9 +1,24 @@
+import os
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from scripts.prepare_release_binary import _normalized_architecture
 
 
 class ReleaseBinaryTests(unittest.TestCase):
+    def test_architecture_name_falls_back_to_windows_environment(self) -> None:
+        with (
+            patch("scripts.prepare_release_binary.platform.machine", return_value=""),
+            patch.dict(
+                os.environ,
+                {"RUNNER_ARCH": "", "PROCESSOR_ARCHITECTURE": "AMD64"},
+                clear=False,
+            ),
+        ):
+            self.assertEqual(_normalized_architecture(), "x86_64")
+
     def test_release_recipe_matches_package_version(self) -> None:
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
