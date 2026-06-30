@@ -47,6 +47,10 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         self.assertIn("apt-get install --yes zstd p7zip-full", workflow)
         self.assertIn("mosaic_archive.benchmark_publication", workflow)
         self.assertIn("--release 0.12.0", workflow)
+        self.assertIn(
+            "${{ github.event.pull_request.head.sha || github.sha }}",
+            workflow,
+        )
         self.assertIn("published-benchmark/report.json", workflow)
         self.assertIn("published-benchmark/report.md", workflow)
 
