@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.10 does
+## What v0.11 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -62,7 +62,11 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - seeds Atheris coverage-guided fuzzing with valid inputs for six structural
   parsers and all seven compression-mode decoders;
 - preserves evolving corpora and crash, timeout, or out-of-memory artifacts
-  from bounded pull-request and weekly fuzz campaigns.
+  from bounded pull-request and weekly fuzz campaigns;
+- freezes MSC6 as the 1.0 writer format and commits to decoding MSC1 through
+  MSC6 throughout the 1.x package line;
+- exposes the format, upgrade, and deprecation contract as human-readable text
+  and machine-readable CLI output.
 
 ## Install for development
 
@@ -94,6 +98,7 @@ uv run msc benchmark benchmark-corpus --json
 uv run python -m mosaic_archive.reliability fuzz --cases 1000
 uv run python -m mosaic_archive.reliability soak --size-mib 256
 uv run python -m mosaic_archive.coverage_fuzzing fuzz-corpus
+uv run msc compatibility --json
 ```
 
 For scripts, read the password from an environment variable:
@@ -167,6 +172,8 @@ uv run python tools/generate_compatibility_fixtures.py
 
 The binary layout is documented in [docs/FORMAT.md](docs/FORMAT.md), and the
 security boundaries are explicit in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+Format stability, upgrades, and deprecations are defined in
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Current limits
 
@@ -182,9 +189,8 @@ security boundaries are explicit in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
   size;
 - the simple codecs prioritize clarity and correctness over mature-compressor
   performance;
-- the format is still pre-1.0, but committed MSC1 through MSC6 decoder fixtures
-  must keep restoring unless the roadmap records an explicit compatibility
-  decision.
+- the package is still pre-1.0, while MSC6 decoder semantics and existing mode
+  identifiers are frozen for the 1.0 format line.
 
 The near-term roadmap is in
 [plans/mosaic-archive-roadmap.md](plans/mosaic-archive-roadmap.md).

@@ -128,6 +128,8 @@ regressions visible in normal test runs. Package v0.9 adds a deterministic
 11-target parser/decoder mutation harness plus a bounded weekly 256 MiB
 streaming soak round trip. Package v0.10 expands that surface to both nested
 manifest parsers and adds seeded Atheris coverage-guided campaigns.
+Package v0.11 freezes MSC6 for the 1.0 writer, makes MSC1-through-MSC6 decoder
+support binding for the 1.x line, and publishes upgrade/deprecation rules.
 
 Parallel research tracks:
 
@@ -150,12 +152,13 @@ Dependencies: B and C; selected D work only when proven.
 
 Status: foundation started. The public corpus, cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
-fuzzing, scheduled large-file soak coverage, and seeded coverage-guided
-campaigns are in place; independent review and signed binaries remain.
+fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
+and the frozen compatibility policy are in place; independent review, published
+versioned benchmark results, and signed binaries remain.
 
 Tasks:
 
-- freeze a versioned format and compatibility policy;
+- [x] freeze a versioned format and compatibility policy;
 - [x] add deterministic parser fuzzing and scheduled large-file soak tests;
 - [x] add seeded coverage-guided parser and decoder fuzzing;
 - complete an independent security review;
@@ -163,7 +166,8 @@ Tasks:
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder
   version;
 - publish versioned benchmark results and comparisons with mature compressors;
-- ship signed cross-platform binaries and an upgrade/deprecation policy.
+- [x] publish an upgrade/deprecation policy;
+- ship signed cross-platform binaries.
 
 Exit criteria: backward-compatibility fixtures are permanent, threat-model
 findings are resolved or documented, and no benchmark claim depends on a
