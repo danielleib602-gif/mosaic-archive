@@ -1,0 +1,42 @@
+name: Coverage-guided fuzzing
+
+on:
+  pull_request:
+    paths:
+      - "src/mosaic_archive/coverage_fuzzing.py"
+      - "src/mosaic_archive/reliability.py"
+      - "fuzz/**"
+      - "tests/test_coverage_fuzzing.py"
+      - ".github/workflows/coverage-fuzz.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "23 1 * * 3"
+
+permissions:
+  contents: read
+
+jobs:
+  atheris:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: uv sync --frozen
+      - run: uv run --frozen python -m mosaic_archive.coverage_fuzzing fuzz-corpus
+      - run: >
+          uv run --frozen --with atheris==3.1.0 python fuzz/atheris_mosaic.py
+          fuzz-corpus -max_total_time=300 -rss_limit_mb=2048 -timeout=10
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: mosaic-coverage-fuzz-${{ github.sha }}
+          path: |
+            fuzz-corpus
+            crash-*
+            timeout-*
+            oom-*
+          if-no-files-found: warn
