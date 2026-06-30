@@ -1,6 +1,6 @@
+import tomllib
 import unittest
 from pathlib import Path
-import tomllib
 
 
 class ReleaseBinaryTests(unittest.TestCase):
@@ -35,6 +35,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("SHA256SUMS", workflow)
         self.assertIn("actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
+        self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("gh release", workflow)
 
     def test_release_verification_is_documented(self) -> None:

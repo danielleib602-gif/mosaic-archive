@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.12 does
+## What v0.13 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -68,7 +68,9 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - exposes the format, upgrade, and deprecation contract as human-readable text
   and machine-readable CLI output;
 - publishes reproducible, versioned JSON and Markdown results against ZIP,
-  tar+gzip, tar+zstd, and 7-Zip on the identical generated corpus.
+  tar+gzip, tar+zstd, and 7-Zip on the identical generated corpus;
+- builds smoke-tested native Linux, Windows, and macOS executables and attaches
+  keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases.
 
 ## Install for development
 
@@ -178,6 +180,8 @@ Format stability, upgrades, and deprecations are defined in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 Published performance evidence is indexed in
 [benchmarks/README.md](benchmarks/README.md).
+Binary build, publication, and verification instructions are in
+[docs/RELEASES.md](docs/RELEASES.md).
 
 The v0.12 corpus result is encouraging but specific: Mosaic's encrypted,
 padded archive reached a 0.471 ratio, better than ZIP/gzip on this duplicate-rich
