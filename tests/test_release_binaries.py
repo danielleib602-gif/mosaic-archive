@@ -1,8 +1,16 @@
 import unittest
 from pathlib import Path
+import tomllib
 
 
 class ReleaseBinaryTests(unittest.TestCase):
+    def test_release_recipe_matches_package_version(self) -> None:
+        project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        self.assertEqual(project["project"]["version"], "0.13.0")
+        self.assertIn("--expected-version 0.13.0", workflow)
+
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
