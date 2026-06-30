@@ -32,7 +32,8 @@ jobs:
       - run: >
           uv run --frozen python -m mosaic_archive.benchmark_publication
           benchmark-corpus published-benchmark --release 0.12.0
-          --source-commit ${{ github.sha }} --kdf-log-n 14
+          --source-commit ${{ github.event.pull_request.head.sha || github.sha }}
+          --kdf-log-n 14
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mosaic-benchmark-v0.12.0-${{ github.sha }}
