@@ -182,7 +182,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(report["format_version"], 6)
             self.assertTrue(report["round_trip_verified"])
             self.assertTrue(report["comparisons"]["zip"]["verified"])
-            self.assertFalse(report["comparisons"]["gzip"]["supported"])
+            self.assertTrue(report["comparisons"]["gzip"]["supported"])
+            self.assertTrue(report["comparisons"]["gzip"]["verified"])
 
 
 if __name__ == "__main__":
