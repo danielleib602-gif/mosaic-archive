@@ -3,15 +3,28 @@
 from __future__ import annotations
 
 import argparse
+import os
 import platform
 import shutil
 import subprocess
+import sysconfig
 from pathlib import Path
 
 
 def _normalized_architecture() -> str:
-    architecture = platform.machine().lower().replace("amd64", "x86_64")
-    return architecture.replace("aarch64", "arm64") or "unknown"
+    architecture = (
+        os.environ.get("RUNNER_ARCH")
+        or platform.machine()
+        or os.environ.get("PROCESSOR_ARCHITECTURE")
+        or sysconfig.get_platform().rsplit("-", 1)[-1]
+        or "unknown"
+    ).lower()
+    aliases = {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+        "aarch64": "arm64",
+    }
+    return aliases.get(architecture, architecture)
 
 
 def prepare_binary(source: Path, output_dir: Path, expected_version: str) -> Path:

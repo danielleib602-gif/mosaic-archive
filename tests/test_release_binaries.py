@@ -19,6 +19,21 @@ class ReleaseBinaryTests(unittest.TestCase):
         ):
             self.assertEqual(_normalized_architecture(), "x86_64")
 
+    def test_architecture_name_falls_back_to_python_platform_tag(self) -> None:
+        with (
+            patch("scripts.prepare_release_binary.platform.machine", return_value=""),
+            patch(
+                "scripts.prepare_release_binary.sysconfig.get_platform",
+                return_value="win-amd64",
+            ),
+            patch.dict(
+                os.environ,
+                {"RUNNER_ARCH": "", "PROCESSOR_ARCHITECTURE": ""},
+                clear=False,
+            ),
+        ):
+            self.assertEqual(_normalized_architecture(), "x86_64")
+
     def test_release_recipe_matches_package_version(self) -> None:
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
