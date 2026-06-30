@@ -13,7 +13,7 @@ class CoverageGuidedFuzzingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             seeds = generate_seed_corpus(Path(temp_dir))
 
-            self.assertGreaterEqual(len(seeds), 11)
+            self.assertGreaterEqual(len(seeds), 13)
             self.assertEqual(len(seeds), len({path.read_bytes()[0] for path in seeds}))
             for seed in seeds:
                 with self.subTest(seed=seed.name):
