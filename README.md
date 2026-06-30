@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.9 does
+## What v0.10 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -44,7 +44,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
   allocation in benchmark mode;
 - optionally compares against ZIP, gzip, zstd, and 7-Zip, reporting unavailable
   or unsupported tools honestly;
-- provides `inspect` to authenticate, decode, hash-check, and explain an archive.
+- provides `inspect` to authenticate, decode, hash-check, and explain an archive;
 - generates a deterministic, SHA-256-verified public benchmark corpus spanning
   text, structured records, numeric data, duplicates, random bytes,
   precompressed bytes, and empty inputs;
@@ -58,7 +58,11 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - provides a deterministic mutation-fuzz harness for every public header parser,
   frame parser, and compression-mode decoder;
 - runs a bounded 10,000-case fuzz campaign and streaming 256 MiB archive
-  round trip on a weekly scheduled workflow.
+  round trip on a weekly scheduled workflow;
+- seeds Atheris coverage-guided fuzzing with valid inputs for six structural
+  parsers and all seven compression-mode decoders;
+- preserves evolving corpora and crash, timeout, or out-of-memory artifacts
+  from bounded pull-request and weekly fuzz campaigns.
 
 ## Install for development
 
@@ -89,6 +93,7 @@ uv run python -m mosaic_archive.corpus benchmark-corpus
 uv run msc benchmark benchmark-corpus --json
 uv run python -m mosaic_archive.reliability fuzz --cases 1000
 uv run python -m mosaic_archive.reliability soak --size-mib 256
+uv run python -m mosaic_archive.coverage_fuzzing fuzz-corpus
 ```
 
 For scripts, read the password from an environment variable:

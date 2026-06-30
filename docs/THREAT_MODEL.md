@@ -1,6 +1,6 @@
 # Threat model
 
-Mosaic Archive v0.6 aims to provide a defensible experimental container around
+Mosaic Archive v0.10 aims to provide a defensible experimental container around
 an intentionally simple compression engine. It does not claim cryptographic
 novelty.
 
@@ -60,15 +60,18 @@ File content is processed one chunk and authenticated frame at a time. The
 encrypted manifest is still held in memory and is capped at 256 MiB; entry,
 frame, chunk, padding, and KDF parameters also have explicit limits. A weekly
 job runs 10,000 deterministic mutations under a 45-minute job budget and
-round-trips a streaming 256 MiB file. Coverage-guided fuzzing, larger soak
-tiers, and race-resistant source traversal are still required before a stable
-large-file release.
+round-trips a streaming 256 MiB file. Atheris additionally runs bounded
+coverage-guided campaigns from valid seeds for outer headers, frame headers,
+encrypted-manifest parsers, and all compression modes. Larger soak tiers and
+race-resistant source traversal are still required before a stable large-file
+release.
 
 Deterministic mutation tests exercise authenticated archive corruption, every
-public header/frame parser, and malformed payloads across every codec. DEFLATE
-decoding uses an explicit authenticated output bound and rejects trailing
-compressed data. These tests improve failure coverage but are not a substitute
-for independent audit or coverage-guided native fuzzing.
+public header/frame parser, both encrypted-manifest parsers, and malformed
+payloads across every codec. DEFLATE decoding uses an explicit authenticated
+output bound and rejects trailing compressed data. These tests and
+coverage-guided campaigns improve failure coverage but are not a substitute for
+an independent audit.
 
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. It remains opt-in through the
@@ -84,5 +87,5 @@ temporary disk-backed cache capped indirectly by authenticated unique content.
 
 The Python `cryptography` package supplies the cryptographic primitives.
 Mosaic's format composition and implementation have not received an independent
-security audit. Treat v0.6 as a research and learning tool, not as the sole
+security audit. Treat v0.10 as a research and learning tool, not as the sole
 protection for irreplaceable or high-risk secrets.

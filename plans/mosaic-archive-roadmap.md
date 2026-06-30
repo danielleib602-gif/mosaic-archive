@@ -126,7 +126,8 @@ the decoder contract. Package v0.8 adds permanent decoder fixtures for every
 claimed archive generation from MSC1 through MSC6, making compatibility
 regressions visible in normal test runs. Package v0.9 adds a deterministic
 11-target parser/decoder mutation harness plus a bounded weekly 256 MiB
-streaming soak round trip.
+streaming soak round trip. Package v0.10 expands that surface to both nested
+manifest parsers and adds seeded Atheris coverage-guided campaigns.
 
 Parallel research tracks:
 
@@ -149,14 +150,15 @@ Dependencies: B and C; selected D work only when proven.
 
 Status: foundation started. The public corpus, cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
-fuzzing, and scheduled large-file soak coverage are in place; coverage-guided
-fuzzing, independent review, and signed binaries remain.
+fuzzing, scheduled large-file soak coverage, and seeded coverage-guided
+campaigns are in place; independent review and signed binaries remain.
 
 Tasks:
 
 - freeze a versioned format and compatibility policy;
 - [x] add deterministic parser fuzzing and scheduled large-file soak tests;
-- complete coverage-guided fuzzing and independent security review;
+- [x] add seeded coverage-guided parser and decoder fuzzing;
+- complete an independent security review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder
   version;
