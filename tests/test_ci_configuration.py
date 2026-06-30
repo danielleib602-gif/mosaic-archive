@@ -22,7 +22,13 @@ class CiConfigurationTests(unittest.TestCase):
         workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
         for platform in ("ubuntu-latest", "windows-latest", "macos-latest"):
             self.assertIn(platform, workflow)
-        for command in ("unittest discover", "ruff check", "mypy src", "pip-audit"):
+        for command in (
+            "unittest discover",
+            "ruff check",
+            "mypy src",
+            "bandit -q -r src -lll",
+            "pip-audit",
+        ):
             self.assertIn(command, workflow)
 
 
