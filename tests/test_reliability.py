@@ -67,6 +67,8 @@ class ReliabilityWorkflowTests(unittest.TestCase):
     def test_scheduled_workflow_runs_bounded_fuzz_and_soak_jobs(self) -> None:
         workflow = Path(".github/workflows/reliability.yml").read_text(encoding="utf-8")
 
+        self.assertIn("pull_request:\n    paths:", workflow)
+        self.assertIn('"src/mosaic_archive/reliability.py"', workflow)
         self.assertIn("schedule:", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
         self.assertIn("timeout-minutes:", workflow)
