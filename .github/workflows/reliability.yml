@@ -1,6 +1,11 @@
 name: Sustained reliability
 
 on:
+  pull_request:
+    paths:
+      - "src/mosaic_archive/reliability.py"
+      - "tests/test_reliability.py"
+      - ".github/workflows/reliability.yml"
   workflow_dispatch:
   schedule:
     - cron: "41 2 * * 0"
