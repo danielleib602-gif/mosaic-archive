@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import random
+import struct
 import unittest
+from unittest.mock import patch
 
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.modes import ModeId
@@ -38,7 +40,21 @@ class LzRansModeTests(unittest.TestCase):
             with self.subTest(size=len(payload)), self.assertRaises(ArchiveFormatError):
                 self.mode.decode(payload, 1400)
 
+    def test_rejects_declared_stream_expansion_before_rans_decode(self) -> None:
+        data = b"bounded nested streams"
+        payload = bytearray(self.mode.encode(data))
+        struct.pack_into(">I", payload, 4, len(data) + 1)
+
+        with (
+            patch.object(
+                self.mode._rans,
+                "decode",
+                side_effect=AssertionError("oversized stream reached rANS decoder"),
+            ),
+            self.assertRaises(ArchiveFormatError),
+        ):
+            self.mode.decode(bytes(payload), len(data))
+
 
 if __name__ == "__main__":
     unittest.main()
-
