@@ -143,6 +143,8 @@ class LzRansMode(CompressionMode):
         descriptors = values[1:]
         raw_lengths = descriptors[0::2]
         encoded_lengths = descriptors[1::2]
+        if any(raw_length > expected_size for raw_length in raw_lengths):
+            raise ArchiveFormatError("LZ_RANS decoded stream exceeds declared block size")
         if sum(encoded_lengths) != len(payload) - _HEADER.size:
             raise ArchiveFormatError("LZ_RANS stream sizes are inconsistent")
 
@@ -191,4 +193,3 @@ class LzRansMode(CompressionMode):
         if literal_position != len(literals) or len(output) != expected_size:
             raise ArchiveFormatError("LZ_RANS decoded size is inconsistent")
         return bytes(output)
-

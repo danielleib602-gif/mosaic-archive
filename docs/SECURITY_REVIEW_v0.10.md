@@ -23,6 +23,16 @@ This is a maintainer self-review, not the independent audit required for MSC
 No medium- or high-severity Bandit findings and no tracked secret signatures
 were found.
 
+The first native Atheris campaign found one denial-of-service condition in the
+research-only `LZ_RANS` decoder. A crafted descriptor could declare a decoded
+substream length of `0xffffffff`, causing `BYTE_RANS` to perform an effectively
+unbounded decode loop before the outer block-size check. The decoder now rejects
+every nested raw-stream length larger than the authenticated expected block
+size before rANS decoding begins. A focused regression test preserves this
+ordering requirement. The exact timeout input subsequently rejected in 0.163
+seconds, and a fresh 20-second campaign completed 86,308 executions without a
+crash or timeout.
+
 Bandit reported seven low-severity items:
 
 - `comparisons.py` invokes discovered `zstd` and `7z` executables with

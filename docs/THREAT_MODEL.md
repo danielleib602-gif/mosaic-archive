@@ -74,8 +74,11 @@ coverage-guided campaigns improve failure coverage but are not a substitute for
 an independent audit.
 
 LZ_RANS validates every nested stream length, frequency table, varint, match
-distance, token kind, and final output length. It remains opt-in through the
-research profile, limiting exposure while it gathers benchmark evidence.
+distance, token kind, and final output length. Nested decoded stream lengths
+are rejected before rANS decoding when they exceed the authenticated block
+size, preventing descriptor-driven expansion work. LZ_RANS remains opt-in
+through the research profile, limiting exposure while it gathers benchmark
+evidence.
 
 MSC3 dedup references may point only to an earlier canonical chunk and may not
 point to another reference. The parser verifies matching digest/size metadata,
