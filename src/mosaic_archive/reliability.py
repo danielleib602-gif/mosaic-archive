@@ -13,9 +13,23 @@ from pathlib import Path
 
 from mosaic_archive.archive_api import decode_path, encode_path
 from mosaic_archive.container_format import PublicHeader, parse_public_header
+from mosaic_archive.dedup_archive import (
+    DedupEntry,
+    DedupManifest,
+    parse_dedup_manifest,
+    serialize_dedup_manifest,
+)
 from mosaic_archive.dedup_format import MSC3_FLAGS, Msc3Header, parse_msc3_header
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.modes import ALL_MODES
+from mosaic_archive.stream_archive import (
+    ENTRY_FILE,
+    KIND_FILE,
+    Manifest,
+    ManifestEntry,
+    parse_manifest,
+    serialize_manifest,
+)
 from mosaic_archive.stream_format import (
     FRAME_MANIFEST,
     FrameHeader,
@@ -82,7 +96,7 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
         kdf_p=1,
         ciphertext_length=16,
     ).pack()
-    stream = Msc2Header(
+    stream_header = Msc2Header(
         version=2,
         flags=3,
         kdf_id=1,
@@ -95,8 +109,8 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
         kdf_r=8,
         kdf_p=1,
         frame_count=1,
-    ).pack()
-    dedup = Msc3Header(
+    )
+    dedup_header = Msc3Header(
         version=6,
         flags=MSC3_FLAGS,
         kdf_id=1,
@@ -111,13 +125,37 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
         kdf_r=8,
         kdf_p=1,
         frame_count=1,
-    ).pack()
+    )
     frame = FrameHeader(index=0, frame_type=FRAME_MANIFEST, ciphertext_length=16).pack()
+    stream_manifest = serialize_manifest(
+        Manifest(
+            KIND_FILE,
+            "seed",
+            (ManifestEntry(ENTRY_FILE, "seed", 0o600, 0, 0, 1, 0, b"\x00" * 32),),
+        )
+    )
+    dedup_manifest = serialize_dedup_manifest(
+        DedupManifest(
+            KIND_FILE,
+            "seed",
+            (DedupEntry(ENTRY_FILE, "seed", 0o600, 0, 0, 0, 0, b"\x00" * 32),),
+            (),
+        )
+    )
+
+    def parse_stream_manifest(payload: bytes) -> None:
+        parse_manifest(payload, stream_header)
+
+    def parse_content_defined_manifest(payload: bytes) -> None:
+        parse_dedup_manifest(payload, dedup_header)
+
     parser_inputs = (
         ("msc1-public-header", public, parse_public_header),
-        ("msc2-public-header", stream, parse_msc2_header),
-        ("msc3-public-header", dedup, parse_msc3_header),
+        ("msc2-public-header", stream_header.pack(), parse_msc2_header),
+        ("msc3-public-header", dedup_header.pack(), parse_msc3_header),
         ("frame-header", frame, parse_frame_header),
+        ("msc2-manifest", stream_manifest, parse_stream_manifest),
+        ("msc3-manifest", dedup_manifest, parse_content_defined_manifest),
     )
     return tuple(
         _FuzzTarget(
