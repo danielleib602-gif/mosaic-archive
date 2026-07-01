@@ -1,0 +1,35 @@
+{
+  "baseline": {
+    "seven_zip_archive_bytes": 292831,
+    "seven_zip_ratio": 0.27877860676861443
+  },
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407,
+    "seed": 20260629,
+    "unit_size": 65536,
+    "version": 1
+  },
+  "experimental_archive": {
+    "archive_bytes": 277585,
+    "archive_ratio": 0.2642642328164226,
+    "decode_seconds": 0.07708669999919948,
+    "encode_seconds": 2.292194699999527,
+    "format": "MSR1",
+    "lane_distribution": {
+      "delta4": 1,
+      "high_entropy": 8,
+      "standard": 4
+    },
+    "manifest_bytes": 2262,
+    "padding_size": 1024,
+    "round_trip_verified": true,
+    "scrypt_log_n": 14,
+    "solid_payload_bytes": 274400,
+    "unique_chunk_count": 13
+  },
+  "margin_vs_7zip_bytes": 15246,
+  "schema_version": 1,
+  "source_commit": "87c2280",
+  "status": "experimental encrypted MSR1 archive; not the stable MSC6 writer"
+}
