@@ -4,6 +4,7 @@ import hashlib
 import io
 import random
 import unittest
+from unittest.mock import patch
 
 from mosaic_archive.cdc import ChunkingConfig, iter_content_defined_chunks
 
@@ -16,6 +17,19 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_hot_loop_inlines_fixed_buzhash_rotations(self) -> None:
+        data = random.Random(28).randbytes(32 * 1024)
+        config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
+
+        with patch(
+            "mosaic_archive.cdc._rotate_left",
+            side_effect=AssertionError("generic rotation entered the byte hot loop"),
+            create=True,
+        ):
+            chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
+
+        self.assertEqual(b"".join(chunks), data)
+
     def test_round_trip_and_size_bounds(self) -> None:
         data = random.Random(20260629).randbytes(200_000)
         config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
@@ -65,4 +79,3 @@ class ContentDefinedChunkingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
