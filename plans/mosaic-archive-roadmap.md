@@ -169,6 +169,10 @@ wrapper overhead from new solid lanes, while retaining legacy MSR2 metadata
 decoding. Its explicit 256-byte compact-padding result is 276,115 bytes on the
 mixed corpus and now beats ZIP on the text subset. Random/precompressed data
 still exposes the small unavoidable authenticated-container overhead.
+Package v0.21 exposes MSR2 as the explicit `msc encode --format solid` option
+and auto-detects it for authenticated inspect and decode. Stable MSC6 remains
+the default writer; compact 256-byte padding remains an explicit privacy/ratio
+choice.
 
 Parallel research tracks:
 

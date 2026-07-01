@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.20 does
+## What v0.21 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -94,6 +94,7 @@ uv run msc inspect report.msc
 uv run msc decode report.msc restored-report.pdf
 uv run msc benchmark report.pdf
 uv run msc encode project-folder project.msc
+uv run msc encode project-folder project.msr --format solid --padding-size 256
 uv run msc decode project.msc restored-project
 uv run msc benchmark project-folder --compare
 uv run msc benchmark project-folder --profile research
@@ -245,6 +246,12 @@ structured, numeric, and duplicate-heavy subsets also win. Random and
 precompressed subsets remain 449 and 401 bytes larger than ZIP because MSR2
 also carries encryption, authentication, and restoration metadata. The compact
 profile leaks length at 256-byte rather than 1 KiB granularity.
+
+The v0.21 CLI makes MSR2 usable without changing the stable default:
+`msc encode --format solid` opts into the research container, while `decode`
+and `inspect` recognize MSR2 automatically. MSC6 remains the default writer.
+The compact 256-byte padding result must be selected explicitly because it
+reveals archive lengths at finer granularity than the 1 KiB default.
 
 ## Current limits
 
