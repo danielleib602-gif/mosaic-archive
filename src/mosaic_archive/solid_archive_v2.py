@@ -191,6 +191,9 @@ def encode_solid_archive_v2(
         with open(os.devnull, "wb") as sink:
             index = 1
             for lane, path in enumerate(lane_paths):
+                if raw_sizes[lane] == 0:
+                    probe_counts.append(0)
+                    continue
                 with path.open("rb") as lane_source:
                     stats = write_solid_lane_frames(
                         lane_source,
@@ -246,6 +249,8 @@ def encode_solid_archive_v2(
                 output.write(metadata_ciphertext)
                 index = 1
                 for lane, path in enumerate(lane_paths):
+                    if raw_sizes[lane] == 0:
+                        continue
                     with path.open("rb") as lane_source:
                         stats = write_solid_lane_frames(
                             lane_source,
@@ -349,8 +354,8 @@ def _parse_metadata(
     for _ in range(_LANE_COUNT):
         raw_size, frame_count = _LANE_RECORD.unpack_from(payload, position)
         position += _LANE_RECORD.size
-        if frame_count <= 0:
-            raise ArchiveFormatError("MSR2 lane frame count is invalid")
+        if (raw_size == 0) != (frame_count == 0):
+            raise ArchiveFormatError("MSR2 lane frame count is inconsistent")
         raw_sizes.append(raw_size)
         frame_counts.append(frame_count)
     if assignment_count != unique_count or manifest_size > MAX_MANIFEST_CIPHERTEXT:
@@ -517,6 +522,9 @@ def decode_solid_archive_v2(
             lane_paths = tuple(Path(spool_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
             index = 1
             for lane, path in enumerate(lane_paths):
+                if frame_counts[lane] == 0:
+                    path.touch()
+                    continue
                 with path.open("w+b") as lane_output:
                     stats = read_solid_lane_frames(
                         stream,

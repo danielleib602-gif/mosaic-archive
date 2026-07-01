@@ -30,8 +30,14 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source, archive = root / "source", root / "archive.msr"
-            source.write_bytes(b"bounded output" * 4096)
-            encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+            source.write_bytes(random.Random(91).randbytes(256 * 1024))
+            encode_solid_archive_v2(
+                source,
+                archive,
+                "secret",
+                frame_payload_size=4096,
+                kdf_log_n=14,
+            )
 
             for name, limits in (
                 ("size", {"max_output_size": 1024}),
