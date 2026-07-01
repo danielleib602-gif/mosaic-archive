@@ -81,6 +81,25 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertTrue(decoded.hash_verified)
             self.assertEqual(restored.read_bytes(), source.read_bytes())
 
+    def test_compact_padding_beats_zip_on_the_text_category(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            corpus, archive, restored = root / "corpus", root / "text.msr", root / "out"
+            generate_corpus(corpus)
+
+            encoded = encode_solid_archive_v2(
+                corpus / "text",
+                archive,
+                "secret",
+                padding_size=256,
+                kdf_log_n=14,
+            )
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertLess(encoded.archive_size, 680)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(_tree_digest(corpus / "text"), _tree_digest(restored))
+
     def test_committed_scorecard_records_an_actual_archive_win(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.18-msr2.json").read_text(encoding="utf-8")
