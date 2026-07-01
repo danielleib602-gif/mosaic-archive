@@ -46,6 +46,7 @@ class SolidLaneResearchTests(unittest.TestCase):
             patch(
                 "mosaic_archive.solid_research.analyze_block",
                 side_effect=AssertionError("unneeded block features were analyzed"),
+                create=True,
             ),
         ):
             self.assertEqual(choose_solid_lane(numeric), SOLID_LANE_DELTA4)
