@@ -1,16 +1,29 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from mosaic_archive.corpus import generate_corpus, verify_corpus
+from mosaic_archive.corpus import MANIFEST_NAME, generate_corpus, verify_corpus
 
 
 class ReproducibleCorpusTests(unittest.TestCase):
+    def test_default_manifest_is_byte_identical_to_published_linux_corpus(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            generate_corpus(root)
+            manifest = (root / MANIFEST_NAME).read_bytes()
+
+            self.assertNotIn(b"\r\n", manifest)
+            self.assertEqual(
+                hashlib.sha256(manifest).hexdigest(),
+                "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+            )
+
     def test_generation_is_deterministic_and_self_verifying(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
