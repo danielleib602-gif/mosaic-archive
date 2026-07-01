@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from mosaic_archive.corpus import generate_corpus
-from mosaic_archive.exceptions import AuthenticationError
+from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
     decode_solid_archive_v2,
     encode_solid_archive_v2,
@@ -26,6 +26,36 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_decode_limits_reject_expansion_and_frame_budgets_before_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive = root / "source", root / "archive.msr"
+            source.write_bytes(b"bounded output" * 4096)
+            encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+
+            for name, limits in (
+                ("size", {"max_output_size": 1024}),
+                ("frames", {"max_frame_count": 2}),
+            ):
+                output = root / name / "output.bin"
+                with self.subTest(limit=name), self.assertRaises(ArchiveFormatError):
+                    decode_solid_archive_v2(archive, output, "secret", **limits)
+                self.assertFalse(output.exists())
+                self.assertFalse(output.parent.exists())
+
+    def test_authentication_failure_has_no_filesystem_side_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive = root / "source", root / "archive.msr"
+            source.write_bytes(b"authenticate before creating output directories")
+            encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+            output = root / "new" / "nested" / "output.bin"
+
+            with self.assertRaises(AuthenticationError):
+                decode_solid_archive_v2(archive, output, "wrong")
+
+            self.assertFalse(output.parent.exists())
+
     def test_committed_scorecard_records_an_actual_archive_win(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.18-msr2.json").read_text(encoding="utf-8")
