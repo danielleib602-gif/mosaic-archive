@@ -114,6 +114,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         self.assertIn("pull_request:\n    paths:", workflow)
         self.assertIn('"src/mosaic_archive/solid_archive_v2.py"', workflow)
         self.assertIn('"src/mosaic_archive/solid_frames.py"', workflow)
+        self.assertIn('"src/mosaic_archive/solid_research.py"', workflow)
         self.assertIn("apt-get install --yes zstd p7zip-full", workflow)
         self.assertIn("mosaic_archive.benchmark_publication", workflow)
         self.assertIn("--release 0.12.0", workflow)
