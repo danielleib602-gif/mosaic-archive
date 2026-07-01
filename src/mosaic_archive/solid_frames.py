@@ -92,6 +92,92 @@ def _decompressor(lane: int, raw_lzma2: bool) -> lzma.LZMADecompressor:
     return lzma.LZMADecompressor(format=lzma.FORMAT_XZ)
 
 
+def compress_solid_lane(
+    source: BinaryIO,
+    destination: BinaryIO,
+    *,
+    lane: int,
+    raw_lzma2: bool = False,
+) -> int:
+    """Compress one continuous lane once into a disk- or memory-backed spool."""
+    if lane not in _VALID_LANES:
+        raise ValueError(f"unknown solid lane: {lane}")
+    compressor = _compressor(lane, raw_lzma2)
+    compressed_size = 0
+    while block := source.read(_IO_BLOCK_SIZE):
+        output = compressor.compress(block)
+        destination.write(output)
+        compressed_size += len(output)
+    output = compressor.flush()
+    destination.write(output)
+    return compressed_size + len(output)
+
+
+def write_precompressed_solid_lane_frames(
+    source: BinaryIO,
+    destination: BinaryIO,
+    *,
+    compressed_size: int,
+    key: bytes,
+    nonce_prefix: bytes,
+    associated_data: bytes,
+    lane: int,
+    start_index: int,
+    frame_payload_size: int = 1024 * 1024,
+    padding_size: int = 1024,
+) -> SolidFrameWriteStats:
+    """Frame and authenticate an already-compressed continuous solid lane."""
+    _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
+    if compressed_size < 0 or not 0 <= start_index <= 0xFFFFFFFF:
+        raise ValueError("solid frame size or start index is invalid")
+    index = start_index
+    padded_size = maximum = 0
+
+    def emit(payload: bytes, *, final: bool) -> None:
+        nonlocal index, padded_size, maximum
+        if index > 0xFFFFFFFF:
+            raise ValueError("solid frame index exceeds the uint32 range")
+        padded = pad_payload(payload, padding_size)
+        header = _FRAME_HEADER.pack(
+            index,
+            lane,
+            _FLAG_FINAL if final else 0,
+            len(padded) + AEAD_TAG_LENGTH,
+        )
+        destination.write(header)
+        destination.write(
+            encrypt(
+                key,
+                frame_nonce(nonce_prefix, index),
+                padded,
+                associated_data + header,
+            )
+        )
+        index += 1
+        padded_size += len(padded)
+        maximum = max(maximum, len(payload))
+
+    remaining = compressed_size
+    if remaining == 0:
+        emit(b"", final=True)
+    while remaining:
+        size = min(frame_payload_size, remaining)
+        payload = source.read(size)
+        if len(payload) != size:
+            raise ValueError("precompressed solid lane is truncated")
+        remaining -= size
+        emit(payload, final=remaining == 0)
+    if source.read(1):
+        raise ValueError("precompressed solid lane exceeds its declared size")
+    return SolidFrameWriteStats(
+        frame_count=index - start_index,
+        next_index=index,
+        compressed_size=compressed_size,
+        padded_size=padded_size,
+        max_frame_payload=maximum,
+    )
+
+
 def write_solid_lane_frames(
     source: BinaryIO,
     destination: BinaryIO,

@@ -27,7 +27,11 @@ from mosaic_archive.dedup_archive import (
 from mosaic_archive.dedup_format import MSC3_FLAGS, MSC6_VERSION, Msc3Header
 from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.padding import pad_payload, unpad_payload
-from mosaic_archive.solid_frames import read_solid_lane_frames, write_solid_lane_frames
+from mosaic_archive.solid_frames import (
+    compress_solid_lane,
+    read_solid_lane_frames,
+    write_precompressed_solid_lane_frames,
+)
 from mosaic_archive.solid_research import _choose_lane
 from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT, frame_nonce
@@ -53,6 +57,7 @@ class SolidArchiveV2EncodeStats:
     unique_chunk_count: int
     frame_count: int
     maximum_frame_payload: int
+    compression_passes: int
     elapsed_seconds: float
 
 
@@ -232,29 +237,33 @@ def encode_solid_archive_v2(
         if len(assignments) != unique_count:
             raise RuntimeError("internal MSR2 unique-chunk mismatch")
 
-        probe_counts: list[int] = []
-        with open(os.devnull, "wb") as sink:
-            index = 1
-            for lane, path in enumerate(lane_paths):
-                if raw_sizes[lane] == 0:
-                    probe_counts.append(0)
-                    continue
-                with path.open("rb") as lane_source:
-                    stats = write_solid_lane_frames(
-                        lane_source,
-                        sink,
-                        key=key,
-                        nonce_prefix=nonce_prefix,
-                        associated_data=b"MSR2 frame-count probe",
-                        lane=lane,
-                        start_index=index,
-                        frame_payload_size=frame_payload_size,
-                        padding_size=padding_size,
-                        raw_lzma2=True,
-                    )
-                probe_counts.append(stats.frame_count)
-                index = stats.next_index
-        frame_counts = cast(tuple[int, int, int], tuple(probe_counts))
+        compressed_paths = tuple(
+            Path(lane_dir) / f"lane-{lane}.lzma2" for lane in range(_LANE_COUNT)
+        )
+        compressed_sizes: list[int] = []
+        frame_count_values: list[int] = []
+        for lane, (raw_path, compressed_path) in enumerate(
+            zip(lane_paths, compressed_paths, strict=True)
+        ):
+            if raw_sizes[lane] == 0:
+                compressed_path.touch()
+                compressed_sizes.append(0)
+                frame_count_values.append(0)
+                continue
+            with raw_path.open("rb") as lane_source, compressed_path.open(
+                "wb"
+            ) as compressed_output:
+                compressed_size = compress_solid_lane(
+                    lane_source,
+                    compressed_output,
+                    lane=lane,
+                    raw_lzma2=True,
+                )
+            compressed_sizes.append(compressed_size)
+            frame_count_values.append(
+                (compressed_size + frame_payload_size - 1) // frame_payload_size
+            )
+        frame_counts = cast(tuple[int, int, int], tuple(frame_count_values))
         metadata = _encode_metadata_envelope(
             _metadata(manifest, assignments, raw_sizes, frame_counts)
         )
@@ -296,13 +305,14 @@ def encode_solid_archive_v2(
                 output.write(header)
                 output.write(metadata_ciphertext)
                 index = 1
-                for lane, path in enumerate(lane_paths):
+                for lane, path in enumerate(compressed_paths):
                     if raw_sizes[lane] == 0:
                         continue
                     with path.open("rb") as lane_source:
-                        stats = write_solid_lane_frames(
+                        stats = write_precompressed_solid_lane_frames(
                             lane_source,
                             output,
+                            compressed_size=compressed_sizes[lane],
                             key=key,
                             nonce_prefix=nonce_prefix,
                             associated_data=frame_aad,
@@ -310,7 +320,6 @@ def encode_solid_archive_v2(
                             start_index=index,
                             frame_payload_size=frame_payload_size,
                             padding_size=padding_size,
-                            raw_lzma2=True,
                         )
                     if stats.frame_count != frame_counts[lane]:
                         raise RuntimeError("MSR2 frame probe was not deterministic")
@@ -332,6 +341,7 @@ def encode_solid_archive_v2(
         unique_count,
         actual_frame_count,
         maximum_payload,
+        1,
         time.perf_counter() - started,
     )
 
