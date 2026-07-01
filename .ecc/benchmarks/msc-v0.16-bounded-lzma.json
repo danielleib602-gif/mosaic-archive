@@ -1,0 +1,23 @@
+{
+  "archive": {
+    "archive_bytes": 277585,
+    "archive_ratio": 0.2642642328164226,
+    "decode_seconds": 0.04934320000029402,
+    "encode_seconds": 1.1706678999980795,
+    "margin_vs_7zip_bytes": 15246,
+    "payload_bytes": 274433,
+    "round_trip_verified": true
+  },
+  "configuration": {
+    "current_lzma_preset": 6,
+    "previous_lzma_preset": "9|EXTREME",
+    "whole_archive_buffering_remains": true
+  },
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407
+  },
+  "schema_version": 1,
+  "source_commit": "5b6f2c2",
+  "status": "local before/after evidence; MSR1 remains experimental"
+}

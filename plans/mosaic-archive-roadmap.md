@@ -145,6 +145,11 @@ research container. The actual 277,585-byte archive round-trips the public
 corpus and is 15,246 bytes smaller than the committed 7-Zip result. MSR1 is not
 yet the stable writer because its whole-archive solid stream trades bounded
 memory and random access for ratio.
+Package v0.16 replaces the extreme LZMA preset with the bounded default preset
+while preserving the exact 277,585-byte final archive on the public corpus.
+Local encode time falls from 2.29 seconds to 1.17 seconds. Whole-archive
+buffering still blocks promotion; MSR2-style independently authenticated
+compressed frames are next.
 
 Parallel research tracks:
 

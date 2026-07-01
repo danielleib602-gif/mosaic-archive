@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.15 does
+## What v0.16 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -203,6 +203,13 @@ bytes (0.2643), 15,246 bytes smaller than the committed 7-Zip result of 292,831
 bytes (0.2788), and restores the corpus exactly. This remains an experimental
 whole-archive research format with higher memory use and slower encoding; MSC6
 continues to be the stable writer.
+
+The v0.16 experiment replaces LZMA preset 9 extreme with the default preset 6.
+The final corpus archive remains exactly 277,585 bytes, while the recorded local
+encode time falls from 2.29 seconds to 1.17 seconds and decode time from 0.077
+seconds to 0.049 seconds. This reduces the codec-state memory requirement, but
+MSR1 still buffers the full solid payload and ciphertext; framed streaming
+remains the next gate.
 
 ## Current limits
 
