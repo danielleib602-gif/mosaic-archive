@@ -234,6 +234,26 @@ class CliTests(unittest.TestCase):
                 (source / "data.txt").read_bytes(),
             )
 
+            benchmark = self.run_cli(
+                "benchmark",
+                str(source),
+                "--format",
+                "solid",
+                "--padding-size",
+                "256",
+                "--password",
+                "test-password",
+                "--kdf-log-n",
+                "14",
+                "--compare",
+                "--json",
+            )
+            self.assertEqual(benchmark.returncode, 0, benchmark.stderr)
+            report = json.loads(benchmark.stdout)
+            self.assertEqual(report["format_name"], "MSR2")
+            self.assertTrue(report["round_trip_verified"])
+            self.assertTrue(report["comparisons"]["zip"]["verified"])
+
 
 if __name__ == "__main__":
     unittest.main()
