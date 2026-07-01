@@ -160,7 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.21.0")
+    parser.add_argument("--version", action="version", version="msc 0.22.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")
@@ -195,6 +195,12 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_parser.add_argument("input", type=Path)
     _add_password_options(benchmark_parser)
     _add_common_encode_options(benchmark_parser)
+    benchmark_parser.add_argument(
+        "--format",
+        choices=("stable", "solid"),
+        default="stable",
+        help="archive format to benchmark (default: stable MSC6)",
+    )
     benchmark_parser.add_argument(
         "--compare",
         action="store_true",
@@ -253,6 +259,7 @@ def _run(arguments: argparse.Namespace) -> None:
             cdc_min_size=arguments.cdc_min_size,
             cdc_max_size=arguments.cdc_max_size,
             profile=arguments.profile,
+            archive_format=arguments.format,
             compare=arguments.compare,
         )
     else:

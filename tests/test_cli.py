@@ -21,11 +21,11 @@ class CliTests(unittest.TestCase):
             env=environment,
         )
 
-    def test_reports_v0_21_package_version(self) -> None:
+    def test_reports_v0_22_package_version(self) -> None:
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), "msc 0.21.0")
+        self.assertEqual(completed.stdout.strip(), "msc 0.22.0")
 
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -233,6 +233,26 @@ class CliTests(unittest.TestCase):
                 (restored / "data.txt").read_bytes(),
                 (source / "data.txt").read_bytes(),
             )
+
+            benchmark = self.run_cli(
+                "benchmark",
+                str(source),
+                "--format",
+                "solid",
+                "--padding-size",
+                "256",
+                "--password",
+                "test-password",
+                "--kdf-log-n",
+                "14",
+                "--compare",
+                "--json",
+            )
+            self.assertEqual(benchmark.returncode, 0, benchmark.stderr)
+            report = json.loads(benchmark.stdout)
+            self.assertEqual(report["format_name"], "MSR2")
+            self.assertTrue(report["round_trip_verified"])
+            self.assertTrue(report["comparisons"]["zip"]["verified"])
 
 
 if __name__ == "__main__":
