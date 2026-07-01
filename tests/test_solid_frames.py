@@ -5,7 +5,10 @@ import random
 import struct
 import unittest
 
-from mosaic_archive.exceptions import AuthenticationError, ArchiveFormatError
+from mosaic_archive.exceptions import (
+    ArchiveFormatError,
+    AuthenticationError,
+)
 from mosaic_archive.solid_frames import (
     SOLID_LANE_DELTA4,
     SOLID_LANE_HIGH_ENTROPY,
