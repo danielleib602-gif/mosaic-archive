@@ -22,10 +22,10 @@ _LANE_NAMES: Final = ("standard", "delta4", "high_entropy")
 _LANE_COUNT: Final = len(_LANE_NAMES)
 _MAX_CHUNKS: Final = 1_000_000
 _MAX_CHUNK_SIZE: Final = 16 * 1024 * 1024
-_PRESET: Final = 9 | lzma.PRESET_EXTREME
+SOLID_LZMA_PRESET: Final = lzma.PRESET_DEFAULT
 _DELTA_FILTERS: Final = (
     {"id": lzma.FILTER_DELTA, "dist": 4},
-    {"id": lzma.FILTER_LZMA2, "preset": _PRESET},
+    {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
 )
 
 
@@ -41,7 +41,7 @@ class SolidLaneEncoding:
 
 
 def _compress_standard(data: bytes) -> bytes:
-    return lzma.compress(data, preset=_PRESET) if data else b""
+    return lzma.compress(data, preset=SOLID_LZMA_PRESET) if data else b""
 
 
 def _compress_delta4(data: bytes) -> bytes:
