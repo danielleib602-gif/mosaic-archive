@@ -177,6 +177,10 @@ Package v0.22 adds format-aware `msc benchmark --format solid` reports with
 round-trip verification, frame bounds, memory/speed measurements, and optional
 ZIP/gzip/zstd/7-Zip comparisons. The stable MSC6 benchmark schema remains
 unchanged.
+Package v0.23 adds an AES-256 and header-encrypted 7-Zip baseline with a fixed
+public benchmark password. Hosted evidence records compact MSR2 at 276,115
+bytes versus encrypted 7-Zip at 292,912 bytes, while also recording MSR2's
+substantially slower encode time. Throughput optimization is next.
 
 Parallel research tracks:
 
