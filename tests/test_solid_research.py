@@ -17,6 +17,24 @@ from mosaic_archive.solid_research import decode_solid_chunks, encode_solid_chun
 
 
 class SolidLaneResearchTests(unittest.TestCase):
+    def test_committed_scorecard_is_verified_and_not_a_release_claim(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.14-solid-lanes.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertTrue(scorecard["prototype"]["round_trip_verified"])
+        self.assertLess(
+            scorecard["prototype"]["projected_archive_bytes"],
+            scorecard["committed_baselines"]["seven_zip_archive_bytes"],
+        )
+        self.assertEqual(
+            scorecard["corpus"]["manifest_sha256"],
+            "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+        )
+        self.assertIn("not an MSC archive or release claim", scorecard["status"])
+
     def test_three_content_routed_lanes_round_trip(self) -> None:
         random_bytes = random.Random(17).randbytes(64 * 1024)
         numeric = b"".join(struct.pack("<i", index * 3 - 100_000) for index in range(16_384))
