@@ -1,10 +1,14 @@
 # MSC format specification
 
-Status: experimental, version 0.6. Integer fields are unsigned and big-endian
+Status: experimental, package version 0.8. Integer fields are unsigned and big-endian
 unless stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and
 decoded blocks that do not match their declared sizes.
+
+Permanent encrypted fixtures for MSC1 through MSC6 live in
+`tests/fixtures/compat`. They are intentionally small, public test archives used
+to keep decoder compatibility honest while the project is still pre-1.0.
 
 ## MSC3 content-defined deduplicating format
 
