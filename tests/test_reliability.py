@@ -16,7 +16,7 @@ class ReliabilityHarnessTests(unittest.TestCase):
         second = run_parser_fuzz(seed=20260629, cases=22)
 
         self.assertEqual(first, second)
-        self.assertGreaterEqual(first.target_count, 11)
+        self.assertEqual(first.target_count, 14)
         self.assertEqual(first.executions, first.cases)
         self.assertEqual(
             first.executions,
