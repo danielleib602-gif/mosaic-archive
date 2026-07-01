@@ -14,6 +14,7 @@ from typing import Any, cast
 
 from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.benchmark import benchmark_path
+from mosaic_archive.compatibility import current_policy
 from mosaic_archive.exceptions import MosaicError
 from mosaic_archive.stream_archive import ProgressEvent
 
@@ -159,7 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.10.0")
+    parser.add_argument("--version", action="version", version="msc 0.11.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")
@@ -194,10 +195,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="also benchmark ZIP, gzip, zstd, and 7-Zip when supported/installed",
     )
     benchmark_parser.add_argument("--json", action="store_true")
+
+    compatibility_parser = subparsers.add_parser(
+        "compatibility",
+        help="show format, upgrade, and deprecation guarantees",
+    )
+    compatibility_parser.add_argument("--json", action="store_true")
     return parser
 
 
 def _run(arguments: argparse.Namespace) -> None:
+    if arguments.command == "compatibility":
+        _print_result(arguments.command, current_policy(), arguments.json)
+        return
     password = _password_from_args(arguments)
     progress = None
     if arguments.command in {"encode", "decode"}:
