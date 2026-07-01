@@ -33,7 +33,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.22.0",
+                release="0.23.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
             )
@@ -42,8 +42,22 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
-            self.assertEqual(report["release"], "0.22.0")
-            self.assertEqual(report["package_version"], "0.22.0")
+            self.assertEqual(report["release"], "0.23.0")
+            self.assertEqual(report["package_version"], "0.23.0")
+
+    def test_encrypted_baseline_scorecard_records_size_and_speed_tradeoff(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.23-encrypted-7zip.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(scorecard["msr2"]["archive_bytes"], 276115)
+        self.assertEqual(scorecard["seven_zip_encrypted"]["archive_bytes"], 292912)
+        self.assertEqual(scorecard["margin_bytes"], 16797)
+        self.assertGreater(
+            scorecard["msr2"]["encode_seconds"],
+            scorecard["seven_zip_encrypted"]["encode_seconds"],
+        )
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])
