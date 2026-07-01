@@ -33,7 +33,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.17.0",
+                release="0.18.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
             )
@@ -42,8 +42,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
-            self.assertEqual(report["release"], "0.17.0")
-            self.assertEqual(report["package_version"], "0.17.0")
+            self.assertEqual(report["release"], "0.18.0")
+            self.assertEqual(report["package_version"], "0.18.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])

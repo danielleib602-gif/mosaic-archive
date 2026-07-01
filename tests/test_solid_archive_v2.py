@@ -26,6 +26,15 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_committed_scorecard_records_an_actual_archive_win(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.18-msr2.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(scorecard["archive"]["round_trip_verified"])
+        self.assertEqual(scorecard["archive"]["archive_bytes"], 279699)
+        self.assertEqual(scorecard["archive"]["margin_vs_7zip_bytes"], 13132)
+        self.assertFalse(scorecard["archive"]["stable_writer"])
+
     def test_public_corpus_round_trip_beats_committed_7zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
