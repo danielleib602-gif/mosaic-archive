@@ -66,6 +66,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         )
         self.assertIn("published-benchmark/report.json", workflow)
         self.assertIn("published-benchmark/report.md", workflow)
+        self.assertIn("benchmark --format solid", workflow)
+        self.assertIn("solid-benchmark.json", workflow)
 
 
 if __name__ == "__main__":

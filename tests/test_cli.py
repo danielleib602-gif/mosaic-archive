@@ -253,6 +253,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(report["format_name"], "MSR2")
             self.assertTrue(report["round_trip_verified"])
             self.assertTrue(report["comparisons"]["zip"]["verified"])
+            self.assertIn("7z-encrypted", report["comparisons"])
 
 
 if __name__ == "__main__":
