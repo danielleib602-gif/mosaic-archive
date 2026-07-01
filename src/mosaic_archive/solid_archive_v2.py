@@ -32,7 +32,7 @@ from mosaic_archive.solid_frames import (
     read_solid_lane_frames,
     write_precompressed_solid_lane_frames,
 )
-from mosaic_archive.solid_research import _choose_lane
+from mosaic_archive.solid_research import choose_solid_lane
 from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT, frame_nonce
 
@@ -58,6 +58,7 @@ class SolidArchiveV2EncodeStats:
     frame_count: int
     maximum_frame_payload: int
     compression_passes: int
+    routing_trial_compressions: int
     elapsed_seconds: float
 
 
@@ -122,7 +123,7 @@ def _spool_lanes(
                     raise OSError(f"input changed while it was encoded: {path}")
                 digest.update(chunk)
                 if record.source_index == occurrence:
-                    lane = _choose_lane(chunk)
+                    lane = choose_solid_lane(chunk)
                     streams[lane].write(chunk)
                     raw_sizes[lane] += len(chunk)
                     assignments.append(lane)
@@ -342,6 +343,7 @@ def encode_solid_archive_v2(
         actual_frame_count,
         maximum_payload,
         1,
+        0,
         time.perf_counter() - started,
     )
 

@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.24 does
+## What v0.25 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -271,6 +271,12 @@ then splits that exact stream into authenticated frames. This removes the
 previous frame-count probe and second compression pass without changing a
 single archive byte. Hosted encode time falls from 1.889 to 1.757 seconds
 (7.0%); chunk routing and hashing now dominate the remaining gap.
+
+The v0.25 router replaces per-chunk standard-versus-delta trial compression
+with entropy and distance-4 residual features. It preserves the public
+corpus's lane assignments and exact 276,115-byte archive while reducing hosted
+encode time from 1.757 to 1.694 seconds (3.6%). Together, v0.24 and v0.25
+improve hosted encode time by 10.3%; hashing, scanning, and LZMA itself remain.
 
 ## Current limits
 

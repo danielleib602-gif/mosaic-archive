@@ -10,18 +10,47 @@ import tempfile
 import unittest
 import zlib
 from pathlib import Path
+from unittest.mock import patch
 
 from mosaic_archive.cdc import iter_content_defined_chunks
 from mosaic_archive.corpus import MANIFEST_NAME, generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError
+from mosaic_archive.solid_frames import (
+    SOLID_LANE_DELTA4,
+    SOLID_LANE_HIGH_ENTROPY,
+    SOLID_LANE_STANDARD,
+)
 from mosaic_archive.solid_research import (
     SOLID_LZMA_PRESET,
+    choose_solid_lane,
     decode_solid_chunks,
     encode_solid_chunks,
 )
 
 
 class SolidLaneResearchTests(unittest.TestCase):
+    def test_feature_router_avoids_trial_compression(self) -> None:
+        numeric = b"".join(struct.pack("<i", index * 3) for index in range(16_384))
+        text = b"compression is prediction\n" * 4096
+        random_data = random.Random(25).randbytes(64 * 1024)
+
+        with (
+            patch(
+                "mosaic_archive.solid_research._compress_standard",
+                side_effect=AssertionError("trial compression was called"),
+            ),
+            patch(
+                "mosaic_archive.solid_research._compress_delta4",
+                side_effect=AssertionError("trial compression was called"),
+            ),
+        ):
+            self.assertEqual(choose_solid_lane(numeric), SOLID_LANE_DELTA4)
+            self.assertEqual(choose_solid_lane(text), SOLID_LANE_STANDARD)
+            self.assertEqual(
+                choose_solid_lane(random_data),
+                SOLID_LANE_HIGH_ENTROPY,
+            )
+
     def test_solid_lanes_use_the_bounded_default_lzma_preset(self) -> None:
         self.assertEqual(SOLID_LZMA_PRESET, lzma.PRESET_DEFAULT)
         self.assertEqual(SOLID_LZMA_PRESET & lzma.PRESET_EXTREME, 0)

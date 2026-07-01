@@ -185,6 +185,11 @@ Package v0.24 separates continuous lane compression from authenticated framing,
 so each lane is compressed exactly once. Archive bytes remain 276,115 while
 hosted encode time improves from 1.889 to 1.757 seconds. Trial compression in
 the lane router is the next measured throughput target.
+Package v0.25 replaces trial compression in the lane router with entropy and
+distance-4 residual features. Hosted encode time improves from 1.757 to 1.694
+seconds with identical routing and archive bytes on the public corpus. Combined
+v0.24/v0.25 improvement is 10.3%; profiling the remaining scan/hash/LZMA work
+is next.
 
 Parallel research tracks:
 
