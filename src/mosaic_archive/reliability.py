@@ -22,6 +22,7 @@ from mosaic_archive.dedup_archive import (
 from mosaic_archive.dedup_format import MSC3_FLAGS, Msc3Header, parse_msc3_header
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.modes import ALL_MODES
+from mosaic_archive.solid_archive_v2 import Msr2Header, parse_msr2_header
 from mosaic_archive.stream_archive import (
     ENTRY_FILE,
     KIND_FILE,
@@ -126,6 +127,18 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
         kdf_p=1,
         frame_count=1,
     )
+    solid_header = Msr2Header(
+        kdf_log_n=14,
+        min_chunk_size=64,
+        avg_chunk_size=256,
+        max_chunk_size=1024,
+        padding_size=256,
+        frame_payload_size=1024,
+        unique_chunk_count=0,
+        salt=b"\x00" * 16,
+        nonce_prefix=b"\x00" * 4,
+        metadata_ciphertext_length=272,
+    )
     frame = FrameHeader(index=0, frame_type=FRAME_MANIFEST, ciphertext_length=16).pack()
     stream_manifest = serialize_manifest(
         Manifest(
@@ -153,6 +166,7 @@ def _parser_targets() -> tuple[_FuzzTarget, ...]:
         ("msc1-public-header", public, parse_public_header),
         ("msc2-public-header", stream_header.pack(), parse_msc2_header),
         ("msc3-public-header", dedup_header.pack(), parse_msc3_header),
+        ("msr2-public-header", solid_header.pack(), parse_msr2_header),
         ("frame-header", frame, parse_frame_header),
         ("msc2-manifest", stream_manifest, parse_stream_manifest),
         ("msc3-manifest", dedup_manifest, parse_content_defined_manifest),

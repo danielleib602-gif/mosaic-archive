@@ -62,6 +62,35 @@ class SolidArchiveV2DecodeStats:
     elapsed_seconds: float
 
 
+@dataclass(frozen=True, slots=True)
+class Msr2Header:
+    kdf_log_n: int
+    min_chunk_size: int
+    avg_chunk_size: int
+    max_chunk_size: int
+    padding_size: int
+    frame_payload_size: int
+    unique_chunk_count: int
+    salt: bytes
+    nonce_prefix: bytes
+    metadata_ciphertext_length: int
+
+    def pack(self) -> bytes:
+        return _HEADER.pack(
+            _MAGIC,
+            self.kdf_log_n,
+            self.min_chunk_size,
+            self.avg_chunk_size,
+            self.max_chunk_size,
+            self.padding_size,
+            self.frame_payload_size,
+            self.unique_chunk_count,
+            self.salt,
+            self.nonce_prefix,
+            self.metadata_ciphertext_length,
+        )
+
+
 def _spool_lanes(
     source: Path,
     manifest: DedupManifest,
@@ -182,8 +211,7 @@ def encode_solid_archive_v2(
             raise ValueError("MSR2 encrypted metadata exceeds its resource limit")
         padded_metadata = pad_payload(metadata, padding_size)
         metadata_ciphertext_length = len(padded_metadata) + AEAD_TAG_LENGTH
-        header = _HEADER.pack(
-            _MAGIC,
+        header = Msr2Header(
             kdf_log_n,
             config.min_size,
             config.avg_size,
@@ -194,7 +222,7 @@ def encode_solid_archive_v2(
             salt,
             nonce_prefix,
             metadata_ciphertext_length,
-        )
+        ).pack()
         metadata_ciphertext = encrypt(
             key,
             frame_nonce(nonce_prefix, 0),
@@ -261,12 +289,13 @@ def _read_exact(stream: BinaryIO, size: int, description: str) -> bytes:
     return data
 
 
-def _read_header(
-    stream: BinaryIO,
-) -> tuple[bytes, tuple[bytes, int, int, int, int, int, int, int, bytes, bytes, int]]:
-    header = _read_exact(stream, _HEADER.size, "header")
-    values = _HEADER.unpack(header)
+def parse_msr2_header(data: bytes) -> Msr2Header:
+    """Parse an exact MSR2 public header under strict resource limits."""
+    if len(data) != _HEADER.size:
+        raise ArchiveFormatError("MSR2 public header length is invalid")
+    values = _HEADER.unpack(data)
     magic, log_n, minimum, average, maximum, padding, frame_size = values[:7]
+    unique_count, salt, nonce_prefix, metadata_length = values[7:]
     metadata_length = values[-1]
     if (
         magic != _MAGIC
@@ -282,7 +311,23 @@ def _read_header(
         ChunkingConfig(minimum, average, maximum)
     except ValueError as error:
         raise ArchiveFormatError("MSR2 chunking limits are invalid") from error
-    return header, values
+    return Msr2Header(
+        log_n,
+        minimum,
+        average,
+        maximum,
+        padding,
+        frame_size,
+        unique_count,
+        salt,
+        nonce_prefix,
+        metadata_length,
+    )
+
+
+def _read_header(stream: BinaryIO) -> tuple[bytes, Msr2Header]:
+    serialized = _read_exact(stream, _HEADER.size, "header")
+    return serialized, parse_msr2_header(serialized)
 
 
 def _parse_metadata(
@@ -434,40 +479,31 @@ def decode_solid_archive_v2(
     archive, destination = Path(archive_path), Path(output_path)
     with archive.open("rb") as raw:
         stream = cast(BinaryIO, raw)
-        header, values = _read_header(stream)
-        (
-            _,
-            log_n,
-            minimum,
-            average,
-            maximum,
-            padding_size,
-            frame_size,
-            unique_count,
-            salt,
-            nonce_prefix,
-            metadata_length,
-        ) = values
-        config = ChunkingConfig(minimum, average, maximum)
-        key = derive_key(password, salt, log_n=log_n, r=8, p=1)
+        serialized_header, header = _read_header(stream)
+        config = ChunkingConfig(
+            header.min_chunk_size,
+            header.avg_chunk_size,
+            header.max_chunk_size,
+        )
+        key = derive_key(password, header.salt, log_n=header.kdf_log_n, r=8, p=1)
         metadata_ciphertext = _read_exact(
-            stream, metadata_length, "metadata ciphertext"
+            stream, header.metadata_ciphertext_length, "metadata ciphertext"
         )
         metadata = unpad_payload(
             decrypt(
                 key,
-                frame_nonce(nonce_prefix, 0),
+                frame_nonce(header.nonce_prefix, 0),
                 metadata_ciphertext,
-                header,
+                serialized_header,
             )
         )
         manifest, assignments, raw_sizes, frame_counts = _parse_metadata(
             metadata,
-            unique_count=unique_count,
+            unique_count=header.unique_chunk_count,
             config=config,
-            padding_size=padding_size,
-            salt=salt,
-            nonce_prefix=nonce_prefix,
+            padding_size=header.padding_size,
+            salt=header.salt,
+            nonce_prefix=header.nonce_prefix,
         )
         total_output_size = sum(entry.size for entry in manifest.entries)
         total_frame_count = sum(frame_counts)
@@ -475,7 +511,7 @@ def decode_solid_archive_v2(
             raise ArchiveFormatError("MSR2 restored size exceeds the decode limit")
         if total_frame_count > max_frame_count:
             raise ArchiveFormatError("MSR2 frame count exceeds the decode limit")
-        frame_aad = header + hashlib.sha256(metadata_ciphertext).digest()
+        frame_aad = serialized_header + hashlib.sha256(metadata_ciphertext).digest()
 
         with tempfile.TemporaryDirectory(prefix=f".{destination.name}.decode.") as spool_dir:
             lane_paths = tuple(Path(spool_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
@@ -486,14 +522,14 @@ def decode_solid_archive_v2(
                         stream,
                         lane_output,
                         key=key,
-                        nonce_prefix=nonce_prefix,
+                        nonce_prefix=header.nonce_prefix,
                         associated_data=frame_aad,
                         lane=lane,
                         start_index=index,
                         frame_count=frame_counts[lane],
                         expected_size=raw_sizes[lane],
-                        frame_payload_size=frame_size,
-                        padding_size=padding_size,
+                        frame_payload_size=header.frame_payload_size,
+                        padding_size=header.padding_size,
                     )
                 index = stats.next_index
             if stream.read(1):
@@ -532,7 +568,7 @@ def decode_solid_archive_v2(
         "MSR2",
         sum(entry.size for entry in manifest.entries),
         archive.stat().st_size,
-        unique_count,
+        header.unique_chunk_count,
         True,
         time.perf_counter() - started,
     )
