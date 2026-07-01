@@ -1,0 +1,28 @@
+name: Sustained reliability
+
+on:
+  pull_request:
+    paths:
+      - "src/mosaic_archive/reliability.py"
+      - "tests/test_reliability.py"
+      - ".github/workflows/reliability.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "41 2 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz-and-soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: uv sync --frozen
+      - run: uv run --frozen python -m mosaic_archive.reliability fuzz --seed 20260629 --cases 10000
+      - run: uv run --frozen python -m mosaic_archive.reliability soak --seed 20260629 --size-mib 256

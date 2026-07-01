@@ -58,15 +58,17 @@ folder destinations are never merged.
 
 File content is processed one chunk and authenticated frame at a time. The
 encrypted manifest is still held in memory and is capped at 256 MiB; entry,
-frame, chunk, padding, and KDF parameters also have explicit limits. Fuzzing,
-hard total-runtime budgets, and race-resistant source traversal are still
-required before a stable large-file release.
+frame, chunk, padding, and KDF parameters also have explicit limits. A weekly
+job runs 10,000 deterministic mutations under a 45-minute job budget and
+round-trips a streaming 256 MiB file. Coverage-guided fuzzing, larger soak
+tiers, and race-resistant source traversal are still required before a stable
+large-file release.
 
-Deterministic mutation tests exercise authenticated archive corruption and
-random malformed payloads across every codec. DEFLATE decoding uses an explicit
-authenticated output bound and rejects trailing compressed data. These tests
-improve failure coverage but are not a substitute for independent audit or
-coverage-guided native fuzzing.
+Deterministic mutation tests exercise authenticated archive corruption, every
+public header/frame parser, and malformed payloads across every codec. DEFLATE
+decoding uses an explicit authenticated output bound and rejects trailing
+compressed data. These tests improve failure coverage but are not a substitute
+for independent audit or coverage-guided native fuzzing.
 
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. It remains opt-in through the
