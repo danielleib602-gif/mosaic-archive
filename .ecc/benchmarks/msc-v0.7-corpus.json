@@ -1,0 +1,18 @@
+{
+  "archive_format_version": 6,
+  "archive_ratio": 0.5947591108,
+  "archive_size": 157017,
+  "compression_ratio": 0.5655849788,
+  "compressed_size": 149315,
+  "corpus": "generated seed=20260629 unit_size=16384",
+  "cross_file_dedup_saved_bytes": 32768,
+  "decode_seconds": 0.0842745,
+  "encode_seconds": 0.3877088,
+  "mode_distribution": {
+    "DEFLATE": 5,
+    "RAW": 4
+  },
+  "original_size": 264001,
+  "package_version": "0.7.0",
+  "round_trip_verified": true
+}
