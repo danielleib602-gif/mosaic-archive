@@ -1,0 +1,26 @@
+{
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407
+  },
+  "margin_bytes": 16797,
+  "margin_percent": 5.734829908982356,
+  "msr2": {
+    "archive_bytes": 276115,
+    "decode_seconds": 0.047870966000004955,
+    "encode_seconds": 1.8893821610000003,
+    "frame_count": 3,
+    "maximum_frame_payload_bytes": 263518,
+    "round_trip_verified": true
+  },
+  "schema_version": 1,
+  "seven_zip_encrypted": {
+    "archive_bytes": 292912,
+    "decode_seconds": 0.040853660999999875,
+    "encode_seconds": 0.07628679799999816,
+    "encryption": "AES-256 data and headers",
+    "round_trip_verified": true
+  },
+  "source_commit": "433a4748b1c18b4727e6a879c4c5b411917a0438",
+  "status": "hosted Linux evidence from private pull-request artifact"
+}

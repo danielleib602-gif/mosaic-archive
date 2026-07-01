@@ -34,6 +34,11 @@ jobs:
           benchmark-corpus published-benchmark --release 0.12.0
           --source-commit ${{ github.event.pull_request.head.sha || github.sha }}
           --kdf-log-n 14
+      - run: >
+          uv run --frozen msc benchmark --format solid benchmark-corpus
+          --padding-size 256 --kdf-log-n 14
+          --password mosaic-public-encrypted-comparison
+          --compare --json > solid-benchmark.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mosaic-benchmark-v0.12.0-${{ github.sha }}
@@ -41,4 +46,5 @@ jobs:
             benchmark-corpus/manifest.json
             published-benchmark/report.json
             published-benchmark/report.md
+            solid-benchmark.json
           if-no-files-found: error
