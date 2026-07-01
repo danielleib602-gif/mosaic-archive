@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.13 does
+## What v0.14 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
