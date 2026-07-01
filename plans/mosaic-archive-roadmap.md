@@ -155,6 +155,10 @@ keeps continuous LZMA history while emitting bounded, independently numbered
 ChaCha20-Poly1305 frames. The public-corpus component measurement adds 2,246
 bytes over the raw compressed lanes and leaves a projected 13,000-byte margin
 against 7-Zip. Full MSR2 container integration remains the next milestone.
+Package v0.18 integrates the primitive into the disk-backed MSR2 container.
+The actual encrypted, padded 279,699-byte public-corpus archive round-trips and
+beats 7-Zip by 13,132 bytes without buffering the whole solid payload or
+ciphertext. Parser hardening and broader-corpus validation are next.
 
 Parallel research tracks:
 

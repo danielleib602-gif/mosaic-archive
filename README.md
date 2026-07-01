@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.17 does
+## What v0.18 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -219,6 +219,14 @@ truncated, or modified streams. On the public corpus the three lane frames use
 that measured cost to MSR1 projects 279,831 bytes, leaving 13,000 bytes against
 the committed 7-Zip result. This is a component measurement, not an end-to-end
 MSR2 claim; container integration is the next gate.
+
+The v0.18 MSR2 experiment completes that integration with encrypted routing
+metadata, disk-backed lane and canonical-chunk spools, continuous compression
+history, and independently authenticated bounded frames. Its actual public
+corpus archive is 279,699 bytes (0.2663), 13,132 bytes smaller than 7-Zip, and
+restores exactly. Local encode/decode measurements were 1.22/0.053 seconds.
+MSR2 remains experimental while parser hardening and broader corpus evaluation
+continue; MSC6 is still the stable writer.
 
 ## Current limits
 

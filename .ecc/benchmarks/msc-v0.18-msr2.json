@@ -1,0 +1,31 @@
+{
+  "archive": {
+    "archive_bytes": 279699,
+    "archive_ratio": 0.26627678604578986,
+    "decode_seconds": 0.05276459999731742,
+    "encode_seconds": 1.223268100002315,
+    "format": "MSR2",
+    "frame_count": 3,
+    "margin_vs_7zip_bytes": 13132,
+    "maximum_frame_payload_bytes": 263576,
+    "round_trip_verified": true,
+    "stable_writer": false
+  },
+  "baseline": {
+    "seven_zip_archive_bytes": 292831,
+    "seven_zip_ratio": 0.27877860676861443
+  },
+  "configuration": {
+    "frame_payload_limit_bytes": 1048576,
+    "padding_size_bytes": 1024,
+    "scrypt_log_n": 14
+  },
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407,
+    "unique_chunk_count": 13
+  },
+  "schema_version": 1,
+  "source_commit": "cb8259e",
+  "status": "experimental streaming MSR2 archive; MSC6 remains the stable writer"
+}
