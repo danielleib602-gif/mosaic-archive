@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.19 does
+## What v0.20 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -236,6 +236,15 @@ each one-lane category in the public corpus. Category results are mixed and
 reported plainly: MSR2 beats ZIP on structured, numeric, and duplicate-heavy
 data, but its encrypted container remains about 1.5–2 KiB larger on tiny text,
 random, and precompressed subsets.
+
+The v0.20 compact experiment compresses authenticated routing metadata and uses
+raw LZMA2 lane streams while retaining legacy MSR2 metadata decoding. With
+explicit 256-byte padding, the mixed corpus reaches 276,115 bytes, 16,716 bytes
+below 7-Zip. The text subset now reaches 607 bytes versus ZIP's 680, while
+structured, numeric, and duplicate-heavy subsets also win. Random and
+precompressed subsets remain 449 and 401 bytes larger than ZIP because MSR2
+also carries encryption, authentication, and restoration metadata. The compact
+profile leaks length at 256-byte rather than 1 KiB granularity.
 
 ## Current limits
 
