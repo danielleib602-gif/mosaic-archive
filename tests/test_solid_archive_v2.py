@@ -56,6 +56,25 @@ class StreamingSolidArchiveTests(unittest.TestCase):
 
             self.assertFalse(output.parent.exists())
 
+    def test_empty_solid_lanes_do_not_emit_padded_frames(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "source.txt", root / "archive.msr", root / "out"
+            source.write_bytes(b"the same compact sentence\n" * 4096)
+
+            encoded = encode_solid_archive_v2(
+                source,
+                archive,
+                "secret",
+                kdf_log_n=14,
+            )
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertEqual(encoded.frame_count, 1)
+            self.assertLess(encoded.archive_size, 3000)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), source.read_bytes())
+
     def test_committed_scorecard_records_an_actual_archive_win(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.18-msr2.json").read_text(encoding="utf-8")
