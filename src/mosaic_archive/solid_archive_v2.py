@@ -37,6 +37,8 @@ _METADATA_PREFIX: Final = struct.Struct(">QI")
 _LANE_RECORD: Final = struct.Struct(">QI")
 _LANE_COUNT: Final = 3
 _MAX_METADATA_CIPHERTEXT: Final = 64 * 1024 * 1024
+DEFAULT_MAX_OUTPUT_SIZE: Final = 1024 * 1024 * 1024 * 1024
+DEFAULT_MAX_FRAME_COUNT: Final = 1_000_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -421,11 +423,15 @@ def decode_solid_archive_v2(
     archive_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
     password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
 ) -> SolidArchiveV2DecodeStats:
     """Authenticate, disk-spool, and atomically restore an MSR2 archive."""
+    if max_output_size < 0 or max_frame_count <= 0:
+        raise ValueError("MSR2 decode limits must be positive")
     started = time.perf_counter()
     archive, destination = Path(archive_path), Path(output_path)
-    destination.parent.mkdir(parents=True, exist_ok=True)
     with archive.open("rb") as raw:
         stream = cast(BinaryIO, raw)
         header, values = _read_header(stream)
@@ -463,11 +469,15 @@ def decode_solid_archive_v2(
             salt=salt,
             nonce_prefix=nonce_prefix,
         )
+        total_output_size = sum(entry.size for entry in manifest.entries)
+        total_frame_count = sum(frame_counts)
+        if total_output_size > max_output_size:
+            raise ArchiveFormatError("MSR2 restored size exceeds the decode limit")
+        if total_frame_count > max_frame_count:
+            raise ArchiveFormatError("MSR2 frame count exceeds the decode limit")
         frame_aad = header + hashlib.sha256(metadata_ciphertext).digest()
 
-        with tempfile.TemporaryDirectory(
-            dir=destination.parent, prefix=f".{destination.name}.decode."
-        ) as spool_dir:
+        with tempfile.TemporaryDirectory(prefix=f".{destination.name}.decode.") as spool_dir:
             lane_paths = tuple(Path(spool_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
             index = 1
             for lane, path in enumerate(lane_paths):
