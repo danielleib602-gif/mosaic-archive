@@ -190,6 +190,11 @@ distance-4 residual features. Hosted encode time improves from 1.757 to 1.694
 seconds with identical routing and archive bytes on the public corpus. Combined
 v0.24/v0.25 improvement is 10.3%; profiling the remaining scan/hash/LZMA work
 is next.
+Package v0.26 fuses dedup discovery and unique-chunk lane spooling into one
+content-defined chunking traversal. The public archive remains 276,115 bytes
+while hosted encode time improves from 1.694 to 1.082 seconds. The cumulative
+v0.23-to-v0.26 improvement is 42.7%; optimizing feature extraction without
+changing lane decisions is the next measured throughput target.
 
 Parallel research tracks:
 
