@@ -130,6 +130,20 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(categories["random"]["delta_vs_zip_bytes"], 1985)
         self.assertTrue(all(row["round_trip_verified"] for row in categories.values()))
 
+    def test_v0_20_compact_scorecard_beats_zip_except_on_incompressible_inputs(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.20-compact-suite.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        categories = {row["category"]: row for row in scorecard["categories"]}
+        self.assertEqual(scorecard["mixed"]["archive_bytes"], 276115)
+        self.assertEqual(scorecard["mixed"]["margin_vs_7zip_bytes"], 16716)
+        self.assertEqual(categories["text"]["delta_vs_zip_bytes"], -73)
+        self.assertEqual(categories["random"]["delta_vs_zip_bytes"], 449)
+
     def test_public_corpus_round_trip_beats_committed_7zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
