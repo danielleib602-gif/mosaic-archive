@@ -13,6 +13,8 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
+_PUBLIC_BENCHMARK_PASSWORD = "mosaic-public-encrypted-comparison"
+
 
 @dataclass(frozen=True, slots=True)
 class ComparisonResult:
@@ -278,7 +280,71 @@ def _compare_7z(source: Path, root: Path) -> ComparisonResult:
     )
 
 
-def compare_common_tools(source: Path, root: Path) -> dict[str, ComparisonResult]:
+def _compare_7z_encrypted(source: Path, root: Path) -> ComparisonResult:
+    executable = next(
+        (candidate for name in ("7z", "7zz", "7za") if (candidate := shutil.which(name))),
+        None,
+    )
+    if executable is None:
+        return ComparisonResult(
+            False,
+            False,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "7-Zip executable not found; AES-256 encryption comparison unavailable",
+        )
+    archive = root / "comparison-encrypted.7z"
+    restored_root = root / "7z-encrypted-restored"
+    restored_root.mkdir()
+    password_switch = f"-p{_PUBLIC_BENCHMARK_PASSWORD}"
+    encode_seconds = _run(
+        [
+            executable,
+            "a",
+            "-bd",
+            "-y",
+            password_switch,
+            "-mhe=on",
+            str(archive),
+            source.name,
+        ],
+        cwd=source.parent,
+    )
+    decode_seconds = _run(
+        [
+            executable,
+            "x",
+            "-bd",
+            "-y",
+            password_switch,
+            f"-o{restored_root}",
+            str(archive),
+        ],
+        cwd=root,
+    )
+    restored = restored_root / source.name
+    return _result(
+        archive,
+        _total_size(source),
+        encode_seconds,
+        decode_seconds,
+        _digest(source) == _digest(restored),
+        (
+            "7z defaults with AES-256 data and header encryption; "
+            "fixed public benchmark password"
+        ),
+    )
+
+
+def compare_common_tools(
+    source: Path,
+    root: Path,
+    *,
+    include_encrypted_7zip: bool = False,
+) -> dict[str, ComparisonResult]:
     root.mkdir(parents=True, exist_ok=True)
     comparisons: dict[str, ComparisonResult] = {}
     for name, adapter in (
@@ -286,6 +352,7 @@ def compare_common_tools(source: Path, root: Path) -> dict[str, ComparisonResult
         ("gzip", _compare_gzip),
         ("zstd", _compare_zstd),
         ("7z", _compare_7z),
+        *((("7z-encrypted", _compare_7z_encrypted),) if include_encrypted_7zip else ()),
     ):
         try:
             adapter_root = root / name

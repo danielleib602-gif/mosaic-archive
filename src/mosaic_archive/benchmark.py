@@ -366,7 +366,13 @@ def _benchmark_solid_path(
 
         original_size = encode_stats.original_size
         comparisons = (
-            compare_common_tools(source, root / "comparisons") if compare else {}
+            compare_common_tools(
+                source,
+                root / "comparisons",
+                include_encrypted_7zip=True,
+            )
+            if compare
+            else {}
         )
         return SolidBenchmarkReport(
             format_name=encode_stats.format_name,
