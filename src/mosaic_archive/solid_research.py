@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import lzma
+import math
 import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -52,14 +53,30 @@ def _compress_delta4(data: bytes) -> bytes:
     )
 
 
-def _choose_lane(chunk: bytes) -> int:
+def _delta4_entropy_bits_per_byte(chunk: bytes) -> float:
+    if len(chunk) <= 4:
+        return 0.0
+    counts = [0] * 256
+    for index in range(4, len(chunk)):
+        counts[(chunk[index] - chunk[index - 4]) & 0xFF] += 1
+    total = len(chunk) - 4
+    return -sum(
+        (count / total) * math.log2(count / total)
+        for count in counts
+        if count
+    )
+
+
+def choose_solid_lane(chunk: bytes) -> int:
+    """Route from cheap byte features without trial-compressing the chunk."""
     if not chunk:
         return _STANDARD
-    if analyze_block(chunk).entropy_bits_per_byte >= 7.75:
+    entropy = analyze_block(chunk).entropy_bits_per_byte
+    if entropy >= 7.75:
         return _HIGH_ENTROPY
-    standard_size = len(_compress_standard(chunk))
-    delta_size = len(_compress_delta4(chunk))
-    return _DELTA4 if delta_size * 2 < standard_size else _STANDARD
+    if entropy >= 3.0 and entropy - _delta4_entropy_bits_per_byte(chunk) >= 2.0:
+        return _DELTA4
+    return _STANDARD
 
 
 def encode_solid_chunks(chunks: Sequence[bytes]) -> SolidLaneEncoding:
@@ -74,7 +91,7 @@ def encode_solid_chunks(chunks: Sequence[bytes]) -> SolidLaneEncoding:
     descriptors: list[tuple[int, int]] = []
     counts = [0] * _LANE_COUNT
     for chunk in normalized:
-        lane = _choose_lane(chunk)
+        lane = choose_solid_lane(chunk)
         lanes[lane].extend(chunk)
         descriptors.append((lane, len(chunk)))
         counts[lane] += 1
