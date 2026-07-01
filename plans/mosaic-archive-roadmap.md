@@ -195,6 +195,12 @@ content-defined chunking traversal. The public archive remains 276,115 bytes
 while hosted encode time improves from 1.694 to 1.082 seconds. The cumulative
 v0.23-to-v0.26 improvement is 42.7%; optimizing feature extraction without
 changing lane decisions is the next measured throughput target.
+Package v0.27 specializes solid routing to byte entropy plus conditional
+distance-4 entropy, avoiding six general block features that cannot affect the
+lane decision. Hosted encode time improves from 1.082 to 0.940 seconds with
+the same 276,115-byte archive. The cumulative v0.23-to-v0.27 improvement is
+50.3%; the rolling chunker and remaining Python delta pass are the next
+throughput candidates.
 
 Parallel research tracks:
 

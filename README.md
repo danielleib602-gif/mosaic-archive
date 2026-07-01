@@ -286,6 +286,13 @@ time falls from 1.694 to 1.082 seconds (36.1%). The cumulative hosted
 improvement since v0.23 is 42.7%; feature analysis now dominates the Python
 side of the remaining encode work.
 
+The v0.27 router computes only the byte entropy needed for its first decision
+instead of invoking the general-purpose block analyzer and discarding six
+unrelated feature families. Distance-4 entropy remains conditional, so chunks
+that already classify as standard or high-entropy avoid it. Hosted encode time
+falls from 1.082 to 0.940 seconds (13.2%) with the same 276,115-byte archive.
+Together, v0.24 through v0.27 cut the v0.23 hosted encode time by 50.3%.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across

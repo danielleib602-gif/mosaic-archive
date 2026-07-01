@@ -1,0 +1,19 @@
+{
+  "after": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.939649990999996,
+    "general_block_analysis": false,
+    "round_trip_verified": true
+  },
+  "before": {
+    "archive_bytes": 276115,
+    "encode_seconds": 1.0820388379999883,
+    "general_block_analysis": true,
+    "round_trip_verified": true
+  },
+  "combined_improvement_vs_v0_23_percent": 50.267165,
+  "encode_improvement_percent": 13.15931,
+  "schema_version": 1,
+  "source_commit": "a8bafb0cd5cc356dd3f403729fc9b5eaa9657db5",
+  "status": "hosted Linux before/after evidence; exact archive size preserved"
+}
