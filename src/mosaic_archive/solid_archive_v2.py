@@ -8,6 +8,7 @@ import shutil
 import struct
 import tempfile
 import time
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Final, cast
@@ -37,6 +38,9 @@ _METADATA_PREFIX: Final = struct.Struct(">QI")
 _LANE_RECORD: Final = struct.Struct(">QI")
 _LANE_COUNT: Final = 3
 _MAX_METADATA_CIPHERTEXT: Final = 64 * 1024 * 1024
+_METADATA_MAGIC: Final = b"MDZ1"
+_METADATA_ENVELOPE: Final = struct.Struct(">4sBQ")
+_RAW_LZMA2_CODEC: Final = 1
 DEFAULT_MAX_OUTPUT_SIZE: Final = 1024 * 1024 * 1024 * 1024
 DEFAULT_MAX_FRAME_COUNT: Final = 1_000_000
 
@@ -140,6 +144,47 @@ def _metadata(
     return bytes(output)
 
 
+def _encode_metadata_envelope(payload: bytes) -> bytes:
+    return _METADATA_ENVELOPE.pack(
+        _METADATA_MAGIC,
+        _RAW_LZMA2_CODEC,
+        len(payload),
+    ) + zlib.compress(payload, level=9)
+
+
+def _decode_metadata_envelope(payload: bytes) -> tuple[bytes, bool]:
+    if not payload.startswith(_METADATA_MAGIC):
+        return payload, False
+    if len(payload) < _METADATA_ENVELOPE.size:
+        raise ArchiveFormatError("MSR2 metadata envelope is truncated")
+    magic, codec, expected_size = _METADATA_ENVELOPE.unpack_from(payload)
+    if (
+        magic != _METADATA_MAGIC
+        or codec != _RAW_LZMA2_CODEC
+        or expected_size > MAX_MANIFEST_CIPHERTEXT
+    ):
+        raise ArchiveFormatError("MSR2 metadata envelope is invalid")
+    decoder = zlib.decompressobj()
+    try:
+        decoded = decoder.decompress(
+            payload[_METADATA_ENVELOPE.size :],
+            expected_size + 1,
+        )
+        if len(decoded) > expected_size or decoder.unconsumed_tail:
+            raise ArchiveFormatError("MSR2 compressed metadata exceeds its size bound")
+        decoded += decoder.flush()
+    except zlib.error as error:
+        raise ArchiveFormatError("MSR2 compressed metadata is malformed") from error
+    if (
+        len(decoded) != expected_size
+        or not decoder.eof
+        or decoder.unused_data
+        or decoder.unconsumed_tail
+    ):
+        raise ArchiveFormatError("MSR2 compressed metadata size is inconsistent")
+    return decoded, True
+
+
 def encode_solid_archive_v2(
     input_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
@@ -205,11 +250,14 @@ def encode_solid_archive_v2(
                         start_index=index,
                         frame_payload_size=frame_payload_size,
                         padding_size=padding_size,
+                        raw_lzma2=True,
                     )
                 probe_counts.append(stats.frame_count)
                 index = stats.next_index
         frame_counts = cast(tuple[int, int, int], tuple(probe_counts))
-        metadata = _metadata(manifest, assignments, raw_sizes, frame_counts)
+        metadata = _encode_metadata_envelope(
+            _metadata(manifest, assignments, raw_sizes, frame_counts)
+        )
         if len(metadata) > MAX_MANIFEST_CIPHERTEXT:
             raise ValueError("MSR2 encrypted metadata exceeds its resource limit")
         padded_metadata = pad_payload(metadata, padding_size)
@@ -262,6 +310,7 @@ def encode_solid_archive_v2(
                             start_index=index,
                             frame_payload_size=frame_payload_size,
                             padding_size=padding_size,
+                            raw_lzma2=True,
                         )
                     if stats.frame_count != frame_counts[lane]:
                         raise RuntimeError("MSR2 frame probe was not deterministic")
@@ -502,8 +551,9 @@ def decode_solid_archive_v2(
                 serialized_header,
             )
         )
+        raw_metadata, raw_lzma2 = _decode_metadata_envelope(metadata)
         manifest, assignments, raw_sizes, frame_counts = _parse_metadata(
-            metadata,
+            raw_metadata,
             unique_count=header.unique_chunk_count,
             config=config,
             padding_size=header.padding_size,
@@ -538,6 +588,7 @@ def decode_solid_archive_v2(
                         expected_size=raw_sizes[lane],
                         frame_payload_size=header.frame_payload_size,
                         padding_size=header.padding_size,
+                        raw_lzma2=raw_lzma2,
                     )
                 index = stats.next_index
             if stream.read(1):

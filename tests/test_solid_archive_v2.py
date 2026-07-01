@@ -10,6 +10,7 @@ from pathlib import Path
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
+    _decode_metadata_envelope,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
@@ -26,6 +27,14 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
+        self,
+    ) -> None:
+        legacy = b"legacy MSR2 metadata"
+        self.assertEqual(_decode_metadata_envelope(legacy), (legacy, False))
+        with self.assertRaises(ArchiveFormatError):
+            _decode_metadata_envelope(b"MDZ1\x01")
+
     def test_decode_limits_reject_expansion_and_frame_budgets_before_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
