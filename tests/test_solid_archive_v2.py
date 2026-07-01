@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from mosaic_archive import dedup_archive, solid_archive_v2
+from mosaic_archive import dedup_archive
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
@@ -35,18 +35,11 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             source, archive = root / "source.bin", root / "archive.msr"
             source.write_bytes((b"single-pass chunking evidence\n" * 8192) + bytes(range(256)))
 
-            with (
-                patch.object(
-                    dedup_archive,
-                    "iter_content_defined_chunks",
-                    wraps=dedup_archive.iter_content_defined_chunks,
-                ) as manifest_chunker,
-                patch.object(
-                    solid_archive_v2,
-                    "iter_content_defined_chunks",
-                    wraps=solid_archive_v2.iter_content_defined_chunks,
-                ) as spool_chunker,
-            ):
+            with patch.object(
+                dedup_archive,
+                "iter_content_defined_chunks",
+                wraps=dedup_archive.iter_content_defined_chunks,
+            ) as chunker:
                 encoded = encode_solid_archive_v2(
                     source,
                     archive,
@@ -54,10 +47,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
                     kdf_log_n=14,
                 )
 
-            self.assertEqual(
-                manifest_chunker.call_count + spool_chunker.call_count,
-                1,
-            )
+            self.assertEqual(chunker.call_count, 1)
             self.assertEqual(encoded.chunking_passes, 1)
 
     def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
