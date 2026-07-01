@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import lzma
 import random
 import struct
 import tempfile
@@ -13,10 +14,18 @@ from pathlib import Path
 from mosaic_archive.cdc import iter_content_defined_chunks
 from mosaic_archive.corpus import MANIFEST_NAME, generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError
-from mosaic_archive.solid_research import decode_solid_chunks, encode_solid_chunks
+from mosaic_archive.solid_research import (
+    SOLID_LZMA_PRESET,
+    decode_solid_chunks,
+    encode_solid_chunks,
+)
 
 
 class SolidLaneResearchTests(unittest.TestCase):
+    def test_solid_lanes_use_the_bounded_default_lzma_preset(self) -> None:
+        self.assertEqual(SOLID_LZMA_PRESET, lzma.PRESET_DEFAULT)
+        self.assertEqual(SOLID_LZMA_PRESET & lzma.PRESET_EXTREME, 0)
+
     def test_committed_scorecard_is_verified_and_not_a_release_claim(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.14-solid-lanes.json").read_text(
