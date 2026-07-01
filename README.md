@@ -188,6 +188,15 @@ padded archive reached a 0.471 ratio, better than ZIP/gzip on this duplicate-ric
 tree, while zstd reached 0.349 and 7-Zip 0.279. Mosaic encoding was substantially
 slower, making throughput and entropy coding the clearest optimization targets.
 
+The v0.14 solid-lane prototype closes that ratio gap at the research-payload
+layer. Exact deduplication is followed by three file-agnostic solid LZMA lanes:
+ordinary compressible chunks, delta-4 numeric chunks, and high-entropy chunks
+that may still share distant content. On the byte-identical corpus it produced
+274,400 payload bytes. Reserving a conservative 16 KiB for the future manifest,
+encryption, authentication, and padding projects a 290,784-byte archive, 2,047
+bytes below the committed 7-Zip result. This is not yet an MSC archive or a
+release claim; integration must prove the full end-to-end result.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across
