@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.14 does
+## What v0.15 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -196,6 +196,13 @@ that may still share distant content. On the byte-identical corpus it produced
 encryption, authentication, and padding projects a 290,784-byte archive, 2,047
 bytes below the committed 7-Zip result. This is not yet an MSC archive or a
 release claim; integration must prove the full end-to-end result.
+
+The v0.15 MSR1 experiment proves that integration end to end: the actual
+scrypt-derived, ChaCha20-Poly1305-authenticated, 1 KiB-padded archive is 277,585
+bytes (0.2643), 15,246 bytes smaller than the committed 7-Zip result of 292,831
+bytes (0.2788), and restores the corpus exactly. This remains an experimental
+whole-archive research format with higher memory use and slower encoding; MSC6
+continues to be the stable writer.
 
 ## Current limits
 

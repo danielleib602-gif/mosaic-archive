@@ -140,6 +140,11 @@ chunk stream. Its verified 274,400-byte research payload leaves a conservative
 16 KiB integration budget and projects 2,047 bytes below the committed 7-Zip
 result. This is evidence for an experimental next format, not yet an end-to-end
 archive claim.
+Package v0.15 integrates those lanes into a separate encrypted and padded MSR1
+research container. The actual 277,585-byte archive round-trips the public
+corpus and is 15,246 bytes smaller than the committed 7-Zip result. MSR1 is not
+yet the stable writer because its whole-archive solid stream trades bounded
+memory and random access for ratio.
 
 Parallel research tracks:
 
