@@ -1,0 +1,68 @@
+{
+  "categories": [
+    {
+      "category": "text",
+      "delta_vs_zip_bytes": -73,
+      "msr2_bytes": 607,
+      "round_trip_verified": true,
+      "zip_bytes": 680
+    },
+    {
+      "category": "structured",
+      "delta_vs_zip_bytes": -3977,
+      "msr2_bytes": 10079,
+      "round_trip_verified": true,
+      "zip_bytes": 14056
+    },
+    {
+      "category": "numeric",
+      "delta_vs_zip_bytes": -45102,
+      "msr2_bytes": 607,
+      "round_trip_verified": true,
+      "zip_bytes": 45709
+    },
+    {
+      "category": "dedup",
+      "delta_vs_zip_bytes": -261721,
+      "msr2_bytes": 131935,
+      "round_trip_verified": true,
+      "zip_bytes": 393656
+    },
+    {
+      "category": "random",
+      "delta_vs_zip_bytes": 449,
+      "msr2_bytes": 131679,
+      "round_trip_verified": true,
+      "zip_bytes": 131230
+    },
+    {
+      "category": "precompressed",
+      "delta_vs_zip_bytes": 401,
+      "msr2_bytes": 131679,
+      "round_trip_verified": true,
+      "zip_bytes": 131278
+    },
+    {
+      "category": "empty",
+      "delta_vs_zip_bytes": 111,
+      "msr2_bytes": 325,
+      "round_trip_verified": true,
+      "zip_bytes": 214
+    }
+  ],
+  "configuration": {
+    "metadata_codec": "zlib-9",
+    "padding_size_bytes": 256,
+    "solid_codec": "raw-lzma2-preset-6"
+  },
+  "mixed": {
+    "archive_bytes": 276115,
+    "margin_vs_7zip_bytes": 16716,
+    "original_bytes": 1050407,
+    "round_trip_verified": true,
+    "seven_zip_bytes": 292831
+  },
+  "schema_version": 1,
+  "source_commit": "b1a35d3",
+  "status": "experimental compact MSR2 profile; 256-byte padding reveals finer size buckets"
+}

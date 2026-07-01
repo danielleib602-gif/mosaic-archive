@@ -29,6 +29,7 @@ _DELTA_FILTERS: Final = (
     {"id": lzma.FILTER_DELTA, "dist": 4},
     {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
 )
+_RAW_LZMA2_FILTERS: Final = ({"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,20 +64,30 @@ def _validate_options(
         raise ValueError("solid frame padding size is invalid")
 
 
-def _compressor(lane: int) -> lzma.LZMACompressor:
+def _compressor(lane: int, raw_lzma2: bool) -> lzma.LZMACompressor:
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMACompressor(
             format=lzma.FORMAT_RAW,
             filters=list(_DELTA_FILTERS),
         )
+    if raw_lzma2:
+        return lzma.LZMACompressor(
+            format=lzma.FORMAT_RAW,
+            filters=list(_RAW_LZMA2_FILTERS),
+        )
     return lzma.LZMACompressor(format=lzma.FORMAT_XZ, preset=SOLID_LZMA_PRESET)
 
 
-def _decompressor(lane: int) -> lzma.LZMADecompressor:
+def _decompressor(lane: int, raw_lzma2: bool) -> lzma.LZMADecompressor:
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMADecompressor(
             format=lzma.FORMAT_RAW,
             filters=list(_DELTA_FILTERS),
+        )
+    if raw_lzma2:
+        return lzma.LZMADecompressor(
+            format=lzma.FORMAT_RAW,
+            filters=list(_RAW_LZMA2_FILTERS),
         )
     return lzma.LZMADecompressor(format=lzma.FORMAT_XZ)
 
@@ -92,12 +103,13 @@ def write_solid_lane_frames(
     start_index: int,
     frame_payload_size: int = 1024 * 1024,
     padding_size: int = 1024,
+    raw_lzma2: bool = False,
 ) -> SolidFrameWriteStats:
     """Compress one continuous lane and emit bounded authenticated frames."""
     _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
     if not 0 <= start_index <= 0xFFFFFFFF:
         raise ValueError("solid frame start index is outside the uint32 range")
-    compressor = _compressor(lane)
+    compressor = _compressor(lane, raw_lzma2)
     pending = bytearray()
     index = start_index
     compressed_size = padded_size = maximum = 0
@@ -165,12 +177,13 @@ def read_solid_lane_frames(
     expected_size: int,
     frame_payload_size: int = 1024 * 1024,
     padding_size: int = 1024,
+    raw_lzma2: bool = False,
 ) -> SolidFrameReadStats:
     """Authenticate and incrementally decompress one continuous lane."""
     _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
     if frame_count <= 0 or expected_size < 0:
         raise ArchiveFormatError("solid frame count or decoded size is invalid")
-    decoder = _decompressor(lane)
+    decoder = _decompressor(lane, raw_lzma2)
     decoded_size = 0
     maximum_padded = (
         (8 + frame_payload_size + padding_size - 1) // padding_size

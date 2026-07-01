@@ -164,6 +164,11 @@ destination-side effects until authentication succeeds, and adds the MSR2
 header to both mutation harnesses. Empty lanes no longer cost padded frames.
 The category suite records strong structured/numeric/dedup wins and honest
 small-text/random/precompressed losses; model and overhead routing are next.
+Package v0.20 compresses the authenticated metadata envelope and removes XZ
+wrapper overhead from new solid lanes, while retaining legacy MSR2 metadata
+decoding. Its explicit 256-byte compact-padding result is 276,115 bytes on the
+mixed corpus and now beats ZIP on the text subset. Random/precompressed data
+still exposes the small unavoidable authenticated-container overhead.
 
 Parallel research tracks:
 

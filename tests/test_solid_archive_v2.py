@@ -10,6 +10,7 @@ from pathlib import Path
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
+    _decode_metadata_envelope,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
@@ -26,6 +27,14 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
+        self,
+    ) -> None:
+        legacy = b"legacy MSR2 metadata"
+        self.assertEqual(_decode_metadata_envelope(legacy), (legacy, False))
+        with self.assertRaises(ArchiveFormatError):
+            _decode_metadata_envelope(b"MDZ1\x01")
+
     def test_decode_limits_reject_expansion_and_frame_budgets_before_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -81,6 +90,25 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertTrue(decoded.hash_verified)
             self.assertEqual(restored.read_bytes(), source.read_bytes())
 
+    def test_compact_padding_beats_zip_on_the_text_category(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            corpus, archive, restored = root / "corpus", root / "text.msr", root / "out"
+            generate_corpus(corpus)
+
+            encoded = encode_solid_archive_v2(
+                corpus / "text",
+                archive,
+                "secret",
+                padding_size=256,
+                kdf_log_n=14,
+            )
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertLess(encoded.archive_size, 680)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(_tree_digest(corpus / "text"), _tree_digest(restored))
+
     def test_committed_scorecard_records_an_actual_archive_win(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.18-msr2.json").read_text(encoding="utf-8")
@@ -101,6 +129,20 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(categories["text"]["delta_vs_zip_bytes"], 1463)
         self.assertEqual(categories["random"]["delta_vs_zip_bytes"], 1985)
         self.assertTrue(all(row["round_trip_verified"] for row in categories.values()))
+
+    def test_v0_20_compact_scorecard_beats_zip_except_on_incompressible_inputs(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.20-compact-suite.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        categories = {row["category"]: row for row in scorecard["categories"]}
+        self.assertEqual(scorecard["mixed"]["archive_bytes"], 276115)
+        self.assertEqual(scorecard["mixed"]["margin_vs_7zip_bytes"], 16716)
+        self.assertEqual(categories["text"]["delta_vs_zip_bytes"], -73)
+        self.assertEqual(categories["random"]["delta_vs_zip_bytes"], 449)
 
     def test_public_corpus_round_trip_beats_committed_7zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
