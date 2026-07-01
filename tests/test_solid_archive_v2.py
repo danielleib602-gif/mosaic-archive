@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from mosaic_archive.corpus import generate_corpus
+from mosaic_archive.exceptions import AuthenticationError
+from mosaic_archive.solid_archive_v2 import (
+    decode_solid_archive_v2,
+    encode_solid_archive_v2,
+)
+
+
+def _tree_digest(root: Path) -> bytes:
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        digest.update(b"D" if path.is_dir() else b"F")
+        digest.update(path.relative_to(root).as_posix().encode())
+        if path.is_file():
+            digest.update(path.read_bytes())
+    return digest.digest()
+
+
+class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_public_corpus_round_trip_beats_committed_7zip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "corpus", root / "corpus.msr", root / "out"
+            generate_corpus(source)
+            seven_zip_size = json.loads(
+                Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")
+            )["comparisons"]["7z"]["archive_size"]
+
+            encoded = encode_solid_archive_v2(
+                source,
+                archive,
+                "correct horse battery staple",
+                kdf_log_n=14,
+            )
+            decoded = decode_solid_archive_v2(
+                archive,
+                restored,
+                "correct horse battery staple",
+            )
+
+            self.assertEqual(archive.read_bytes()[:4], b"MSR2")
+            self.assertLess(encoded.archive_size, seven_zip_size)
+            self.assertLessEqual(encoded.maximum_frame_payload, 1024 * 1024)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(_tree_digest(source), _tree_digest(restored))
+
+    def test_small_frames_stream_and_tampering_never_publishes_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "source"
+            source.mkdir()
+            (source / "data.bin").write_bytes(bytes(range(256)) * 8192)
+            archive = root / "archive.msr"
+            encoded = encode_solid_archive_v2(
+                source,
+                archive,
+                "secret",
+                frame_payload_size=4096,
+                kdf_log_n=14,
+            )
+            self.assertGreater(encoded.frame_count, 3)
+
+            data = bytearray(archive.read_bytes())
+            data[-1] ^= 1
+            archive.write_bytes(data)
+            output = root / "tampered"
+            with self.assertRaises(AuthenticationError):
+                decode_solid_archive_v2(archive, output, "secret")
+            self.assertFalse(output.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
