@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.16 does
+## What v0.17 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -208,8 +208,17 @@ The v0.16 experiment replaces LZMA preset 9 extreme with the default preset 6.
 The final corpus archive remains exactly 277,585 bytes, while the recorded local
 encode time falls from 2.29 seconds to 1.17 seconds and decode time from 0.077
 seconds to 0.049 seconds. This reduces the codec-state memory requirement, but
-MSR1 still buffers the full solid payload and ciphertext; framed streaming
-remains the next gate.
+MSR1 still buffers the full solid payload and ciphertext.
+
+The v0.17 primitive keeps one continuous LZMA history per solid lane while
+splitting its compressed output into independently numbered, padded, and
+ChaCha20-Poly1305-authenticated frames. Decoding authenticates before
+decompression, enforces frame and output bounds, and rejects reordered,
+truncated, or modified streams. On the public corpus the three lane frames use
+276,558 wire bytes, adding 2,246 bytes to the unframed compressed lanes. Adding
+that measured cost to MSR1 projects 279,831 bytes, leaving 13,000 bytes against
+the committed 7-Zip result. This is a component measurement, not an end-to-end
+MSR2 claim; container integration is the next gate.
 
 ## Current limits
 

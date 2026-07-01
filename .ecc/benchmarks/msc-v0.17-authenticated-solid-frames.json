@@ -1,0 +1,59 @@
+{
+  "baseline": {
+    "msr1_archive_bytes": 277585,
+    "seven_zip_archive_bytes": 292831
+  },
+  "configuration": {
+    "continuous_lzma_history_per_lane": true,
+    "frame_payload_limit_bytes": 1048576,
+    "padding_size_bytes": 1024,
+    "per_frame_aead": "ChaCha20-Poly1305"
+  },
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407,
+    "unique_bytes": 818520,
+    "unique_chunk_count": 13
+  },
+  "framed_lanes": {
+    "compressed_bytes": 274312,
+    "frame_count": 3,
+    "maximum_frame_payload_bytes": 263576,
+    "padded_bytes": 276480,
+    "round_trip_verified": true,
+    "wire_bytes": 276558,
+    "wire_overhead_bytes": 2246
+  },
+  "lanes": [
+    {
+      "compressed_bytes": 10556,
+      "frame_count": 1,
+      "lane": "standard",
+      "raw_bytes": 263913,
+      "wire_bytes": 11290
+    },
+    {
+      "compressed_bytes": 180,
+      "frame_count": 1,
+      "lane": "delta4",
+      "raw_bytes": 131072,
+      "wire_bytes": 1050
+    },
+    {
+      "compressed_bytes": 263576,
+      "frame_count": 1,
+      "lane": "high_entropy",
+      "raw_bytes": 423535,
+      "wire_bytes": 264218
+    }
+  ],
+  "projection": {
+    "end_to_end_msr2_claim": false,
+    "projected_archive_bytes": 279831,
+    "remaining_margin_vs_7zip_bytes": 13000,
+    "scope": "MSR1 archive size plus measured framed-lane wire overhead; excludes future MSR2 metadata deltas"
+  },
+  "schema_version": 1,
+  "source_commit": "34ead69",
+  "status": "verified component evidence; MSR2 container not yet integrated"
+}

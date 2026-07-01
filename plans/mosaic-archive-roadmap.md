@@ -150,6 +150,11 @@ while preserving the exact 277,585-byte final archive on the public corpus.
 Local encode time falls from 2.29 seconds to 1.17 seconds. Whole-archive
 buffering still blocks promotion; MSR2-style independently authenticated
 compressed frames are next.
+Package v0.17 implements and verifies that framed-stream primitive. Each lane
+keeps continuous LZMA history while emitting bounded, independently numbered
+ChaCha20-Poly1305 frames. The public-corpus component measurement adds 2,246
+bytes over the raw compressed lanes and leaves a projected 13,000-byte margin
+against 7-Zip. Full MSR2 container integration remains the next milestone.
 
 Parallel research tracks:
 
