@@ -113,6 +113,13 @@ Rollback: retain fixed-size chunk profile as the portable baseline.
 
 Dependencies: A for isolated experiments, C for the integrated archive.
 
+Status: in progress. MSC4 added normalized byte-histogram rANS. MSC5 adds a
+bounded C-backed DEFLATE baseline and a rule-based feature router that skips the
+quadratic teaching LZ path while preserving exact-size final selection.
+MSC6 adds separately entropy-coded LZ token/literal/length/distance streams and
+explicit fast/balanced/research profiles. Current source-corpus evidence keeps
+LZ_RANS research-only because it did not beat DEFLATE and doubled encode time.
+
 Parallel research tracks:
 
 - canonical rANS for delta and literal/token streams;

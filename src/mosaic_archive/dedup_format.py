@@ -12,6 +12,12 @@ from mosaic_archive.stream_format import MAX_FRAME_COUNT, NONCE_PREFIX_LENGTH
 
 MSC3_MAGIC = b"MSC3"
 MSC3_VERSION = 3
+MSC4_MAGIC = b"MSC4"
+MSC4_VERSION = 4
+MSC5_MAGIC = b"MSC5"
+MSC5_VERSION = 5
+MSC6_MAGIC = b"MSC6"
+MSC6_VERSION = 6
 MSC3_FLAGS = 0x07  # framed, padded, content-defined/deduplicated
 MSC3_HEADER = struct.Struct(">4sBBBBIIII16s4sBBBQ")
 
@@ -34,8 +40,14 @@ class Msc3Header:
     frame_count: int
 
     def pack(self) -> bytes:
+        magic = {
+            MSC3_VERSION: MSC3_MAGIC,
+            MSC4_VERSION: MSC4_MAGIC,
+            MSC5_VERSION: MSC5_MAGIC,
+            MSC6_VERSION: MSC6_MAGIC,
+        }.get(self.version, MSC6_MAGIC)
         return MSC3_HEADER.pack(
-            MSC3_MAGIC,
+            magic,
             self.version,
             self.flags,
             self.kdf_id,
@@ -57,11 +69,17 @@ def parse_msc3_header(data: bytes) -> Msc3Header:
     if len(data) != MSC3_HEADER.size:
         raise ArchiveFormatError("MSC3 public header is truncated")
     values = MSC3_HEADER.unpack(data)
-    if values[0] != MSC3_MAGIC:
+    if values[0] not in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC}:
         raise ArchiveFormatError("not a deduplicating Mosaic Archive")
     header = Msc3Header(*values[1:])
-    if header.version != MSC3_VERSION:
-        raise UnsupportedVersionError(f"unsupported MSC3 version: {header.version}")
+    expected_version = {
+        MSC3_MAGIC: MSC3_VERSION,
+        MSC4_MAGIC: MSC4_VERSION,
+        MSC5_MAGIC: MSC5_VERSION,
+        MSC6_MAGIC: MSC6_VERSION,
+    }[values[0]]
+    if header.version != expected_version:
+        raise UnsupportedVersionError("dedup archive magic/version mismatch")
     if header.flags != MSC3_FLAGS:
         raise ArchiveFormatError("MSC3 archive uses unsupported flags")
     if header.kdf_id != KDF_SCRYPT or header.aead_id != AEAD_CHACHA20_POLY1305:
@@ -84,4 +102,3 @@ def parse_msc3_header(data: bytes) -> Msc3Header:
     if not 1 <= header.frame_count <= MAX_FRAME_COUNT:
         raise ArchiveFormatError("MSC3 frame count is outside supported limits")
     return header
-

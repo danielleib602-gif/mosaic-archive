@@ -79,7 +79,7 @@ def benchmark_file(
     password: str | bytes,
     *,
     chunk_size: int = 65_536,
-    padding_size: int = 4096,
+    padding_size: int = 1024,
     kdf_log_n: int = 15,
 ) -> BenchmarkReport:
     source = Path(input_path)
@@ -88,7 +88,6 @@ def benchmark_file(
         archive = root / "benchmark.msc"
         restored = root / "restored.bin"
 
-        tracemalloc.start()
         encode_started = time.perf_counter()
         encode_stats = encode_file(
             source,
@@ -99,16 +98,26 @@ def benchmark_file(
             kdf_log_n=kdf_log_n,
         )
         encode_seconds = time.perf_counter() - encode_started
-        _, encode_peak = tracemalloc.get_traced_memory()
-        tracemalloc.reset_peak()
-
         decode_started = time.perf_counter()
         decode_file(archive, restored, password)
         decode_seconds = time.perf_counter() - decode_started
+        verified = _sha256(source) == _sha256(restored)
+        memory_archive = root / "memory.msc"
+        memory_restored = root / "memory-restored.bin"
+        tracemalloc.start()
+        encode_file(
+            source,
+            memory_archive,
+            password,
+            chunk_size=chunk_size,
+            padding_size=padding_size,
+            kdf_log_n=kdf_log_n,
+        )
+        _, encode_peak = tracemalloc.get_traced_memory()
+        tracemalloc.reset_peak()
+        decode_file(memory_archive, memory_restored, password)
         _, decode_peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-
-        verified = _sha256(source) == _sha256(restored)
         original_size = encode_stats.original_size
         return BenchmarkReport(
             format_version=1,
@@ -149,10 +158,11 @@ def benchmark_path(
     password: str | bytes,
     *,
     chunk_size: int = 65_536,
-    padding_size: int = 4096,
+    padding_size: int = 1024,
     kdf_log_n: int = 15,
     cdc_min_size: int | None = None,
     cdc_max_size: int | None = None,
+    profile: str = "balanced",
     compare: bool = False,
 ) -> BenchmarkReport:
     source = Path(input_path)
@@ -161,7 +171,6 @@ def benchmark_path(
         archive = root / "benchmark.msc"
         restored = root / ("restored" if source.is_dir() else "restored.bin")
 
-        tracemalloc.start()
         encode_started = time.perf_counter()
         encode_stats = encode_path(
             source,
@@ -172,18 +181,34 @@ def benchmark_path(
             kdf_log_n=kdf_log_n,
             cdc_min_size=cdc_min_size,
             cdc_max_size=cdc_max_size,
+            profile=profile,
         )
         encode_seconds = time.perf_counter() - encode_started
-        _, encode_peak = tracemalloc.get_traced_memory()
-        tracemalloc.reset_peak()
-
         decode_started = time.perf_counter()
         decode_path(archive, restored, password)
         decode_seconds = time.perf_counter() - decode_started
+        verified = _tree_digest(source) == _tree_digest(restored)
+        memory_archive = root / "memory.msc"
+        memory_restored = root / (
+            "memory-restored" if source.is_dir() else "memory-restored.bin"
+        )
+        tracemalloc.start()
+        encode_path(
+            source,
+            memory_archive,
+            password,
+            chunk_size=chunk_size,
+            padding_size=padding_size,
+            kdf_log_n=kdf_log_n,
+            cdc_min_size=cdc_min_size,
+            cdc_max_size=cdc_max_size,
+            profile=profile,
+        )
+        _, encode_peak = tracemalloc.get_traced_memory()
+        tracemalloc.reset_peak()
+        decode_path(memory_archive, memory_restored, password)
         _, decode_peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-
-        verified = _tree_digest(source) == _tree_digest(restored)
         original_size = encode_stats.original_size
         comparisons = (
             compare_common_tools(source, root / "comparisons") if compare else {}

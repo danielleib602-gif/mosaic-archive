@@ -21,7 +21,7 @@ from mosaic_archive.dedup_archive import (
     encode_dedup_archive,
     inspect_dedup_archive,
 )
-from mosaic_archive.dedup_format import MSC3_MAGIC
+from mosaic_archive.dedup_format import MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.stream_archive import (
     ProgressCallback,
@@ -39,10 +39,11 @@ def encode_path(
     password: str | bytes,
     *,
     chunk_size: int = 65_536,
-    padding_size: int = 4096,
+    padding_size: int = 1024,
     kdf_log_n: int = 15,
     cdc_min_size: int | None = None,
     cdc_max_size: int | None = None,
+    profile: str = "balanced",
     progress: ProgressCallback | None = None,
 ) -> DedupEncodeStats:
     minimum = cdc_min_size if cdc_min_size is not None else max(64, chunk_size // 4)
@@ -58,6 +59,7 @@ def encode_path(
         config=ChunkingConfig(minimum, chunk_size, maximum),
         padding_size=padding_size,
         kdf_log_n=kdf_log_n,
+        profile=profile,
         progress=progress,
     )
 
@@ -75,7 +77,7 @@ def decode_path(
     progress: ProgressCallback | None = None,
 ) -> DecodeStats | StreamDecodeStats | DedupDecodeStats:
     magic = _magic(archive_path)
-    if magic == MSC3_MAGIC:
+    if magic in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC}:
         return decode_dedup_archive(
             archive_path, output_path, password, progress=progress
         )
@@ -93,7 +95,7 @@ def inspect_path(
     password: str | bytes,
 ) -> ArchiveInfo | StreamArchiveInfo | DedupArchiveInfo:
     magic = _magic(archive_path)
-    if magic == MSC3_MAGIC:
+    if magic in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC}:
         return inspect_dedup_archive(archive_path, password)
     if magic == MSC2_MAGIC:
         return inspect_stream_archive(archive_path, password)

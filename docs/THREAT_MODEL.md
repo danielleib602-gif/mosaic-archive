@@ -1,6 +1,6 @@
 # Threat model
 
-Mosaic Archive v0.3 aims to provide a defensible experimental container around
+Mosaic Archive v0.6 aims to provide a defensible experimental container around
 an intentionally simple compression engine. It does not claim cryptographic
 novelty.
 
@@ -62,6 +62,16 @@ frame, chunk, padding, and KDF parameters also have explicit limits. Fuzzing,
 hard total-runtime budgets, and race-resistant source traversal are still
 required before a stable large-file release.
 
+Deterministic mutation tests exercise authenticated archive corruption and
+random malformed payloads across every codec. DEFLATE decoding uses an explicit
+authenticated output bound and rejects trailing compressed data. These tests
+improve failure coverage but are not a substitute for independent audit or
+coverage-guided native fuzzing.
+
+LZ_RANS validates every nested stream length, frequency table, varint, match
+distance, token kind, and final output length. It remains opt-in through the
+research profile, limiting exposure while it gathers benchmark evidence.
+
 MSC3 dedup references may point only to an earlier canonical chunk and may not
 point to another reference. The parser verifies matching digest/size metadata,
 so forward references, chains, cycles, and reference-driven expansion are
@@ -72,5 +82,5 @@ temporary disk-backed cache capped indirectly by authenticated unique content.
 
 The Python `cryptography` package supplies the cryptographic primitives.
 Mosaic's format composition and implementation have not received an independent
-security audit. Treat v0.3 as a research and learning tool, not as the sole
+security audit. Treat v0.6 as a research and learning tool, not as the sole
 protection for irreplaceable or high-risk secrets.

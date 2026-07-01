@@ -1,0 +1,14 @@
+{
+  "corpus": "src/",
+  "version": "0.4.0",
+  "original_size": 565763,
+  "compressed_size": 396437,
+  "archive_size": 563411,
+  "compression_ratio": 0.7007121356,
+  "archive_ratio": 0.9958427822,
+  "padding_overhead": 164107,
+  "encode_seconds": 14.6356267,
+  "decode_seconds": 4.1664355,
+  "zip_size": 250848,
+  "zip_ratio": 0.4433800019
+}

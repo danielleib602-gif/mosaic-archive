@@ -68,7 +68,7 @@ class StreamArchiveTests(unittest.TestCase):
         )
 
         self.assertEqual(tree_contents(restored), tree_contents(source))
-        self.assertEqual(encoded.format_version, 3)
+        self.assertEqual(encoded.format_version, 6)
         self.assertEqual(encoded.archive_kind, "folder")
         self.assertEqual(encoded.file_count, 3)
         self.assertGreater(encoded.block_count, 3)
@@ -144,7 +144,7 @@ class StreamArchiveTests(unittest.TestCase):
 
         info = inspect_path(archive, PASSWORD)
 
-        self.assertEqual(info.format_version, 3)
+        self.assertEqual(info.format_version, 6)
         self.assertEqual(info.archive_kind, "folder")
         self.assertEqual(info.file_count, 3)
         self.assertGreaterEqual(info.directory_count, 3)

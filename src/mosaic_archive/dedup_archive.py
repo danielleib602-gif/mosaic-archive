@@ -20,13 +20,13 @@ from mosaic_archive.crypto import AEAD_TAG_LENGTH, SALT_LENGTH, decrypt, derive_
 from mosaic_archive.dedup_format import (
     MSC3_FLAGS,
     MSC3_HEADER,
-    MSC3_VERSION,
+    MSC6_VERSION,
     Msc3Header,
     parse_msc3_header,
 )
 from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.features import BlockFeatures, analyze_block
-from mosaic_archive.modes import choose_best_mode, get_mode
+from mosaic_archive.modes import choose_routed_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
 from mosaic_archive.paths import validate_relative_path
 from mosaic_archive.stream_archive import (
@@ -432,6 +432,7 @@ def encode_dedup_archive(
     config: ChunkingConfig,
     padding_size: int = 4096,
     kdf_log_n: int = 15,
+    profile: str = "balanced",
     progress: ProgressCallback | None = None,
 ) -> DedupEncodeStats:
     started = time.perf_counter()
@@ -442,13 +443,15 @@ def encode_dedup_archive(
         raise ValueError("folder archives must be written outside the input tree")
     if not 256 <= padding_size <= 16 * 1024 * 1024 or not 14 <= kdf_log_n <= 18:
         raise ValueError("padding or scrypt cost is outside supported limits")
+    if profile not in {"fast", "balanced", "research"}:
+        raise ValueError(f"unknown compression profile: {profile}")
     manifest, owners = _scan_manifest(source, config)
     unique = sum(chunk.source_index == index for index, chunk in enumerate(manifest.chunks))
     if unique + 1 > 16_777_216:
         raise ValueError("input produces too many unique MSC3 chunks")
     salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
     header = Msc3Header(
-        MSC3_VERSION,
+        MSC6_VERSION,
         MSC3_FLAGS,
         KDF_SCRYPT,
         AEAD_CHACHA20_POLY1305,
@@ -508,7 +511,7 @@ def encode_dedup_archive(
                             raise OSError(f"input changed while it was encoded: {path}")
                         digest.update(chunk)
                         if record.source_index == occurrence:
-                            selected = choose_best_mode(chunk)
+                            selected = choose_routed_mode(chunk, profile=profile)
                             distribution[selected.mode.name] += 1
                             features.append(analyze_block(chunk))
                             payload = DATA_PREFIX.pack(
@@ -571,7 +574,7 @@ def encode_dedup_archive(
         if owners[index] != owners[manifest.chunks[index].source_index]
     ]
     return DedupEncodeStats(
-        MSC3_VERSION,
+        MSC6_VERSION,
         "file" if manifest.kind == KIND_FILE else "folder",
         original_size,
         compressed,
@@ -779,7 +782,7 @@ def _decode(
     )
     mode_distribution = dict(sorted(distribution.items()))
     stats = DedupDecodeStats(
-        format_version=MSC3_VERSION,
+        format_version=header.version,
         archive_kind=kind,
         original_size=original_size,
         block_count=unique,
@@ -796,7 +799,7 @@ def _decode(
         elapsed_seconds=time.perf_counter() - started,
     )
     info = DedupArchiveInfo(
-        format_version=MSC3_VERSION,
+        format_version=header.version,
         archive_kind=kind,
         root_name=manifest.root_name,
         original_size=original_size,
