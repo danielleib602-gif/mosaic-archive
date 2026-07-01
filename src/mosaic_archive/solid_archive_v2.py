@@ -13,14 +13,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Final, cast
 
-from mosaic_archive.cdc import DEFAULT_CHUNKING, ChunkingConfig, iter_content_defined_chunks
+from mosaic_archive.cdc import DEFAULT_CHUNKING, ChunkingConfig
 from mosaic_archive.container_format import AEAD_CHACHA20_POLY1305, KDF_SCRYPT
 from mosaic_archive.crypto import AEAD_TAG_LENGTH, SALT_LENGTH, decrypt, derive_key, encrypt
 from mosaic_archive.dedup_archive import (
     DedupManifest,
     _apply_metadata,
     _scan_manifest,
-    _source_path,
     parse_dedup_manifest,
     serialize_dedup_manifest,
 )
@@ -33,7 +32,7 @@ from mosaic_archive.solid_frames import (
     write_precompressed_solid_lane_frames,
 )
 from mosaic_archive.solid_research import choose_solid_lane
-from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
+from mosaic_archive.stream_archive import ENTRY_DIRECTORY, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT, frame_nonce
 
 MSR2_MAGIC: Final = b"MSR2"
@@ -57,6 +56,7 @@ class SolidArchiveV2EncodeStats:
     unique_chunk_count: int
     frame_count: int
     maximum_frame_payload: int
+    chunking_passes: int
     compression_passes: int
     routing_trial_compressions: int
     elapsed_seconds: float
@@ -99,40 +99,6 @@ class Msr2Header:
             self.nonce_prefix,
             self.metadata_ciphertext_length,
         )
-
-
-def _spool_lanes(
-    source: Path,
-    manifest: DedupManifest,
-    config: ChunkingConfig,
-    streams: tuple[BinaryIO, BinaryIO, BinaryIO],
-) -> tuple[bytes, tuple[int, int, int]]:
-    assignments = bytearray()
-    raw_sizes = [0, 0, 0]
-    occurrence = 0
-    for entry in manifest.entries:
-        if entry.entry_type != ENTRY_FILE:
-            continue
-        path = _source_path(source, manifest.kind, entry.relative_path)
-        digest = hashlib.sha256()
-        with path.open("rb") as input_stream:
-            for chunk in iter_content_defined_chunks(input_stream, config):
-                record = manifest.chunks[occurrence]
-                chunk_digest = hashlib.sha256(chunk).digest()
-                if len(chunk) != record.size or chunk_digest != record.digest:
-                    raise OSError(f"input changed while it was encoded: {path}")
-                digest.update(chunk)
-                if record.source_index == occurrence:
-                    lane = choose_solid_lane(chunk)
-                    streams[lane].write(chunk)
-                    raw_sizes[lane] += len(chunk)
-                    assignments.append(lane)
-                occurrence += 1
-        if digest.digest() != entry.digest:
-            raise OSError(f"input changed while it was encoded: {path}")
-    if occurrence != len(manifest.chunks):
-        raise RuntimeError("internal MSR2 chunk mismatch")
-    return bytes(assignments), cast(tuple[int, int, int], tuple(raw_sizes))
 
 
 def _metadata(
@@ -211,12 +177,6 @@ def encode_solid_archive_v2(
     if not 14 <= kdf_log_n <= 18:
         raise ValueError("scrypt cost is outside supported limits")
 
-    manifest, _ = _scan_manifest(source, config)
-    unique_count = sum(
-        record.source_index == index for index, record in enumerate(manifest.chunks)
-    )
-    salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
-    key = derive_key(password, salt, log_n=kdf_log_n, r=8, p=1)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
 
@@ -225,19 +185,34 @@ def encode_solid_archive_v2(
     ) as lane_dir:
         lane_paths = tuple(Path(lane_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
         lane_streams = tuple(path.open("w+b") for path in lane_paths)
+        assignments_buffer = bytearray()
+        raw_size_values = [0, 0, 0]
+
+        def spool_unique_chunk(chunk: bytes) -> None:
+            lane = choose_solid_lane(chunk)
+            lane_streams[lane].write(chunk)
+            raw_size_values[lane] += len(chunk)
+            assignments_buffer.append(lane)
+
         try:
-            assignments, raw_sizes = _spool_lanes(
+            manifest, _ = _scan_manifest(
                 source,
-                manifest,
                 config,
-                cast(tuple[BinaryIO, BinaryIO, BinaryIO], lane_streams),
+                on_unique_chunk=spool_unique_chunk,
             )
         finally:
             for stream in lane_streams:
                 stream.close()
+        assignments = bytes(assignments_buffer)
+        raw_sizes = cast(tuple[int, int, int], tuple(raw_size_values))
+        unique_count = sum(
+            record.source_index == index for index, record in enumerate(manifest.chunks)
+        )
         if len(assignments) != unique_count:
             raise RuntimeError("internal MSR2 unique-chunk mismatch")
 
+        salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
+        key = derive_key(password, salt, log_n=kdf_log_n, r=8, p=1)
         compressed_paths = tuple(
             Path(lane_dir) / f"lane-{lane}.lzma2" for lane in range(_LANE_COUNT)
         )
@@ -342,6 +317,7 @@ def encode_solid_archive_v2(
         unique_count,
         actual_frame_count,
         maximum_payload,
+        1,
         1,
         0,
         time.perf_counter() - started,

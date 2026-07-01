@@ -278,6 +278,14 @@ corpus's lane assignments and exact 276,115-byte archive while reducing hosted
 encode time from 1.757 to 1.694 seconds (3.6%). Together, v0.24 and v0.25
 improve hosted encode time by 10.3%; hashing, scanning, and LZMA itself remain.
 
+The v0.26 encoder fuses dedup-manifest construction with unique-chunk lane
+spooling. Each file now crosses the content-defined chunker once instead of
+twice, while the earlier whole-file hash pass continues to detect input
+changes. The public archive remains exactly 276,115 bytes and hosted encode
+time falls from 1.694 to 1.082 seconds (36.1%). The cumulative hosted
+improvement since v0.23 is 42.7%; feature analysis now dominates the Python
+side of the remaining encode work.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across
