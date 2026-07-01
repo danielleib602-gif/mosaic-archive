@@ -181,6 +181,10 @@ Package v0.23 adds an AES-256 and header-encrypted 7-Zip baseline with a fixed
 public benchmark password. Hosted evidence records compact MSR2 at 276,115
 bytes versus encrypted 7-Zip at 292,912 bytes, while also recording MSR2's
 substantially slower encode time. Throughput optimization is next.
+Package v0.24 separates continuous lane compression from authenticated framing,
+so each lane is compressed exactly once. Archive bytes remain 276,115 while
+hosted encode time improves from 1.889 to 1.757 seconds. Trial compression in
+the lane router is the next measured throughput target.
 
 Parallel research tracks:
 

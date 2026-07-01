@@ -7,6 +7,8 @@ on:
       - "src/mosaic_archive/benchmark.py"
       - "src/mosaic_archive/comparisons.py"
       - "src/mosaic_archive/corpus.py"
+      - "src/mosaic_archive/solid_archive_v2.py"
+      - "src/mosaic_archive/solid_frames.py"
       - "tests/test_benchmark_publication.py"
       - ".github/workflows/benchmark.yml"
   workflow_dispatch:

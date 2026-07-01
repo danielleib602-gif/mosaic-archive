@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.23 does
+## What v0.24 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -265,6 +265,12 @@ benchmark password, AES-256 data encryption, and encrypted headers. On hosted
 Linux, compact MSR2 produced 276,115 bytes versus encrypted 7-Zip's 292,912,
 a 16,797-byte (5.73%) size win. MSR2 encoding took 1.89 seconds versus 0.076
 seconds for 7-Zip, so throughput remains the clearest measured weakness.
+
+The v0.24 encoder compresses each solid lane once into a disk-backed spool,
+then splits that exact stream into authenticated frames. This removes the
+previous frame-count probe and second compression pass without changing a
+single archive byte. Hosted encode time falls from 1.889 to 1.757 seconds
+(7.0%); chunk routing and hashing now dominate the remaining gap.
 
 ## Current limits
 
