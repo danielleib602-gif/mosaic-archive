@@ -17,6 +17,26 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_subminimum_chunk_skips_unobservable_buzhash_work(self) -> None:
+        class CountingTable:
+            def __init__(self, values: tuple[int, ...]) -> None:
+                self.values = values
+                self.lookups = 0
+
+            def __getitem__(self, index: int) -> int:
+                self.lookups += 1
+                return self.values[index]
+
+        data = random.Random(29).randbytes(511)
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+        table = CountingTable(tuple(range(256)))
+
+        with patch("mosaic_archive.cdc._BUZHASH_TABLE", table):
+            chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
+
+        self.assertEqual(chunks, [data])
+        self.assertEqual(table.lookups, 0)
+
     def test_hot_loop_inlines_fixed_buzhash_rotations(self) -> None:
         data = random.Random(28).randbytes(32 * 1024)
         config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
