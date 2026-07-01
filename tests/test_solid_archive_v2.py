@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,7 +58,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             root = Path(temp_dir)
             source = root / "source"
             source.mkdir()
-            (source / "data.bin").write_bytes(bytes(range(256)) * 8192)
+            (source / "data.bin").write_bytes(random.Random(18).randbytes(256 * 1024))
             archive = root / "archive.msr"
             encoded = encode_solid_archive_v2(
                 source,
