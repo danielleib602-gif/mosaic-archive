@@ -168,6 +168,12 @@ def build_parser() -> argparse.ArgumentParser:
     encode_parser.add_argument("output", type=Path)
     _add_password_options(encode_parser)
     _add_common_encode_options(encode_parser)
+    encode_parser.add_argument(
+        "--format",
+        choices=("stable", "solid"),
+        default="stable",
+        help="archive format (default: stable MSC6; solid selects experimental MSR2)",
+    )
     _add_progress_option(encode_parser)
     encode_parser.add_argument("--json", action="store_true")
 
@@ -228,6 +234,7 @@ def _run(arguments: argparse.Namespace) -> None:
             cdc_min_size=arguments.cdc_min_size,
             cdc_max_size=arguments.cdc_max_size,
             profile=arguments.profile,
+            archive_format=arguments.format,
             progress=progress,
         )
     elif arguments.command == "decode":

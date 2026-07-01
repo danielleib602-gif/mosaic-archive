@@ -32,7 +32,7 @@ from mosaic_archive.solid_research import _choose_lane
 from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT, frame_nonce
 
-_MAGIC: Final = b"MSR2"
+MSR2_MAGIC: Final = b"MSR2"
 _HEADER: Final = struct.Struct(">4sBIIIIII16s4sI")
 _METADATA_PREFIX: Final = struct.Struct(">QI")
 _LANE_RECORD: Final = struct.Struct(">QI")
@@ -81,7 +81,7 @@ class Msr2Header:
 
     def pack(self) -> bytes:
         return _HEADER.pack(
-            _MAGIC,
+            MSR2_MAGIC,
             self.kdf_log_n,
             self.min_chunk_size,
             self.avg_chunk_size,
@@ -352,7 +352,7 @@ def parse_msr2_header(data: bytes) -> Msr2Header:
     unique_count, salt, nonce_prefix, metadata_length = values[7:]
     metadata_length = values[-1]
     if (
-        magic != _MAGIC
+        magic != MSR2_MAGIC
         or not 14 <= log_n <= 18
         or not 256 <= padding <= frame_size
         or not 1024 <= frame_size <= 16 * 1024 * 1024
@@ -631,3 +631,21 @@ def decode_solid_archive_v2(
         True,
         time.perf_counter() - started,
     )
+
+
+def inspect_solid_archive_v2(
+    archive_path: str | os.PathLike[str],
+    password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
+) -> SolidArchiveV2DecodeStats:
+    """Fully authenticate and hash-check MSR2 without retaining restored output."""
+    with tempfile.TemporaryDirectory(prefix="mosaic-msr2-inspect.") as temp_dir:
+        return decode_solid_archive_v2(
+            archive_path,
+            Path(temp_dir) / "restored",
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+        )
