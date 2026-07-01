@@ -132,6 +132,9 @@ Package v0.11 freezes MSC6 for the 1.0 writer, makes MSC1-through-MSC6 decoder
 support binding for the 1.x line, and publishes upgrade/deprecation rules.
 Package v0.12 publishes a versioned, verified Linux benchmark against ZIP,
 gzip, zstd, and 7-Zip using the deterministic public corpus.
+Package v0.13 adds smoke-tested native Linux, Windows, and macOS release
+executables, SHA-256 manifests, and keyless Sigstore/SLSA provenance. The first
+signed assets publish when a reviewed v0.13 tag is created.
 
 Parallel research tracks:
 
@@ -155,8 +158,9 @@ Dependencies: B and C; selected D work only when proven.
 Status: foundation started. The public corpus, cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
 fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
-the frozen compatibility policy, and versioned mature-compressor results are in
-place; independent review and signed binaries remain.
+the frozen compatibility policy, versioned mature-compressor results, and the
+cross-platform attested-binary release pipeline are in place; independent
+review and the first tagged binary publication remain.
 
 Tasks:
 
@@ -169,7 +173,7 @@ Tasks:
   version;
 - [x] publish versioned benchmark results and comparisons with mature compressors;
 - [x] publish an upgrade/deprecation policy;
-- ship signed cross-platform binaries.
+- ship signed cross-platform binaries (pipeline complete; awaits reviewed tag).
 
 Exit criteria: backward-compatibility fixtures are permanent, threat-model
 findings are resolved or documented, and no benchmark claim depends on a
