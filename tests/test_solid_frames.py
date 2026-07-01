@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import io
+import json
 import random
 import struct
 import unittest
+from pathlib import Path
 
 from mosaic_archive.exceptions import (
     ArchiveFormatError,
@@ -18,6 +20,22 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_committed_public_corpus_scorecard_preserves_the_7zip_margin(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.17-authenticated-solid-frames.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertTrue(scorecard["framed_lanes"]["round_trip_verified"])
+        self.assertEqual(scorecard["framed_lanes"]["maximum_frame_payload_bytes"], 263576)
+        self.assertLessEqual(
+            scorecard["framed_lanes"]["maximum_frame_payload_bytes"],
+            scorecard["configuration"]["frame_payload_limit_bytes"],
+        )
+        self.assertEqual(scorecard["projection"]["remaining_margin_vs_7zip_bytes"], 13000)
+        self.assertFalse(scorecard["projection"]["end_to_end_msr2_claim"])
+
     def setUp(self) -> None:
         self.key = bytes(range(32))
         self.nonce_prefix = b"MSR2"
