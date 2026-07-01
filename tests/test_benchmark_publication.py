@@ -44,6 +44,14 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             self.assertEqual(report["schema_version"], 1)
             self.assertEqual(report["release"], "0.23.0")
             self.assertEqual(report["package_version"], "0.23.0")
+            self.assertEqual(report["source_commit"], "test-commit")
+            self.assertEqual(report["corpus"]["version"], 1)
+            self.assertTrue(report["mosaic"]["round_trip_verified"])
+            self.assertTrue(report["comparisons"]["zip"]["verified"])
+            self.assertTrue(report["comparisons"]["gzip"]["verified"])
+            self.assertIn("compression-only baselines", markdown)
+            self.assertIn("| Mosaic Archive |", markdown)
+            self.assertIn("| gzip |", markdown)
 
     def test_encrypted_baseline_scorecard_records_size_and_speed_tradeoff(self) -> None:
         scorecard = json.loads(
@@ -58,14 +66,6 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             scorecard["msr2"]["encode_seconds"],
             scorecard["seven_zip_encrypted"]["encode_seconds"],
         )
-            self.assertEqual(report["source_commit"], "test-commit")
-            self.assertEqual(report["corpus"]["version"], 1)
-            self.assertTrue(report["mosaic"]["round_trip_verified"])
-            self.assertTrue(report["comparisons"]["zip"]["verified"])
-            self.assertTrue(report["comparisons"]["gzip"]["verified"])
-            self.assertIn("compression-only baselines", markdown)
-            self.assertIn("| Mosaic Archive |", markdown)
-            self.assertIn("| gzip |", markdown)
 
     def test_workflow_installs_mature_tools_and_uploads_versioned_report(self) -> None:
         workflow = Path(".github/workflows/benchmark.yml").read_text(encoding="utf-8")
