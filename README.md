@@ -293,6 +293,13 @@ that already classify as standard or high-entropy avoid it. Hosted encode time
 falls from 1.082 to 0.940 seconds (13.2%) with the same 276,115-byte archive.
 Together, v0.24 through v0.27 cut the v0.23 hosted encode time by 50.3%.
 
+The v0.28 chunker inlines its fixed one-bit Buzhash rotation and replaces the
+outgoing byte's redundant 64-bit rotation with the identical table value. It
+also tracks chunk length locally and advances the 64-slot ring with a mask.
+Chunk boundaries and the 276,115-byte public archive remain unchanged, while
+hosted encode time falls from 0.940 to 0.700 seconds (25.5%). The cumulative
+hosted improvement since v0.23 is 62.9%.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across

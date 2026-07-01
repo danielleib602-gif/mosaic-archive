@@ -25,13 +25,6 @@ def _build_table() -> tuple[int, ...]:
 _BUZHASH_TABLE = _build_table()
 
 
-def _rotate_left(value: int, amount: int) -> int:
-    amount %= 64
-    if amount == 0:
-        return value & _MASK_64
-    return ((value << amount) | (value >> (64 - amount))) & _MASK_64
-
-
 @dataclass(frozen=True, slots=True)
 class ChunkingConfig:
     min_size: int = 16 * 1024
@@ -63,34 +56,41 @@ def iter_content_defined_chunks(
     """
     boundary_mask = config.avg_size - 1
     chunk = bytearray()
+    chunk_size = 0
     window = bytearray(_WINDOW_SIZE)
     window_length = 0
     window_position = 0
     fingerprint = 0
+    table = _BUZHASH_TABLE
+    minimum_size = config.min_size
+    maximum_size = config.max_size
 
     while input_block := stream.read(_READ_SIZE):
         for byte in input_block:
             chunk.append(byte)
+            chunk_size += 1
+            rotated = ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
             if window_length < _WINDOW_SIZE:
                 window[window_length] = byte
                 window_length += 1
-                fingerprint = _rotate_left(fingerprint, 1) ^ _BUZHASH_TABLE[byte]
+                fingerprint = rotated ^ table[byte]
             else:
                 outgoing = window[window_position]
                 window[window_position] = byte
-                window_position = (window_position + 1) % _WINDOW_SIZE
+                window_position = (window_position + 1) & (_WINDOW_SIZE - 1)
                 fingerprint = (
-                    _rotate_left(fingerprint, 1)
-                    ^ _rotate_left(_BUZHASH_TABLE[outgoing], _WINDOW_SIZE)
-                    ^ _BUZHASH_TABLE[byte]
+                    rotated
+                    ^ table[outgoing]
+                    ^ table[byte]
                 )
 
             at_content_boundary = (
-                len(chunk) >= config.min_size and fingerprint & boundary_mask == 0
+                chunk_size >= minimum_size and fingerprint & boundary_mask == 0
             )
-            if at_content_boundary or len(chunk) >= config.max_size:
+            if at_content_boundary or chunk_size >= maximum_size:
                 yield bytes(chunk)
                 chunk.clear()
+                chunk_size = 0
                 window_length = 0
                 window_position = 0
                 fingerprint = 0

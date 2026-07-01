@@ -1,0 +1,19 @@
+{
+  "after": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.7004960950000054,
+    "generic_hot_loop_rotation": false,
+    "round_trip_verified": true
+  },
+  "before": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.939649990999996,
+    "generic_hot_loop_rotation": true,
+    "round_trip_verified": true
+  },
+  "combined_improvement_vs_v0_23_percent": 62.924858,
+  "encode_improvement_percent": 25.451381,
+  "schema_version": 1,
+  "source_commit": "9e276b9b1250460c8ae611c0a6375a342455af47",
+  "status": "hosted Linux before/after evidence; exact archive size preserved"
+}

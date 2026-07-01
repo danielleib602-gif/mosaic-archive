@@ -201,6 +201,11 @@ lane decision. Hosted encode time improves from 1.082 to 0.940 seconds with
 the same 276,115-byte archive. The cumulative v0.23-to-v0.27 improvement is
 50.3%; the rolling chunker and remaining Python delta pass are the next
 throughput candidates.
+Package v0.28 algebraically simplifies the 64-byte rolling Buzhash hot loop.
+The public corpus retains identical chunk boundaries and its 276,115-byte
+archive while hosted encode time improves from 0.940 to 0.700 seconds. The
+cumulative v0.23-to-v0.28 improvement is 62.9%; independent security review
+is now the principal stable-release gate.
 
 Parallel research tracks:
 
