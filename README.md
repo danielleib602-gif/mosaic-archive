@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.18 does
+## What v0.19 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -227,6 +227,15 @@ corpus archive is 279,699 bytes (0.2663), 13,132 bytes smaller than 7-Zip, and
 restores exactly. Local encode/decode measurements were 1.22/0.053 seconds.
 MSR2 remains experimental while parser hardening and broader corpus evaluation
 continue; MSC6 is still the stable writer.
+
+The v0.19 hardening pass adds explicit restored-size and frame-count budgets,
+authenticates and validates an archive before creating destination directories,
+and adds the exact MSR2 header parser to both deterministic and coverage-guided
+fuzzing. Empty solid lanes no longer emit padded frames, saving 2,100 bytes on
+each one-lane category in the public corpus. Category results are mixed and
+reported plainly: MSR2 beats ZIP on structured, numeric, and duplicate-heavy
+data, but its encrypted container remains about 1.5–2 KiB larger on tiny text,
+random, and precompressed subsets.
 
 ## Current limits
 

@@ -1,0 +1,81 @@
+{
+  "categories": [
+    {
+      "category": "text",
+      "delta_vs_zip_bytes": 1463,
+      "frame_count": 1,
+      "gzip_bytes": 754,
+      "msr2_bytes": 2143,
+      "original_bytes": 131072,
+      "round_trip_verified": true,
+      "zip_bytes": 680
+    },
+    {
+      "category": "structured",
+      "delta_vs_zip_bytes": -2697,
+      "frame_count": 1,
+      "gzip_bytes": 14223,
+      "msr2_bytes": 11359,
+      "original_bytes": 131072,
+      "round_trip_verified": true,
+      "zip_bytes": 14056
+    },
+    {
+      "category": "numeric",
+      "delta_vs_zip_bytes": -43566,
+      "frame_count": 1,
+      "gzip_bytes": 45858,
+      "msr2_bytes": 2143,
+      "original_bytes": 131072,
+      "round_trip_verified": true,
+      "zip_bytes": 45709
+    },
+    {
+      "category": "dedup",
+      "delta_vs_zip_bytes": -260441,
+      "frame_count": 1,
+      "gzip_bytes": 393984,
+      "msr2_bytes": 133215,
+      "original_bytes": 393232,
+      "round_trip_verified": true,
+      "zip_bytes": 393656
+    },
+    {
+      "category": "random",
+      "delta_vs_zip_bytes": 1985,
+      "frame_count": 1,
+      "gzip_bytes": 131392,
+      "msr2_bytes": 133215,
+      "original_bytes": 131072,
+      "round_trip_verified": true,
+      "zip_bytes": 131230
+    },
+    {
+      "category": "precompressed",
+      "delta_vs_zip_bytes": 1937,
+      "frame_count": 1,
+      "gzip_bytes": 131450,
+      "msr2_bytes": 133215,
+      "original_bytes": 131118,
+      "round_trip_verified": true,
+      "zip_bytes": 131278
+    },
+    {
+      "category": "empty",
+      "delta_vs_zip_bytes": 879,
+      "frame_count": 0,
+      "gzip_bytes": 232,
+      "msr2_bytes": 1093,
+      "original_bytes": 0,
+      "round_trip_verified": true,
+      "zip_bytes": 214
+    }
+  ],
+  "configuration": {
+    "kdf_log_n": 14,
+    "padding_size_bytes": 1024
+  },
+  "schema_version": 1,
+  "source_commit": "bbb7cc5",
+  "status": "local category evidence; ZIP/gzip are compression-only while MSR2 is encrypted"
+}

@@ -159,6 +159,11 @@ Package v0.18 integrates the primitive into the disk-backed MSR2 container.
 The actual encrypted, padded 279,699-byte public-corpus archive round-trips and
 beats 7-Zip by 13,132 bytes without buffering the whole solid payload or
 ciphertext. Parser hardening and broader-corpus validation are next.
+Package v0.19 bounds restored bytes and frame counts before extraction, avoids
+destination-side effects until authentication succeeds, and adds the MSR2
+header to both mutation harnesses. Empty lanes no longer cost padded frames.
+The category suite records strong structured/numeric/dedup wins and honest
+small-text/random/precompressed losses; model and overhead routing are next.
 
 Parallel research tracks:
 
