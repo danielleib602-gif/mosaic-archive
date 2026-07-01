@@ -20,7 +20,7 @@ class CompatibilityPolicyTests(unittest.TestCase):
 
         policy = current_policy()
 
-        self.assertEqual(policy.package_version, "0.24.0")
+        self.assertEqual(policy.package_version, "0.25.0")
         self.assertEqual(policy.writer_format_version, 6)
         self.assertEqual(policy.readable_format_versions, fixture_versions)
         self.assertEqual(policy.format_status, "frozen-for-1.0")
