@@ -196,6 +196,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_password_options(benchmark_parser)
     _add_common_encode_options(benchmark_parser)
     benchmark_parser.add_argument(
+        "--format",
+        choices=("stable", "solid"),
+        default="stable",
+        help="archive format to benchmark (default: stable MSC6)",
+    )
+    benchmark_parser.add_argument(
         "--compare",
         action="store_true",
         help="also benchmark ZIP, gzip, zstd, and 7-Zip when supported/installed",
@@ -253,6 +259,7 @@ def _run(arguments: argparse.Namespace) -> None:
             cdc_min_size=arguments.cdc_min_size,
             cdc_max_size=arguments.cdc_max_size,
             profile=arguments.profile,
+            archive_format=arguments.format,
             compare=arguments.compare,
         )
     else:
