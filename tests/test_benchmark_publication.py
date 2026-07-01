@@ -125,6 +125,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         workflow = Path(".github/workflows/benchmark.yml").read_text(encoding="utf-8")
 
         self.assertIn("pull_request:\n    paths:", workflow)
+        self.assertIn('"src/mosaic_archive/cdc.py"', workflow)
         self.assertIn('"src/mosaic_archive/solid_archive_v2.py"', workflow)
         self.assertIn('"src/mosaic_archive/solid_frames.py"', workflow)
         self.assertIn('"src/mosaic_archive/solid_research.py"', workflow)
