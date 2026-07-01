@@ -11,7 +11,7 @@ import zlib
 from pathlib import Path
 
 from mosaic_archive.cdc import iter_content_defined_chunks
-from mosaic_archive.corpus import generate_corpus
+from mosaic_archive.corpus import MANIFEST_NAME, generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.solid_research import decode_solid_chunks, encode_solid_chunks
 
@@ -59,6 +59,12 @@ class SolidLaneResearchTests(unittest.TestCase):
                     if digest not in seen:
                         seen.add(digest)
                         chunks.append(chunk)
+            manifest_data = (root / MANIFEST_NAME).read_bytes()
+            for chunk in iter_content_defined_chunks(io.BytesIO(manifest_data)):
+                digest = hashlib.sha256(chunk).digest()
+                if digest not in seen:
+                    seen.add(digest)
+                    chunks.append(chunk)
 
             encoded = encode_solid_chunks(chunks)
             report = json.loads(
