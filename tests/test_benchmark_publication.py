@@ -33,7 +33,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.26.0",
+                release="0.27.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
             )
@@ -42,8 +42,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
-            self.assertEqual(report["release"], "0.26.0")
-            self.assertEqual(report["package_version"], "0.26.0")
+            self.assertEqual(report["release"], "0.27.0")
+            self.assertEqual(report["package_version"], "0.27.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])
@@ -108,12 +108,26 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             scorecard["before"]["encode_seconds"],
         )
 
+    def test_focused_router_scorecard_preserves_size_and_improves_time(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.27-router-features.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(scorecard["after"]["archive_bytes"], 276115)
+        self.assertFalse(scorecard["after"]["general_block_analysis"])
+        self.assertLess(
+            scorecard["after"]["encode_seconds"],
+            scorecard["before"]["encode_seconds"],
+        )
+
     def test_workflow_installs_mature_tools_and_uploads_versioned_report(self) -> None:
         workflow = Path(".github/workflows/benchmark.yml").read_text(encoding="utf-8")
 
         self.assertIn("pull_request:\n    paths:", workflow)
         self.assertIn('"src/mosaic_archive/solid_archive_v2.py"', workflow)
         self.assertIn('"src/mosaic_archive/solid_frames.py"', workflow)
+        self.assertIn('"src/mosaic_archive/solid_research.py"', workflow)
         self.assertIn("apt-get install --yes zstd p7zip-full", workflow)
         self.assertIn("mosaic_archive.benchmark_publication", workflow)
         self.assertIn("--release 0.12.0", workflow)

@@ -5,12 +5,12 @@ from __future__ import annotations
 import lzma
 import math
 import struct
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
 from mosaic_archive.exceptions import ArchiveFormatError
-from mosaic_archive.features import analyze_block
 
 _MAGIC: Final = b"SLZ1"
 _HEADER: Final = struct.Struct(">4sI")
@@ -67,11 +67,19 @@ def _delta4_entropy_bits_per_byte(chunk: bytes) -> float:
     )
 
 
+def _byte_entropy_bits_per_byte(chunk: bytes) -> float:
+    total = len(chunk)
+    return -sum(
+        (count / total) * math.log2(count / total)
+        for count in Counter(chunk).values()
+    )
+
+
 def choose_solid_lane(chunk: bytes) -> int:
     """Route from cheap byte features without trial-compressing the chunk."""
     if not chunk:
         return _STANDARD
-    entropy = analyze_block(chunk).entropy_bits_per_byte
+    entropy = _byte_entropy_bits_per_byte(chunk)
     if entropy >= 7.75:
         return _HIGH_ENTROPY
     if entropy >= 3.0 and entropy - _delta4_entropy_bits_per_byte(chunk) >= 2.0:

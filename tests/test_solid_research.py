@@ -43,6 +43,11 @@ class SolidLaneResearchTests(unittest.TestCase):
                 "mosaic_archive.solid_research._compress_delta4",
                 side_effect=AssertionError("trial compression was called"),
             ),
+            patch(
+                "mosaic_archive.solid_research.analyze_block",
+                side_effect=AssertionError("unneeded block features were analyzed"),
+                create=True,
+            ),
         ):
             self.assertEqual(choose_solid_lane(numeric), SOLID_LANE_DELTA4)
             self.assertEqual(choose_solid_lane(text), SOLID_LANE_STANDARD)
