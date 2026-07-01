@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.21 does
+## What v0.22 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -97,6 +97,7 @@ uv run msc encode project-folder project.msc
 uv run msc encode project-folder project.msr --format solid --padding-size 256
 uv run msc decode project.msc restored-project
 uv run msc benchmark project-folder --compare
+uv run msc benchmark project-folder --format solid --padding-size 256 --compare
 uv run msc benchmark project-folder --profile research
 uv run python -m mosaic_archive.corpus benchmark-corpus
 uv run msc benchmark benchmark-corpus --json
@@ -252,6 +253,12 @@ The v0.21 CLI makes MSR2 usable without changing the stable default:
 and `inspect` recognize MSR2 automatically. MSC6 remains the default writer.
 The compact 256-byte padding result must be selected explicitly because it
 reveals archive lengths at finer granularity than the 1 KiB default.
+
+The v0.22 CLI extends that opt-in path to
+`msc benchmark --format solid`. Its JSON report records MSR2 archive size,
+ratio, frame bounds, throughput, peak Python allocation, verified restoration,
+and optional mature-tool comparisons without pretending MSR2 has MSC6 block
+mode metrics.
 
 ## Current limits
 

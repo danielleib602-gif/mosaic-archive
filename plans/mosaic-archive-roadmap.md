@@ -173,6 +173,10 @@ Package v0.21 exposes MSR2 as the explicit `msc encode --format solid` option
 and auto-detects it for authenticated inspect and decode. Stable MSC6 remains
 the default writer; compact 256-byte padding remains an explicit privacy/ratio
 choice.
+Package v0.22 adds format-aware `msc benchmark --format solid` reports with
+round-trip verification, frame bounds, memory/speed measurements, and optional
+ZIP/gzip/zstd/7-Zip comparisons. The stable MSC6 benchmark schema remains
+unchanged.
 
 Parallel research tracks:
 
