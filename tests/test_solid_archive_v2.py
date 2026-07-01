@@ -167,6 +167,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
 
             self.assertEqual(archive.read_bytes()[:4], b"MSR2")
             self.assertEqual(encoded.compression_passes, 1)
+            self.assertEqual(encoded.routing_trial_compressions, 0)
             self.assertLess(encoded.archive_size, seven_zip_size)
             self.assertLessEqual(encoded.maximum_frame_payload, 1024 * 1024)
             self.assertTrue(decoded.hash_verified)
