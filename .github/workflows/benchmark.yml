@@ -9,6 +9,7 @@ on:
       - "src/mosaic_archive/corpus.py"
       - "src/mosaic_archive/solid_archive_v2.py"
       - "src/mosaic_archive/solid_frames.py"
+      - "src/mosaic_archive/solid_research.py"
       - "tests/test_benchmark_publication.py"
       - ".github/workflows/benchmark.yml"
   workflow_dispatch:
