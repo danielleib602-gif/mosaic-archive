@@ -1,0 +1,36 @@
+{
+  "committed_baselines": {
+    "mosaic_v0_12_archive_bytes": 495053,
+    "seven_zip_archive_bytes": 292831,
+    "zstd_archive_bytes": 366090
+  },
+  "corpus": {
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "original_bytes": 1050407,
+    "seed": 20260629,
+    "unit_size": 65536,
+    "version": 1
+  },
+  "projected_margin_vs_7zip_bytes": 2047,
+  "prototype": {
+    "conservative_non_payload_budget_bytes": 16384,
+    "decode_seconds": 0.006597499999770662,
+    "encode_seconds": 0.6593998999996984,
+    "lane_distribution": {
+      "delta4": 1,
+      "high_entropy": 8,
+      "standard": 4
+    },
+    "name": "solid-lanes-v1",
+    "payload_bytes": 274400,
+    "payload_ratio": 0.26123207480528976,
+    "projected_archive_bytes": 290784,
+    "projected_archive_ratio": 0.27682983833885344,
+    "round_trip_verified": true,
+    "unique_chunk_bytes": 818520,
+    "unique_chunk_count": 13
+  },
+  "schema_version": 1,
+  "source_commit": "9f09c35",
+  "status": "research payload only; not an MSC archive or release claim"
+}

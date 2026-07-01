@@ -14,7 +14,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.13 does
+## What v0.14 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a 64-byte rolling Buzhash;
@@ -187,6 +187,15 @@ The v0.12 corpus result is encouraging but specific: Mosaic's encrypted,
 padded archive reached a 0.471 ratio, better than ZIP/gzip on this duplicate-rich
 tree, while zstd reached 0.349 and 7-Zip 0.279. Mosaic encoding was substantially
 slower, making throughput and entropy coding the clearest optimization targets.
+
+The v0.14 solid-lane prototype closes that ratio gap at the research-payload
+layer. Exact deduplication is followed by three file-agnostic solid LZMA lanes:
+ordinary compressible chunks, delta-4 numeric chunks, and high-entropy chunks
+that may still share distant content. On the byte-identical corpus it produced
+274,400 payload bytes. Reserving a conservative 16 KiB for the future manifest,
+encryption, authentication, and padding projects a 290,784-byte archive, 2,047
+bytes below the committed 7-Zip result. This is not yet an MSC archive or a
+release claim; integration must prove the full end-to-end result.
 
 ## Current limits
 

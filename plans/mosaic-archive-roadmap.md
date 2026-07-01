@@ -135,12 +135,18 @@ gzip, zstd, and 7-Zip using the deterministic public corpus.
 Package v0.13 adds smoke-tested native Linux, Windows, and macOS release
 executables, SHA-256 manifests, and keyless Sigstore/SLSA provenance. The first
 signed assets publish when a reviewed v0.13 tag is created.
+Package v0.14 prototypes file-agnostic solid compression lanes over the unique
+chunk stream. Its verified 274,400-byte research payload leaves a conservative
+16 KiB integration budget and projects 2,047 bytes below the committed 7-Zip
+result. This is evidence for an experimental next format, not yet an end-to-end
+archive claim.
 
 Parallel research tracks:
 
 - canonical rANS for delta and literal/token streams;
 - better LZ parsing and separate literal/length/distance streams;
 - byte-context and structured-text residual models;
+- [x] solid second-stage lanes for distant relationships between unique chunks;
 - a classifier that predicts which modes are worth attempting from cheap block
   features, while final selection remains based on actual encoded size.
 
