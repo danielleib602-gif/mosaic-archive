@@ -10,6 +10,7 @@ import struct
 import tempfile
 import time
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, cast
@@ -299,7 +300,12 @@ def _source_path(source: Path, manifest_kind: int, relative: str) -> Path:
     return source if manifest_kind == KIND_FILE else source.joinpath(*relative.split("/"))
 
 
-def _scan_manifest(source: Path, config: ChunkingConfig) -> tuple[DedupManifest, list[int]]:
+def _scan_manifest(
+    source: Path,
+    config: ChunkingConfig,
+    *,
+    on_unique_chunk: Callable[[bytes], None] | None = None,
+) -> tuple[DedupManifest, list[int]]:
     base = scan_input(source, config.max_size)
     chunks: list[ChunkRecord] = []
     entries: list[DedupEntry] = []
@@ -329,6 +335,8 @@ def _scan_manifest(source: Path, config: ChunkingConfig) -> tuple[DedupManifest,
                 digest = hashlib.sha256(chunk).digest()
                 key = (digest, len(chunk))
                 source_index = canonical.setdefault(key, len(chunks))
+                if source_index == len(chunks) and on_unique_chunk is not None:
+                    on_unique_chunk(chunk)
                 chunks.append(ChunkRecord(digest, len(chunk), source_index))
                 owners.append(file_index)
         if file_digest.digest() != entry.digest:

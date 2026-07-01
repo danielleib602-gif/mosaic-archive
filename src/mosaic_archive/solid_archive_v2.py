@@ -57,6 +57,7 @@ class SolidArchiveV2EncodeStats:
     unique_chunk_count: int
     frame_count: int
     maximum_frame_payload: int
+    chunking_passes: int
     compression_passes: int
     routing_trial_compressions: int
     elapsed_seconds: float
@@ -211,12 +212,6 @@ def encode_solid_archive_v2(
     if not 14 <= kdf_log_n <= 18:
         raise ValueError("scrypt cost is outside supported limits")
 
-    manifest, _ = _scan_manifest(source, config)
-    unique_count = sum(
-        record.source_index == index for index, record in enumerate(manifest.chunks)
-    )
-    salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
-    key = derive_key(password, salt, log_n=kdf_log_n, r=8, p=1)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
 
@@ -225,19 +220,34 @@ def encode_solid_archive_v2(
     ) as lane_dir:
         lane_paths = tuple(Path(lane_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
         lane_streams = tuple(path.open("w+b") for path in lane_paths)
+        assignments_buffer = bytearray()
+        raw_size_values = [0, 0, 0]
+
+        def spool_unique_chunk(chunk: bytes) -> None:
+            lane = choose_solid_lane(chunk)
+            lane_streams[lane].write(chunk)
+            raw_size_values[lane] += len(chunk)
+            assignments_buffer.append(lane)
+
         try:
-            assignments, raw_sizes = _spool_lanes(
+            manifest, _ = _scan_manifest(
                 source,
-                manifest,
                 config,
-                cast(tuple[BinaryIO, BinaryIO, BinaryIO], lane_streams),
+                on_unique_chunk=spool_unique_chunk,
             )
         finally:
             for stream in lane_streams:
                 stream.close()
+        assignments = bytes(assignments_buffer)
+        raw_sizes = cast(tuple[int, int, int], tuple(raw_size_values))
+        unique_count = sum(
+            record.source_index == index for index, record in enumerate(manifest.chunks)
+        )
         if len(assignments) != unique_count:
             raise RuntimeError("internal MSR2 unique-chunk mismatch")
 
+        salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
+        key = derive_key(password, salt, log_n=kdf_log_n, r=8, p=1)
         compressed_paths = tuple(
             Path(lane_dir) / f"lane-{lane}.lzma2" for lane in range(_LANE_COUNT)
         )
@@ -342,6 +352,7 @@ def encode_solid_archive_v2(
         unique_count,
         actual_frame_count,
         maximum_payload,
+        1,
         1,
         0,
         time.perf_counter() - started,

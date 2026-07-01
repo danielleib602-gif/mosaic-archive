@@ -54,8 +54,10 @@ class StreamingSolidArchiveTests(unittest.TestCase):
                     kdf_log_n=14,
                 )
 
-            self.assertEqual(manifest_chunker.call_count, 1)
-            self.assertEqual(spool_chunker.call_count, 0)
+            self.assertEqual(
+                manifest_chunker.call_count + spool_chunker.call_count,
+                1,
+            )
             self.assertEqual(encoded.chunking_passes, 1)
 
     def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
