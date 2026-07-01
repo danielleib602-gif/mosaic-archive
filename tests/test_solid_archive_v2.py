@@ -90,6 +90,18 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(scorecard["archive"]["margin_vs_7zip_bytes"], 13132)
         self.assertFalse(scorecard["archive"]["stable_writer"])
 
+    def test_v0_19_category_scorecard_reports_losses_as_plainly_as_wins(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.19-category-suite.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        categories = {row["category"]: row for row in scorecard["categories"]}
+        self.assertEqual(categories["numeric"]["delta_vs_zip_bytes"], -43566)
+        self.assertEqual(categories["text"]["delta_vs_zip_bytes"], 1463)
+        self.assertEqual(categories["random"]["delta_vs_zip_bytes"], 1985)
+        self.assertTrue(all(row["round_trip_verified"] for row in categories.values()))
+
     def test_public_corpus_round_trip_beats_committed_7zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
