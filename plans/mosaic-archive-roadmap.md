@@ -130,6 +130,8 @@ streaming soak round trip. Package v0.10 expands that surface to both nested
 manifest parsers and adds seeded Atheris coverage-guided campaigns.
 Package v0.11 freezes MSC6 for the 1.0 writer, makes MSC1-through-MSC6 decoder
 support binding for the 1.x line, and publishes upgrade/deprecation rules.
+Package v0.12 publishes a versioned, verified Linux benchmark against ZIP,
+gzip, zstd, and 7-Zip using the deterministic public corpus.
 
 Parallel research tracks:
 
@@ -153,8 +155,8 @@ Dependencies: B and C; selected D work only when proven.
 Status: foundation started. The public corpus, cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
 fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
-and the frozen compatibility policy are in place; independent review, published
-versioned benchmark results, and signed binaries remain.
+the frozen compatibility policy, and versioned mature-compressor results are in
+place; independent review and signed binaries remain.
 
 Tasks:
 
@@ -165,7 +167,7 @@ Tasks:
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder
   version;
-- publish versioned benchmark results and comparisons with mature compressors;
+- [x] publish versioned benchmark results and comparisons with mature compressors;
 - [x] publish an upgrade/deprecation policy;
 - ship signed cross-platform binaries.
 

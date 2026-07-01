@@ -1,6 +1,14 @@
 name: Reproducible benchmark
 
 on:
+  pull_request:
+    paths:
+      - "src/mosaic_archive/benchmark_publication.py"
+      - "src/mosaic_archive/benchmark.py"
+      - "src/mosaic_archive/comparisons.py"
+      - "src/mosaic_archive/corpus.py"
+      - "tests/test_benchmark_publication.py"
+      - ".github/workflows/benchmark.yml"
   workflow_dispatch:
   schedule:
     - cron: "17 3 1 * *"
@@ -17,16 +25,20 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: sudo apt-get update
+      - run: sudo apt-get install --yes zstd p7zip-full
       - run: uv sync --frozen
       - run: uv run --frozen python -m mosaic_archive.corpus benchmark-corpus
       - run: >
-          uv run --frozen python -m mosaic_archive benchmark benchmark-corpus
-          --password synthetic-public-corpus --kdf-log-n 14 --compare --json
-          > benchmark-result.json
+          uv run --frozen python -m mosaic_archive.benchmark_publication
+          benchmark-corpus published-benchmark --release 0.12.0
+          --source-commit ${{ github.event.pull_request.head.sha || github.sha }}
+          --kdf-log-n 14
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: mosaic-benchmark-${{ github.sha }}
+          name: mosaic-benchmark-v0.12.0-${{ github.sha }}
           path: |
             benchmark-corpus/manifest.json
-            benchmark-result.json
+            published-benchmark/report.json
+            published-benchmark/report.md
           if-no-files-found: error

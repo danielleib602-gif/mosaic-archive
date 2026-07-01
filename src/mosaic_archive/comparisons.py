@@ -6,8 +6,10 @@ import gzip
 import hashlib
 import shutil
 import subprocess
+import tarfile
 import time
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -70,6 +72,23 @@ def _result(
     )
 
 
+def safe_extract_zip(compressed: zipfile.ZipFile, destination: Path) -> None:
+    """Extract a ZIP while rejecting members outside the destination."""
+    root = destination.resolve()
+    for member in compressed.infolist():
+        target = (destination / member.filename).resolve()
+        if not target.is_relative_to(root):
+            raise zipfile.BadZipFile(
+                f"ZIP member escapes the extraction root: {member.filename}"
+            )
+        if member.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with compressed.open(member, "r") as source, target.open("wb") as output:
+            shutil.copyfileobj(source, output)
+
+
 def _compare_zip(source: Path, root: Path) -> ComparisonResult:
     archive = root / "comparison.zip"
     restored = root / "zip-restored"
@@ -90,7 +109,7 @@ def _compare_zip(source: Path, root: Path) -> ComparisonResult:
     restored.mkdir()
     started = time.perf_counter()
     with zipfile.ZipFile(archive, "r") as compressed:
-        compressed.extractall(restored)
+        safe_extract_zip(compressed, restored)
     decode_seconds = time.perf_counter() - started
     restored_input = restored / source.name if source.is_file() else restored
     return _result(
@@ -104,27 +123,39 @@ def _compare_zip(source: Path, root: Path) -> ComparisonResult:
 
 
 def _compare_gzip(source: Path, root: Path) -> ComparisonResult:
-    if not source.is_file():
-        return ComparisonResult(
-            True, False, None, None, None, None, None, "gzip does not archive folders"
-        )
-    archive = root / "comparison.gz"
+    archive = root / ("comparison.gz" if source.is_file() else "comparison.tar.gz")
     restored = root / "gzip-restored"
     started = time.perf_counter()
-    with source.open("rb") as input_stream, gzip.open(archive, "wb", compresslevel=6) as output:
-        shutil.copyfileobj(input_stream, output)
+    if source.is_file():
+        with source.open("rb") as input_stream, gzip.open(
+            archive, "wb", compresslevel=6
+        ) as output:
+            shutil.copyfileobj(input_stream, output)
+    else:
+        _write_tar(source, archive, gzip_compressed=True)
     encode_seconds = time.perf_counter() - started
     started = time.perf_counter()
-    with gzip.open(archive, "rb") as input_stream, restored.open("wb") as output:
-        shutil.copyfileobj(input_stream, output)
+    if source.is_file():
+        with gzip.open(archive, "rb") as input_stream, restored.open("wb") as output:
+            shutil.copyfileobj(input_stream, output)
+        restored_input = restored
+    else:
+        restored.mkdir()
+        with tarfile.open(archive, "r:gz") as compressed:
+            compressed.extractall(restored, filter="data")
+        restored_input = restored
     decode_seconds = time.perf_counter() - started
     return _result(
         archive,
-        source.stat().st_size,
+        _total_size(source),
         encode_seconds,
         decode_seconds,
-        _digest(source) == _digest(restored),
-        "gzip level 6; compression only, no encryption",
+        _digest(source) == _digest(restored_input),
+        (
+            "gzip level 6; compression only, no encryption"
+            if source.is_file()
+            else "tar + gzip level 6; compression only, no encryption"
+        ),
     )
 
 
@@ -143,31 +174,76 @@ def _run(command: list[str], *, cwd: Path) -> float:
     return time.perf_counter() - started
 
 
+def _write_tar(
+    source: Path,
+    archive: Path,
+    *,
+    gzip_compressed: bool = False,
+) -> None:
+    def add_entries(output: tarfile.TarFile) -> None:
+        if source.is_file():
+            output.add(source, arcname=source.name)
+            return
+        for entry in sorted(
+            source.rglob("*"), key=lambda item: item.relative_to(source).as_posix()
+        ):
+            output.add(
+                entry,
+                arcname=entry.relative_to(source).as_posix(),
+                recursive=False,
+            )
+
+    if gzip_compressed:
+        with tarfile.open(archive, "w:gz", compresslevel=6) as output:
+            add_entries(output)
+    else:
+        with tarfile.open(archive, "w") as output:
+            add_entries(output)
+
+
 def _compare_zstd(source: Path, root: Path) -> ComparisonResult:
     executable = shutil.which("zstd")
     if executable is None:
         return ComparisonResult(
             False, False, None, None, None, None, None, "zstd executable not found"
         )
-    if not source.is_file():
-        return ComparisonResult(
-            True, False, None, None, None, None, None, "zstd requires a tar layer for folders"
-        )
-    archive = root / "comparison.zst"
+    archive = root / ("comparison.zst" if source.is_file() else "comparison.tar.zst")
     restored = root / "zstd-restored"
-    encode_seconds = _run(
-        [executable, "-q", "-f", str(source), "-o", str(archive)], cwd=root
-    )
-    decode_seconds = _run(
-        [executable, "-q", "-d", "-f", str(archive), "-o", str(restored)], cwd=root
-    )
+    if source.is_file():
+        encode_seconds = _run(
+            [executable, "-q", "-f", str(source), "-o", str(archive)], cwd=root
+        )
+        decode_seconds = _run(
+            [executable, "-q", "-d", "-f", str(archive), "-o", str(restored)],
+            cwd=root,
+        )
+        restored_input = restored
+        note = "zstd default level; compression only, no encryption"
+    else:
+        tar_path = root / "comparison.tar"
+        restored_tar = root / "restored.tar"
+        started = time.perf_counter()
+        _write_tar(source, tar_path)
+        _run([executable, "-q", "-f", str(tar_path), "-o", str(archive)], cwd=root)
+        encode_seconds = time.perf_counter() - started
+        started = time.perf_counter()
+        _run(
+            [executable, "-q", "-d", "-f", str(archive), "-o", str(restored_tar)],
+            cwd=root,
+        )
+        restored.mkdir()
+        with tarfile.open(restored_tar, "r:") as compressed:
+            compressed.extractall(restored, filter="data")
+        decode_seconds = time.perf_counter() - started
+        restored_input = restored
+        note = "tar + zstd default level; compression only, no encryption"
     return _result(
         archive,
-        source.stat().st_size,
+        _total_size(source),
         encode_seconds,
         decode_seconds,
-        _digest(source) == _digest(restored),
-        "zstd default level; compression only, no encryption",
+        _digest(source) == _digest(restored_input),
+        note,
     )
 
 
@@ -227,3 +303,43 @@ def compare_common_tools(source: Path, root: Path) -> dict[str, ComparisonResult
                 f"comparison failed: {error}",
             )
     return comparisons
+
+
+def comparison_tool_versions() -> dict[str, str | None]:
+    versions: dict[str, str | None] = {
+        "zip": f"Python zipfile / zlib {zlib.ZLIB_VERSION}",
+        "gzip": f"Python gzip / zlib {zlib.ZLIB_VERSION}",
+    }
+    for name, candidates in (
+        ("zstd", ("zstd",)),
+        ("7z", ("7z", "7zz", "7za")),
+    ):
+        executable = next(
+            (
+                candidate
+                for candidate_name in candidates
+                if (candidate := shutil.which(candidate_name))
+            ),
+            None,
+        )
+        if executable is None:
+            versions[name] = None
+            continue
+        argument = "--version" if name == "zstd" else "i"
+        try:
+            completed = subprocess.run(
+                [executable, argument],
+                capture_output=True,
+                check=False,
+                timeout=10,
+            )
+            text = (completed.stdout or completed.stderr).decode(
+                errors="replace"
+            )
+            versions[name] = next(
+                (line.strip() for line in text.splitlines() if line.strip()),
+                "version output unavailable",
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            versions[name] = "version query failed"
+    return versions
