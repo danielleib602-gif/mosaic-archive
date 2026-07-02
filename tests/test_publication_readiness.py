@@ -40,6 +40,18 @@ class PublicationReadinessTests(unittest.TestCase):
                 content = Path(relative_path).read_text(encoding="utf-8")
                 self.assertIn(marker, content)
 
+    def test_github_community_templates_are_present(self) -> None:
+        required = {
+            ".github/ISSUE_TEMPLATE/bug_report.yml": "name: Bug report",
+            ".github/ISSUE_TEMPLATE/feature_request.yml": "name: Feature request",
+            ".github/ISSUE_TEMPLATE/config.yml": "blank_issues_enabled: false",
+            ".github/pull_request_template.md": "## Verification",
+        }
+        for relative_path, marker in required.items():
+            with self.subTest(path=relative_path):
+                content = Path(relative_path).read_text(encoding="utf-8")
+                self.assertIn(marker, content)
+
     def test_status_snapshot_names_current_version_and_active_work(self) -> None:
         status = Path("PROJECT_STATUS.md").read_text(encoding="utf-8")
 
@@ -47,6 +59,7 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
         self.assertIn("rerun the required workflows on `main`", status)
+        self.assertIn("standard GitHub-hosted runners are free", status)
         self.assertNotIn("rerun PR #", status)
 
     def test_relative_markdown_links_resolve(self) -> None:
