@@ -1,0 +1,19 @@
+{
+  "after": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.5920941749999997,
+    "round_trip_verified": true,
+    "subminimum_hash_lookups": 0
+  },
+  "before": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.7004960950000054,
+    "round_trip_verified": true,
+    "subminimum_hash_lookups": 958
+  },
+  "combined_improvement_vs_v0_23_percent": 68.662244,
+  "encode_improvement_percent": 15.475021,
+  "schema_version": 1,
+  "source_commit": "e405985f0aba55c2eaaee655911d150e5d2b2269",
+  "status": "hosted Linux before/after evidence; exact archive size preserved"
+}

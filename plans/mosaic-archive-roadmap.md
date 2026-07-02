@@ -206,6 +206,11 @@ The public corpus retains identical chunk boundaries and its 276,115-byte
 archive while hosted encode time improves from 0.940 to 0.700 seconds. The
 cumulative v0.23-to-v0.28 improvement is 62.9%; independent security review
 is now the principal stable-release gate.
+Package v0.29 initializes Buzhash from the latest 64-byte window only when a
+chunk first reaches its minimum size, eliminating hash work that cannot affect
+a boundary. Hosted encode time improves from 0.700 to 0.592 seconds with
+identical chunk boundaries and archive size. A larger-chunk size experiment
+was rejected because it harmed shifted repetitive-data deduplication.
 
 Parallel research tracks:
 
