@@ -211,6 +211,11 @@ chunk first reaches its minimum size, eliminating hash work that cannot affect
 a boundary. Hosted encode time improves from 0.700 to 0.592 seconds with
 identical chunk boundaries and archive size. A larger-chunk size experiment
 was rejected because it harmed shifted repetitive-data deduplication.
+Package v0.30 compacts authenticated MSR2 metadata without changing chunking or
+lane compression. Hosted archive size improves from 276,115 to 275,859 bytes;
+legacy metadata remains readable. The hosted run records a small 2.5% encode
+cost, reported as plainly as the 256-byte size win. Generated corpus mtimes are
+now deterministic so archive-size evidence is reproducible across platforms.
 
 Parallel research tracks:
 
