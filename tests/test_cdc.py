@@ -17,6 +17,33 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_chunk_storage_avoids_per_byte_buffer_appends(self) -> None:
+        class CountingBytearray(bytearray):
+            append_calls = 0
+            extend_calls = 0
+
+            def append(self, item: int) -> None:
+                type(self).append_calls += 1
+                super().append(item)
+
+            def extend(self, items: bytes) -> None:
+                type(self).extend_calls += 1
+                super().extend(items)
+
+        data = random.Random(31).randbytes(200_000)
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+
+        with patch(
+            "mosaic_archive.cdc.bytearray",
+            CountingBytearray,
+            create=True,
+        ):
+            chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
+
+        self.assertEqual(b"".join(chunks), data)
+        self.assertEqual(CountingBytearray.append_calls, 0)
+        self.assertEqual(CountingBytearray.extend_calls, 4)
+
     def test_subminimum_chunk_skips_unobservable_buzhash_work(self) -> None:
         class CountingTable:
             def __init__(self, values: tuple[int, ...]) -> None:

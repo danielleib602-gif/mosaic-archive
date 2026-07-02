@@ -57,6 +57,7 @@ def iter_content_defined_chunks(
     boundary_mask = config.avg_size - 1
     chunk = bytearray()
     chunk_size = 0
+    emitted_size = 0
     window = bytearray(_WINDOW_SIZE)
     window_position = 0
     fingerprint = 0
@@ -66,13 +67,14 @@ def iter_content_defined_chunks(
     maximum_size = config.max_size
 
     while input_block := stream.read(_READ_SIZE):
+        chunk.extend(input_block)
         for byte in input_block:
-            chunk.append(byte)
             chunk_size += 1
             if not fingerprint_active:
                 if chunk_size < minimum_size:
                     continue
-                window[:] = chunk[-_WINDOW_SIZE:]
+                current_end = emitted_size + chunk_size
+                window[:] = chunk[current_end - _WINDOW_SIZE : current_end]
                 fingerprint = 0
                 for initial in window:
                     fingerprint = (
@@ -94,12 +96,16 @@ def iter_content_defined_chunks(
                 chunk_size >= minimum_size and fingerprint & boundary_mask == 0
             )
             if at_content_boundary or chunk_size >= maximum_size:
-                yield bytes(chunk)
-                chunk.clear()
+                current_end = emitted_size + chunk_size
+                yield bytes(memoryview(chunk)[emitted_size:current_end])
+                emitted_size = current_end
                 chunk_size = 0
                 window_position = 0
                 fingerprint = 0
                 fingerprint_active = False
+        if emitted_size:
+            del chunk[:emitted_size]
+            emitted_size = 0
 
     if chunk:
         yield bytes(chunk)
