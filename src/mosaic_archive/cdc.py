@@ -58,9 +58,9 @@ def iter_content_defined_chunks(
     chunk = bytearray()
     chunk_size = 0
     window = bytearray(_WINDOW_SIZE)
-    window_length = 0
     window_position = 0
     fingerprint = 0
+    fingerprint_active = False
     table = _BUZHASH_TABLE
     minimum_size = config.min_size
     maximum_size = config.max_size
@@ -69,15 +69,21 @@ def iter_content_defined_chunks(
         for byte in input_block:
             chunk.append(byte)
             chunk_size += 1
-            rotated = ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
-            if window_length < _WINDOW_SIZE:
-                window[window_length] = byte
-                window_length += 1
-                fingerprint = rotated ^ table[byte]
+            if not fingerprint_active:
+                if chunk_size < minimum_size:
+                    continue
+                window[:] = chunk[-_WINDOW_SIZE:]
+                fingerprint = 0
+                for initial in window:
+                    fingerprint = (
+                        ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
+                    ) ^ table[initial]
+                fingerprint_active = True
             else:
                 outgoing = window[window_position]
                 window[window_position] = byte
                 window_position = (window_position + 1) & (_WINDOW_SIZE - 1)
+                rotated = ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
                 fingerprint = (
                     rotated
                     ^ table[outgoing]
@@ -91,9 +97,9 @@ def iter_content_defined_chunks(
                 yield bytes(chunk)
                 chunk.clear()
                 chunk_size = 0
-                window_length = 0
                 window_position = 0
                 fingerprint = 0
+                fingerprint_active = False
 
     if chunk:
         yield bytes(chunk)

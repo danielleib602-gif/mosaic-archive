@@ -300,6 +300,13 @@ Chunk boundaries and the 276,115-byte public archive remain unchanged, while
 hosted encode time falls from 0.940 to 0.700 seconds (25.5%). The cumulative
 hosted improvement since v0.23 is 62.9%.
 
+The v0.29 chunker defers Buzhash initialization until the first legal content
+boundary. Since the rolling value depends only on the latest 64-byte window,
+hashing earlier bytes cannot affect any observable boundary decision. Exact
+chunk boundaries and the 276,115-byte archive remain unchanged, while hosted
+encode time falls from 0.700 to 0.592 seconds (15.5%). The cumulative hosted
+improvement since v0.23 is 68.7%.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across
