@@ -12,6 +12,7 @@ from mosaic_archive import dedup_archive
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
+    _decode_compact_uint,
     _decode_metadata_envelope,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
@@ -29,6 +30,13 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_compact_uints_are_bounded_and_canonical(self) -> None:
+        self.assertEqual(_decode_compact_uint(b"\x00", 0, 100, "value"), (0, 1))
+        self.assertEqual(_decode_compact_uint(b"\xac\x02", 0, 1000, "value"), (300, 2))
+        for malformed in (b"\x80", b"\x80\x00", b"\xff\x7f"):
+            with self.subTest(payload=malformed), self.assertRaises(ArchiveFormatError):
+                _decode_compact_uint(malformed, 0, 1000, "value")
+
     def test_encoder_content_defined_chunks_each_file_only_once(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -189,6 +197,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             )
 
             self.assertEqual(archive.read_bytes()[:4], b"MSR2")
+            self.assertEqual(encoded.archive_size, 275859)
             self.assertEqual(encoded.compression_passes, 1)
             self.assertEqual(encoded.routing_trial_compressions, 0)
             self.assertLess(encoded.archive_size, seven_zip_size)
