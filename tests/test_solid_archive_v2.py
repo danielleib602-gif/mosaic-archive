@@ -14,6 +14,7 @@ from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
     _decode_compact_uint,
     _decode_metadata_envelope,
+    _metadata,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
@@ -65,6 +66,38 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(_decode_metadata_envelope(legacy), (legacy, False))
         with self.assertRaises(ArchiveFormatError):
             _decode_metadata_envelope(b"MDZ1\x01")
+
+    def test_decoder_retains_legacy_fixed_width_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "source", root / "legacy.msr", root / "out"
+            source.write_bytes(b"legacy metadata remains readable\n" * 4096)
+
+            def legacy_metadata(manifest, assignments, frame_counts):
+                raw_sizes = [0, 0, 0]
+                unique_records = [
+                    chunk
+                    for index, chunk in enumerate(manifest.chunks)
+                    if chunk.source_index == index
+                ]
+                for chunk, lane in zip(unique_records, assignments, strict=True):
+                    raw_sizes[lane] += chunk.size
+                return _metadata(
+                    manifest,
+                    assignments,
+                    tuple(raw_sizes),
+                    frame_counts,
+                )
+
+            with patch(
+                "mosaic_archive.solid_archive_v2._compact_metadata",
+                side_effect=legacy_metadata,
+            ):
+                encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), source.read_bytes())
 
     def test_decode_limits_reject_expansion_and_frame_budgets_before_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -188,6 +221,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
                 source,
                 archive,
                 "correct horse battery staple",
+                padding_size=256,
                 kdf_log_n=14,
             )
             decoded = decode_solid_archive_v2(
