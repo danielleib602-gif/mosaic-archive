@@ -45,6 +45,22 @@ class ChunkingConfig:
 DEFAULT_CHUNKING = ChunkingConfig()
 
 
+def _fill_recent_window(
+    window: bytearray,
+    completed_segments: list[memoryview],
+    current_segment: memoryview,
+) -> None:
+    position = _WINDOW_SIZE
+    for segment in (current_segment, *reversed(completed_segments)):
+        if position == 0:
+            break
+        count = min(position, len(segment))
+        position -= count
+        window[position : position + count] = segment[-count:]
+    if position:
+        raise RuntimeError("internal CDC window is incomplete")
+
+
 def iter_content_defined_chunks(
     stream: BinaryIO,
     config: ChunkingConfig = DEFAULT_CHUNKING,
@@ -55,7 +71,7 @@ def iter_content_defined_chunks(
     offsets, so alignment recovers after insertions or deletions.
     """
     boundary_mask = config.avg_size - 1
-    chunk = bytearray()
+    chunk_segments: list[memoryview] = []
     chunk_size = 0
     window = bytearray(_WINDOW_SIZE)
     window_position = 0
@@ -66,13 +82,18 @@ def iter_content_defined_chunks(
     maximum_size = config.max_size
 
     while input_block := stream.read(_READ_SIZE):
-        for byte in input_block:
-            chunk.append(byte)
+        block_view = memoryview(input_block)
+        segment_start = 0
+        for index, byte in enumerate(input_block):
             chunk_size += 1
             if not fingerprint_active:
                 if chunk_size < minimum_size:
                     continue
-                window[:] = chunk[-_WINDOW_SIZE:]
+                _fill_recent_window(
+                    window,
+                    chunk_segments,
+                    block_view[segment_start : index + 1],
+                )
                 fingerprint = 0
                 for initial in window:
                     fingerprint = (
@@ -94,12 +115,16 @@ def iter_content_defined_chunks(
                 chunk_size >= minimum_size and fingerprint & boundary_mask == 0
             )
             if at_content_boundary or chunk_size >= maximum_size:
-                yield bytes(chunk)
-                chunk.clear()
+                chunk_segments.append(block_view[segment_start : index + 1])
+                yield b"".join(chunk_segments)
+                chunk_segments.clear()
+                segment_start = index + 1
                 chunk_size = 0
                 window_position = 0
                 fingerprint = 0
                 fingerprint_active = False
+        if segment_start < len(input_block):
+            chunk_segments.append(block_view[segment_start:])
 
-    if chunk:
-        yield bytes(chunk)
+    if chunk_segments:
+        yield b"".join(chunk_segments)
