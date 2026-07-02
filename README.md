@@ -14,10 +14,13 @@ compressor finds a cheaper description of repeated or predictable bytes.
 > benchmarks. Security uses standard ChaCha20-Poly1305 authenticated encryption;
 > the experimental part is the adaptive compression engine.
 
-## What v0.25 does
+The exact publication state, evidence, limitations, and active development
+focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+
+## What v0.32 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
-- finds stable content-defined boundaries with a 64-byte rolling Buzhash;
+- finds stable content-defined boundaries with a deterministic Gear hash;
 - stores each unique chunk once and uses direct authenticated backward
   references for repeated chunks across files and shifted versions;
 - adds a normalized byte-histogram rANS entropy mode for skewed symbol streams;
@@ -26,7 +29,8 @@ compressor finds a cheaper description of repeated or predictable bytes.
 - adds an experimental LZ parser with separately rANS-coded token, literal,
   length, and distance streams;
 - provides `fast`, `balanced`, and `research` codec-search profiles;
-- tries `RAW`, `RLE`, `DELTA8`, and `LZ_SIMPLE` independently on every block;
+- provides seven lossless modes and routes cheap candidates by measured block
+  features, with exhaustive mode search available through the research profile;
 - selects the smallest actual encoding, without relying on file extensions;
 - stores portable relative paths, file metadata, and per-file SHA-256 restoration
   digests in an encrypted manifest;
@@ -71,6 +75,19 @@ compressor finds a cheaper description of repeated or predictable bytes.
   tar+gzip, tar+zstd, and 7-Zip on the identical generated corpus;
 - builds smoke-tested native Linux, Windows, and macOS executables and attaches
   keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases.
+
+## Install
+
+Install a tagged source checkout with `pip`:
+
+```console
+python -m pip install .
+msc --version
+```
+
+Tagged releases also build smoke-tested single-file executables for Linux,
+Windows, and macOS. Check their SHA-256 manifest and GitHub build provenance as
+described in [docs/RELEASES.md](docs/RELEASES.md).
 
 ## Install for development
 
@@ -184,6 +201,9 @@ Published performance evidence is indexed in
 [benchmarks/README.md](benchmarks/README.md).
 Binary build, publication, and verification instructions are in
 [docs/RELEASES.md](docs/RELEASES.md).
+Changes are recorded in [CHANGELOG.md](CHANGELOG.md), contribution checks in
+[CONTRIBUTING.md](CONTRIBUTING.md), and private vulnerability-reporting
+guidance in [SECURITY.md](SECURITY.md).
 
 The v0.12 corpus result is encouraging but specific: Mosaic's encrypted,
 padded archive reached a 0.471 ratio, better than ZIP/gzip on this duplicate-rich

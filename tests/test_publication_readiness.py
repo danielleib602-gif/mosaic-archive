@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import tomllib
 import unittest
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 
 class PublicationReadinessTests(unittest.TestCase):
@@ -44,6 +46,25 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("Package version: 0.32.0", status)
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
+
+    def test_relative_markdown_links_resolve(self) -> None:
+        markdown_files = (
+            list(Path(".").glob("*.md"))
+            + list(Path("benchmarks").rglob("*.md"))
+            + list(Path("docs").rglob("*.md"))
+            + list(Path("plans").rglob("*.md"))
+        )
+        link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+        for markdown_file in markdown_files:
+            content = markdown_file.read_text(encoding="utf-8")
+            for raw_target in link_pattern.findall(content):
+                target = raw_target.strip().strip("<>").split("#", 1)[0]
+                if not target or urlparse(target).scheme:
+                    continue
+                resolved = markdown_file.parent / unquote(target)
+                with self.subTest(source=str(markdown_file), target=target):
+                    self.assertTrue(resolved.exists(), f"broken link: {resolved}")
 
 
 if __name__ == "__main__":
