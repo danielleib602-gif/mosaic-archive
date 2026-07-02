@@ -66,13 +66,18 @@ def iter_content_defined_chunks(
     maximum_size = config.max_size
 
     while input_block := stream.read(_READ_SIZE):
-        for byte in input_block:
-            chunk.append(byte)
+        segment_start = 0
+        for index, byte in enumerate(input_block):
             chunk_size += 1
             if not fingerprint_active:
                 if chunk_size < minimum_size:
                     continue
-                window[:] = chunk[-_WINDOW_SIZE:]
+                current_segment = input_block[segment_start : index + 1]
+                if len(current_segment) >= _WINDOW_SIZE:
+                    window[:] = current_segment[-_WINDOW_SIZE:]
+                else:
+                    missing = _WINDOW_SIZE - len(current_segment)
+                    window[:] = chunk[-missing:] + current_segment
                 fingerprint = 0
                 for initial in window:
                     fingerprint = (
@@ -94,12 +99,16 @@ def iter_content_defined_chunks(
                 chunk_size >= minimum_size and fingerprint & boundary_mask == 0
             )
             if at_content_boundary or chunk_size >= maximum_size:
+                chunk.extend(input_block[segment_start : index + 1])
                 yield bytes(chunk)
                 chunk.clear()
+                segment_start = index + 1
                 chunk_size = 0
                 window_position = 0
                 fingerprint = 0
                 fingerprint_active = False
+        if segment_start < len(input_block):
+            chunk.extend(input_block[segment_start:])
 
     if chunk:
         yield bytes(chunk)
