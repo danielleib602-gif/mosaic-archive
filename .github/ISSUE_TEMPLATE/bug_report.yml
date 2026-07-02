@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible Mosaic Archive defect
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here. Follow SECURITY.md and use
+        GitHub private vulnerability reporting.
+  - type: input
+    id: version
+    attributes:
+      label: Mosaic Archive version
+      placeholder: "0.32.0"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and Python or binary version
+      placeholder: "Ubuntu 24.04, Python 3.13"
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Archive format
+      options:
+        - Stable MSC6 (default)
+        - Solid MSR2 (--format solid)
+        - Decode/inspect of an older archive
+        - Not format-specific
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include commands and synthetic input-generation steps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Remove passwords, private paths, filenames, and archive data.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I reproduced this with non-sensitive data.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

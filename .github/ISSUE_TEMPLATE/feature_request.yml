@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused capability or engineering improvement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or engineering problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Compatibility, security, and performance constraints
+      description: Note any format, decoder, memory, benchmark, or privacy impact.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or alternatives
+      description: Link reproducible measurements or describe rejected alternatives.

@@ -56,9 +56,12 @@ Mosaic encoder is also slower than those tools on that corpus.
   PyPI publication is not configured.
 - On 2026-07-03, GitHub refused to start PR, binary, reliability, and
   coverage-fuzz jobs because recent account payments failed or the Actions
-  spending limit must be increased. No workflow steps executed. Resolve the
-  account gate and rerun the required workflows on `main` before creating
-  `v0.32.0`; otherwise the tag cannot produce the promised binary assets.
+  spending limit must be increased. No workflow steps executed. There are two
+  valid paths: make the repository public or resolve billing while it remains
+  private. GitHub documents that standard GitHub-hosted runners are free for
+  public repositories. Then rerun the required workflows on `main` before
+  creating `v0.32.0`; otherwise the tag cannot produce the promised binary
+  assets.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
 - Padding hides exact length only within the selected bucket and cannot hide
@@ -71,7 +74,7 @@ Mosaic encoder is also slower than those tools on that corpus.
 
 ## Verification snapshot
 
-The publication checkout passes 147 unit/integration tests on Python 3.13.
+The publication checkout passes 148 unit/integration tests on Python 3.13.
 Exact source coverage is 3,129 of 3,547 executable lines (88.215393%). Ruff,
 strict mypy, Bandit, dependency audit, bytecode compilation, source/wheel
 builds, and package-metadata validation pass. A clean isolated installation of
@@ -91,9 +94,10 @@ contains no sensitive information.
 
 ## Current development focus
 
-Resolving the GitHub Actions account gate and rerunning the required workflows
-on `main` is the immediate current work. After the v0.32 alpha is published,
-the next priorities are:
+The immediate current work is to rerun the required workflows on `main`. That
+requires making the repository public or resolving the private-repository
+GitHub Actions account gate. After the v0.32 alpha is published, the next
+priorities are:
 
 1. complete an independent security review and resolve or document its findings;
 2. promote repeated benchmark medians into the standard CI report schema;
@@ -107,10 +111,10 @@ The detailed milestone history and rollback rules remain in
 
 ## Maintainer publication checklist
 
-1. Resolve the GitHub Actions billing or spending-limit gate and rerun the
-   required workflows on `main`.
-2. Review the commit-email privacy note above.
-3. Make the repository public when desired.
+1. Review the commit-email privacy note above.
+2. Make the repository public, or resolve the billing/spending-limit gate while
+   keeping it private.
+3. Rerun the required workflows on `main`.
 4. Confirm every `main` and release-binary check is green.
 5. Create and push the annotated tag `v0.32.0`.
 6. Let the release workflow build, attest, and publish all three binaries.

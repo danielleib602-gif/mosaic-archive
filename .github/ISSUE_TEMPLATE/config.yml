@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/danielleib602-gif/mosaic-archive/security/advisories/new
+    about: Report vulnerabilities privately; do not open a public issue.
+  - name: Project status and current work
+    url: https://github.com/danielleib602-gif/mosaic-archive/blob/main/PROJECT_STATUS.md
+    about: Review release readiness, known limits, and active development.
