@@ -316,6 +316,13 @@ reproducible across platforms. The hosted archive falls from 276,115 to
 275,859 bytes; encode time measured 0.607 instead of 0.592 seconds, so this is
 a 256-byte size win with a small 2.5% measured speed cost.
 
+The v0.31 chunker extends its chunk buffer once per 64 KiB input block instead
+of appending every byte individually. It retains direct byte iteration, emits
+completed chunks through one-copy views, and compacts consumed storage once
+per block. Exact chunk boundaries and the 275,859-byte archive remain
+unchanged, while hosted Linux encode time falls from 0.607 to 0.572 seconds
+(5.7%). The cumulative hosted encode improvement since v0.23 is 69.7%.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across

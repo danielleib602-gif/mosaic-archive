@@ -216,6 +216,11 @@ lane compression. Hosted archive size improves from 276,115 to 275,859 bytes;
 legacy metadata remains readable. The hosted run records a small 2.5% encode
 cost, reported as plainly as the 256-byte size win. Generated corpus mtimes are
 now deterministic so archive-size evidence is reproducible across platforms.
+Package v0.31 replaces per-byte chunk-buffer appends with one extend per 64 KiB
+input block while preserving direct byte iteration. Hosted Linux encode time
+improves from 0.607 to 0.572 seconds with identical chunk boundaries and the
+same 275,859-byte archive. This supersedes an earlier segmented-memoryview
+experiment whose Linux overhead outweighed its local gain.
 
 Parallel research tracks:
 

@@ -21,7 +21,7 @@ class CliTests(unittest.TestCase):
             env=environment,
         )
 
-    def test_reports_v0_30_package_version(self) -> None:
+    def test_reports_v0_31_package_version(self) -> None:
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)

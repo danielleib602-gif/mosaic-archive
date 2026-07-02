@@ -1,0 +1,18 @@
+{
+  "after": {
+    "archive_bytes": 275859,
+    "encode_seconds": 0.5721800590000043,
+    "per_byte_chunk_appends": 0,
+    "round_trip_verified": true
+  },
+  "before": {
+    "archive_bytes": 275859,
+    "encode_seconds": 0.6068660130000012,
+    "round_trip_verified": true
+  },
+  "encode_improvement_percent": 5.715587,
+  "schema_version": 1,
+  "size_change_bytes": 0,
+  "source_commit": "a75d2f8292b63039dd9b96b799728a96ad647d87",
+  "status": "hosted Linux speed win with identical chunks and archive bytes; one chunk-buffer extend per 64 KiB input block replaces per-byte appends"
+}
