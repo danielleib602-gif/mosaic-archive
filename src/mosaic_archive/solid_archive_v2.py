@@ -188,21 +188,27 @@ def _compact_metadata(
     frame_counts: tuple[int, int, int],
 ) -> bytes:
     output = bytearray(_COMPACT_METADATA_MAGIC)
-    output.append(manifest.kind)
     root = manifest.root_name.encode("utf-8")
-    output.extend(_encode_compact_uint(len(root)))
+    if manifest.kind not in {KIND_FILE, KIND_FOLDER}:
+        raise RuntimeError("internal MSR2 archive kind is invalid")
+    kind_bit = int(manifest.kind == KIND_FOLDER)
+    output.extend(_encode_compact_uint((len(root) << 1) | kind_bit))
     output.extend(root)
     output.extend(_encode_compact_uint(len(manifest.entries)))
     output.extend(_encode_compact_uint(len(manifest.chunks)))
     for frame_count in frame_counts:
         output.extend(_encode_compact_uint(frame_count))
+    previous_mtime_ns = 0
     for entry in manifest.entries:
-        output.append(entry.entry_type)
         path = entry.relative_path.encode("utf-8")
-        output.extend(_encode_compact_uint(len(path)))
+        if entry.entry_type not in {ENTRY_FILE, ENTRY_DIRECTORY}:
+            raise RuntimeError("internal MSR2 entry type is invalid")
+        directory_bit = int(entry.entry_type == ENTRY_DIRECTORY)
+        output.extend(_encode_compact_uint((len(path) << 1) | directory_bit))
         output.extend(path)
         output.extend(_encode_compact_uint(entry.mode))
-        output.extend(_encode_compact_sint(entry.mtime_ns))
+        output.extend(_encode_compact_sint(entry.mtime_ns - previous_mtime_ns))
+        previous_mtime_ns = entry.mtime_ns
         if entry.entry_type == ENTRY_FILE:
             output.extend(_encode_compact_uint(entry.chunk_count))
             output.extend(entry.digest)
@@ -527,11 +533,11 @@ def _parse_compact_metadata(
     nonce_prefix: bytes,
 ) -> tuple[DedupManifest, bytes, tuple[int, int, int], tuple[int, int, int]]:
     position = len(_COMPACT_METADATA_MAGIC)
-    kind_bytes, position = _take_compact_bytes(payload, position, 1, "archive kind")
-    kind = kind_bytes[0]
-    root_length, position = _decode_compact_uint(
-        payload, position, 65_535, "root length"
+    root_descriptor, position = _decode_compact_uint(
+        payload, position, (65_535 << 1) | 1, "root descriptor"
     )
+    kind = KIND_FOLDER if root_descriptor & 1 else KIND_FILE
+    root_length = root_descriptor >> 1
     root_bytes, position = _take_compact_bytes(
         payload, position, root_length, "root name"
     )
@@ -556,16 +562,16 @@ def _parse_compact_metadata(
         frame_count_values.append(frame_count)
 
     entry_specs: list[tuple[int, str, int, int, int, bytes]] = []
+    previous_mtime_ns = 0
     for index in range(entry_count):
-        entry_type_bytes, position = _take_compact_bytes(
-            payload, position, 1, f"entry {index} type"
+        path_descriptor, position = _decode_compact_uint(
+            payload,
+            position,
+            (65_535 << 1) | 1,
+            f"entry {index} path descriptor",
         )
-        entry_type = entry_type_bytes[0]
-        if entry_type not in {ENTRY_FILE, ENTRY_DIRECTORY}:
-            raise ArchiveFormatError(f"MSR2 compact entry {index} type is invalid")
-        path_length, position = _decode_compact_uint(
-            payload, position, 65_535, f"entry {index} path length"
-        )
+        entry_type = ENTRY_DIRECTORY if path_descriptor & 1 else ENTRY_FILE
+        path_length = path_descriptor >> 1
         path_bytes, position = _take_compact_bytes(
             payload, position, path_length, f"entry {index} path"
         )
@@ -578,9 +584,15 @@ def _parse_compact_metadata(
         mode, position = _decode_compact_uint(
             payload, position, 0o777, f"entry {index} mode"
         )
-        mtime_ns, position = _decode_compact_sint(
+        mtime_delta, position = _decode_compact_sint(
             payload, position, f"entry {index} modification time"
         )
+        mtime_ns = previous_mtime_ns + mtime_delta
+        if not -(1 << 63) <= mtime_ns < 1 << 63:
+            raise ArchiveFormatError(
+                f"MSR2 compact entry {index} modification time is invalid"
+            )
+        previous_mtime_ns = mtime_ns
         if entry_type == ENTRY_FILE:
             count, position = _decode_compact_uint(
                 payload, position, chunk_count, f"entry {index} chunk count"
