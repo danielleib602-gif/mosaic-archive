@@ -17,6 +17,25 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_boundary_signal_uses_one_gear_lookup_per_probe(self) -> None:
+        class CountingTable:
+            def __init__(self) -> None:
+                self.lookups = 0
+
+            def __getitem__(self, index: int) -> int:
+                self.lookups += 1
+                return 0
+
+        data = random.Random(32).randbytes(8192)
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+        table = CountingTable()
+
+        with patch("mosaic_archive.cdc._GEAR_TABLE", table, create=True):
+            chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
+
+        self.assertEqual(b"".join(chunks), data)
+        self.assertEqual(table.lookups, 16)
+
     def test_chunk_storage_avoids_per_byte_buffer_appends(self) -> None:
         class CountingBytearray(bytearray):
             append_calls = 0
