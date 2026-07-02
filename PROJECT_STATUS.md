@@ -1,10 +1,10 @@
 # Project status
 
-Package version: 0.32.0  
-Publication status: READY for source publication; tagged binary release BLOCKED
-by the GitHub Actions account gate described below  
-Stable-format status: MSC6 is frozen for the planned 1.0 line  
-Repository status at this snapshot: private; no `v0.32.0` tag has been created
+- Package version: 0.32.0
+- Publication status: READY for source publication; tagged binary release
+  BLOCKED by the GitHub Actions account gate described below
+- Stable-format status: MSC6 is frozen for the planned 1.0 line
+- Repository status at this snapshot: private; no `v0.32.0` tag has been created
 
 ## What is ready now
 
