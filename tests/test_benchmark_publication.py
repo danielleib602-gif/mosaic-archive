@@ -33,7 +33,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.29.0",
+                release="0.30.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
             )
@@ -42,8 +42,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
-            self.assertEqual(report["release"], "0.29.0")
-            self.assertEqual(report["package_version"], "0.29.0")
+            self.assertEqual(report["release"], "0.30.0")
+            self.assertEqual(report["package_version"], "0.30.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])
@@ -146,6 +146,20 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             scorecard["after"]["encode_seconds"],
             scorecard["before"]["encode_seconds"],
         )
+
+    def test_compact_metadata_scorecard_reports_size_win_and_speed_cost(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.30-compact-metadata.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(scorecard["after"]["archive_bytes"], 275859)
+        self.assertTrue(scorecard["after"]["legacy_metadata_readable"])
+        self.assertLess(
+            scorecard["after"]["archive_bytes"],
+            scorecard["before"]["archive_bytes"],
+        )
+        self.assertGreater(scorecard["encode_regression_percent"], 0)
 
     def test_workflow_installs_mature_tools_and_uploads_versioned_report(self) -> None:
         workflow = Path(".github/workflows/benchmark.yml").read_text(encoding="utf-8")
