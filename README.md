@@ -324,6 +324,14 @@ unchanged, while the median of five hosted Linux runs falls from 0.618 to
 0.588 seconds (4.9%). The cumulative hosted encode improvement since v0.23 is
 68.9%.
 
+The v0.32 chunker replaces the rolling Buzhash boundary signal with a
+deterministic Gear hash requiring one table lookup per legal boundary probe.
+Minimum, average, and maximum chunk bounds and insertion-shift recovery remain
+covered by tests. Five contemporaneous hosted Linux runs per revision show
+median encode time falling from 0.618 to 0.437 seconds (29.2%). The archive
+remains 275,859 bytes, while maximum frame payload improves by 8 bytes. The
+cumulative hosted encode improvement since v0.23 is 76.8%.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across

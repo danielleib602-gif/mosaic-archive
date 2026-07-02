@@ -221,6 +221,11 @@ input block while preserving direct byte iteration. Hosted Linux encode time
 improves from a five-run median of 0.618 to 0.588 seconds with identical chunk
 boundaries and the same 275,859-byte archive. This supersedes an earlier
 segmented-memoryview experiment whose Linux overhead outweighed its local gain.
+Package v0.32 replaces rolling Buzhash with a deterministic one-lookup Gear
+boundary signal. Five contemporaneous hosted Linux runs per revision improve
+median encode time from 0.618 to 0.437 seconds. The padded archive remains
+275,859 bytes, maximum frame payload improves by 8 bytes, and existing
+insertion-shift and cross-file dedup recovery tests remain green.
 
 Parallel research tracks:
 
