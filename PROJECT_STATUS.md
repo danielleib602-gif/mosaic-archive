@@ -1,7 +1,8 @@
 # Project status
 
 Package version: 0.32.0  
-Publication status: READY for an experimental-alpha GitHub release  
+Publication status: READY for source publication; tagged binary release BLOCKED
+by the GitHub Actions account gate described below  
 Stable-format status: MSC6 is frozen for the planned 1.0 line  
 Repository status at this snapshot: private; no `v0.32.0` tag has been created
 
@@ -53,6 +54,11 @@ Mosaic encoder is also slower than those tools on that corpus.
   compatibility commitment.
 - The GitHub workflow publishes native executables, checksums, and provenance.
   PyPI publication is not configured.
+- On 2026-07-03, GitHub refused to start PR, binary, reliability, and
+  coverage-fuzz jobs because recent account payments failed or the Actions
+  spending limit must be increased. No workflow steps executed. Resolve the
+  account gate and rerun PR #33 before creating `v0.32.0`; otherwise the tag
+  cannot produce the promised binary assets.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
 - Padding hides exact length only within the selected bucket and cannot hide
@@ -65,12 +71,18 @@ Mosaic encoder is also slower than those tools on that corpus.
 
 ## Verification snapshot
 
-The publication checkout passes 146 unit/integration tests on Python 3.13.
+The publication checkout passes 147 unit/integration tests on Python 3.13.
 Exact source coverage is 3,129 of 3,547 executable lines (88.215393%). Ruff,
 strict mypy, Bandit, dependency audit, bytecode compilation, source/wheel
 builds, and package-metadata validation pass. A clean isolated installation of
 the built wheel reports `msc 0.32.0` and completes a verified encrypted MSR2
 round trip.
+
+The deterministic reliability campaign executes 10,000 mutations across 14
+targets, and the local 256 MiB MSC6 soak round trip restores the exact source
+SHA-256. The last v0.32 code CI and cross-platform binary matrix passed before
+the account gate appeared. The final documentation PR jobs did not fail code;
+GitHub created them with zero steps and a billing/spending-limit annotation.
 
 Tracked files and Git history were checked for common private-key, AWS-key, and
 GitHub-token signatures. No matching secret or dangerous credential file was
@@ -79,8 +91,8 @@ contains no sensitive information.
 
 ## Current development focus
 
-The publication-readiness pass is the current work. After the v0.32 alpha is
-published, the next priorities are:
+Resolving the GitHub Actions account gate and rerunning PR #33 is the immediate
+current work. After the v0.32 alpha is published, the next priorities are:
 
 1. complete an independent security review and resolve or document its findings;
 2. promote repeated benchmark medians into the standard CI report schema;
@@ -94,11 +106,12 @@ The detailed milestone history and rollback rules remain in
 
 ## Maintainer publication checklist
 
-1. Review the commit-email privacy note above.
-2. Make the repository public when desired.
-3. Confirm every `main` and release-binary check is green.
-4. Create and push the annotated tag `v0.32.0`.
-5. Let the release workflow build, attest, and publish all three binaries.
-6. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.
-7. Keep the experimental-alpha and no-independent-audit language in the
+1. Resolve the GitHub Actions billing or spending-limit gate and rerun PR #33.
+2. Review the commit-email privacy note above.
+3. Make the repository public when desired.
+4. Confirm every `main` and release-binary check is green.
+5. Create and push the annotated tag `v0.32.0`.
+6. Let the release workflow build, attest, and publish all three binaries.
+7. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.
+8. Keep the experimental-alpha and no-independent-audit language in the
    announcement.
