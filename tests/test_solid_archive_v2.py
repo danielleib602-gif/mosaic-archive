@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import random
 import tempfile
 import unittest
@@ -213,6 +214,14 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             root = Path(temp_dir)
             source, archive, restored = root / "corpus", root / "corpus.msr", root / "out"
             generate_corpus(source)
+            for index, path in enumerate(
+                sorted(
+                    source.rglob("*"),
+                    key=lambda item: item.relative_to(source).as_posix(),
+                )
+            ):
+                timestamp = 1_700_000_000_000_000_000 + index * 123_456_789
+                os.utime(path, ns=(timestamp, timestamp))
             seven_zip_size = json.loads(
                 Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")
             )["comparisons"]["7z"]["archive_size"]
