@@ -1,0 +1,36 @@
+{
+  "after": {
+    "archive_bytes": 275859,
+    "encode_seconds": 0.4373710039999992,
+    "encode_seconds_runs": [
+      0.3923754360000089,
+      0.43841223799999796,
+      0.45424505599999776,
+      0.4373710039999992,
+      0.43574514400000197
+    ],
+    "maximum_frame_payload": 263510,
+    "round_trip_verified": true
+  },
+  "baseline_commit": "d2fc9e9f859f77c70b25fed739497d836b080837",
+  "before": {
+    "archive_bytes": 275859,
+    "encode_seconds": 0.617935688000003,
+    "encode_seconds_runs": [
+      0.580167137000018,
+      0.567378745000013,
+      0.632726884000007,
+      0.617935688000003,
+      0.634540883
+    ],
+    "maximum_frame_payload": 263518,
+    "round_trip_verified": true
+  },
+  "encode_improvement_percent": 29.220627,
+  "measurement": "median of five contemporaneous independent hosted Ubuntu workflow runs per revision",
+  "payload_improvement_bytes": 8,
+  "schema_version": 1,
+  "size_change_bytes": 0,
+  "source_commit": "fb0d4509115e5fcdca3a87fa6bd4dcfb3ac634e0",
+  "status": "hosted Linux speed and payload win with identical padded archive bytes; one-lookup Gear hash retains shifted-boundary recovery"
+}

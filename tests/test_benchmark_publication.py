@@ -33,7 +33,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.31.0",
+                release="0.32.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
             )
@@ -42,8 +42,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 1)
-            self.assertEqual(report["release"], "0.31.0")
-            self.assertEqual(report["package_version"], "0.31.0")
+            self.assertEqual(report["release"], "0.32.0")
+            self.assertEqual(report["package_version"], "0.32.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 1)
             self.assertTrue(report["mosaic"]["round_trip_verified"])
@@ -171,6 +171,22 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         )
         self.assertEqual(scorecard["after"]["archive_bytes"], 275859)
         self.assertEqual(scorecard["after"]["per_byte_chunk_appends"], 0)
+        self.assertLess(
+            scorecard["after"]["encode_seconds"],
+            scorecard["before"]["encode_seconds"],
+        )
+
+    def test_gear_cdc_scorecard_preserves_size_and_improves_time(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.32-gear-cdc.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(scorecard["after"]["archive_bytes"], 275859)
+        self.assertLessEqual(
+            scorecard["after"]["maximum_frame_payload"],
+            scorecard["before"]["maximum_frame_payload"],
+        )
         self.assertLess(
             scorecard["after"]["encode_seconds"],
             scorecard["before"]["encode_seconds"],

@@ -15,14 +15,16 @@ _READ_SIZE = 64 * 1024
 def _build_table() -> tuple[int, ...]:
     return tuple(
         int.from_bytes(
-            hashlib.sha256(b"Mosaic-CDC-v1" + bytes((value,))).digest()[:8],
+            hashlib.sha256(
+                b"Mosaic-Gear-v1/" + bytes((7, value))
+            ).digest()[:8],
             "big",
         )
         for value in range(256)
     )
 
 
-_BUZHASH_TABLE = _build_table()
+_GEAR_TABLE = _build_table()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,20 +51,17 @@ def iter_content_defined_chunks(
     stream: BinaryIO,
     config: ChunkingConfig = DEFAULT_CHUNKING,
 ) -> Iterator[bytes]:
-    """Yield bounded chunks using a 64-byte rolling Buzhash boundary signal.
+    """Yield bounded chunks using a deterministic Gear boundary signal.
 
-    Boundary decisions depend on the recent byte window rather than absolute
-    offsets, so alignment recovers after insertions or deletions.
+    Boundary decisions depend on recent content rather than absolute offsets,
+    so alignment recovers after insertions or deletions.
     """
     boundary_mask = config.avg_size - 1
     chunk = bytearray()
     chunk_size = 0
     emitted_size = 0
-    window = bytearray(_WINDOW_SIZE)
-    window_position = 0
     fingerprint = 0
-    fingerprint_active = False
-    table = _BUZHASH_TABLE
+    table = _GEAR_TABLE
     minimum_size = config.min_size
     maximum_size = config.max_size
 
@@ -70,39 +69,19 @@ def iter_content_defined_chunks(
         chunk.extend(input_block)
         for byte in input_block:
             chunk_size += 1
-            if not fingerprint_active:
-                if chunk_size < minimum_size:
-                    continue
-                current_end = emitted_size + chunk_size
-                window[:] = chunk[current_end - _WINDOW_SIZE : current_end]
-                fingerprint = 0
-                for initial in window:
-                    fingerprint = (
-                        ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
-                    ) ^ table[initial]
-                fingerprint_active = True
-            else:
-                outgoing = window[window_position]
-                window[window_position] = byte
-                window_position = (window_position + 1) & (_WINDOW_SIZE - 1)
-                rotated = ((fingerprint << 1) | (fingerprint >> 63)) & _MASK_64
-                fingerprint = (
-                    rotated
-                    ^ table[outgoing]
-                    ^ table[byte]
-                )
+            if chunk_size < minimum_size:
+                continue
+            fingerprint = ((fingerprint << 1) ^ table[byte]) & _MASK_64
 
             at_content_boundary = (
-                chunk_size >= minimum_size and fingerprint & boundary_mask == 0
+                fingerprint & boundary_mask == 0
             )
             if at_content_boundary or chunk_size >= maximum_size:
                 current_end = emitted_size + chunk_size
                 yield bytes(memoryview(chunk)[emitted_size:current_end])
                 emitted_size = current_end
                 chunk_size = 0
-                window_position = 0
                 fingerprint = 0
-                fingerprint_active = False
         if emitted_size:
             del chunk[:emitted_size]
             emitted_size = 0
