@@ -218,9 +218,9 @@ cost, reported as plainly as the 256-byte size win. Generated corpus mtimes are
 now deterministic so archive-size evidence is reproducible across platforms.
 Package v0.31 replaces per-byte chunk-buffer appends with one extend per 64 KiB
 input block while preserving direct byte iteration. Hosted Linux encode time
-improves from 0.607 to 0.572 seconds with identical chunk boundaries and the
-same 275,859-byte archive. This supersedes an earlier segmented-memoryview
-experiment whose Linux overhead outweighed its local gain.
+improves from a five-run median of 0.618 to 0.588 seconds with identical chunk
+boundaries and the same 275,859-byte archive. This supersedes an earlier
+segmented-memoryview experiment whose Linux overhead outweighed its local gain.
 
 Parallel research tracks:
 

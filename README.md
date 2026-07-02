@@ -320,8 +320,9 @@ The v0.31 chunker extends its chunk buffer once per 64 KiB input block instead
 of appending every byte individually. It retains direct byte iteration, emits
 completed chunks through one-copy views, and compacts consumed storage once
 per block. Exact chunk boundaries and the 275,859-byte archive remain
-unchanged, while hosted Linux encode time falls from 0.607 to 0.572 seconds
-(5.7%). The cumulative hosted encode improvement since v0.23 is 69.7%.
+unchanged, while the median of five hosted Linux runs falls from 0.618 to
+0.588 seconds (4.9%). The cumulative hosted encode improvement since v0.23 is
+68.9%.
 
 ## Current limits
 
