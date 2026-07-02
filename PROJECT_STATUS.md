@@ -57,8 +57,8 @@ Mosaic encoder is also slower than those tools on that corpus.
 - On 2026-07-03, GitHub refused to start PR, binary, reliability, and
   coverage-fuzz jobs because recent account payments failed or the Actions
   spending limit must be increased. No workflow steps executed. Resolve the
-  account gate and rerun PR #33 before creating `v0.32.0`; otherwise the tag
-  cannot produce the promised binary assets.
+  account gate and rerun the required workflows on `main` before creating
+  `v0.32.0`; otherwise the tag cannot produce the promised binary assets.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
 - Padding hides exact length only within the selected bucket and cannot hide
@@ -91,8 +91,9 @@ contains no sensitive information.
 
 ## Current development focus
 
-Resolving the GitHub Actions account gate and rerunning PR #33 is the immediate
-current work. After the v0.32 alpha is published, the next priorities are:
+Resolving the GitHub Actions account gate and rerunning the required workflows
+on `main` is the immediate current work. After the v0.32 alpha is published,
+the next priorities are:
 
 1. complete an independent security review and resolve or document its findings;
 2. promote repeated benchmark medians into the standard CI report schema;
@@ -106,7 +107,8 @@ The detailed milestone history and rollback rules remain in
 
 ## Maintainer publication checklist
 
-1. Resolve the GitHub Actions billing or spending-limit gate and rerun PR #33.
+1. Resolve the GitHub Actions billing or spending-limit gate and rerun the
+   required workflows on `main`.
 2. Review the commit-email privacy note above.
 3. Make the repository public when desired.
 4. Confirm every `main` and release-binary check is green.

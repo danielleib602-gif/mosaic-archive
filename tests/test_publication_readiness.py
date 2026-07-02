@@ -46,6 +46,8 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("Package version: 0.32.0", status)
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
+        self.assertIn("rerun the required workflows on `main`", status)
+        self.assertNotIn("rerun PR #", status)
 
     def test_relative_markdown_links_resolve(self) -> None:
         markdown_files = (
