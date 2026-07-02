@@ -25,7 +25,7 @@ class CliTests(unittest.TestCase):
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), "msc 0.30.0")
+        self.assertEqual(completed.stdout.strip(), "msc 0.31.0")
 
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
