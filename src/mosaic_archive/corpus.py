@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import random
 import struct
 import zlib
@@ -15,6 +16,7 @@ CORPUS_VERSION = 1
 DEFAULT_SEED = 20260629
 DEFAULT_UNIT_SIZE = 64 * 1024
 MANIFEST_NAME = "manifest.json"
+CORPUS_MTIME_NS = 1_700_000_000_000_000_000
 
 
 def _sha256(data: bytes) -> str:
@@ -125,6 +127,9 @@ def generate_corpus(
         encoding="utf-8",
         newline="\n",
     )
+    for path in root.rglob("*"):
+        os.utime(path, ns=(CORPUS_MTIME_NS, CORPUS_MTIME_NS))
+    os.utime(root, ns=(CORPUS_MTIME_NS, CORPUS_MTIME_NS))
     return manifest
 
 

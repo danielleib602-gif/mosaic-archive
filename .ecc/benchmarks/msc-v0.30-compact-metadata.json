@@ -1,0 +1,22 @@
+{
+  "after": {
+    "archive_bytes": 275859,
+    "encode_seconds": 0.6068660130000012,
+    "legacy_metadata_readable": true,
+    "round_trip_verified": true
+  },
+  "before": {
+    "archive_bytes": 276115,
+    "encode_seconds": 0.5920941749999997,
+    "legacy_metadata_readable": true,
+    "round_trip_verified": true
+  },
+  "encode_regression_percent": 2.494846,
+  "margin_vs_encrypted_7zip_bytes": 17053,
+  "margin_vs_encrypted_7zip_percent": 5.821885,
+  "schema_version": 1,
+  "size_improvement_bytes": 256,
+  "size_improvement_percent": 0.092715,
+  "source_commit": "f2adfa6414a3cd2dce806c05d255bdf4399f4a49",
+  "status": "hosted Linux size win with a small measured encode-time cost; deterministic corpus metadata and legacy MSR2 decoding verified"
+}

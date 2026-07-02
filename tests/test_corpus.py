@@ -8,10 +8,28 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mosaic_archive.corpus import MANIFEST_NAME, generate_corpus, verify_corpus
+from mosaic_archive.corpus import (
+    CORPUS_MTIME_NS,
+    MANIFEST_NAME,
+    generate_corpus,
+    verify_corpus,
+)
 
 
 class ReproducibleCorpusTests(unittest.TestCase):
+    def test_generated_metadata_uses_a_reproducible_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "corpus"
+            generate_corpus(root)
+
+            self.assertEqual(root.stat().st_mtime_ns, CORPUS_MTIME_NS)
+            self.assertTrue(
+                all(
+                    path.stat().st_mtime_ns == CORPUS_MTIME_NS
+                    for path in root.rglob("*")
+                )
+            )
+
     def test_default_manifest_is_byte_identical_to_published_linux_corpus(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

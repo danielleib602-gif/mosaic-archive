@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import random
 import tempfile
 import unittest
@@ -12,7 +13,9 @@ from mosaic_archive import dedup_archive
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
+    _decode_compact_uint,
     _decode_metadata_envelope,
+    _metadata,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
@@ -29,6 +32,13 @@ def _tree_digest(root: Path) -> bytes:
 
 
 class StreamingSolidArchiveTests(unittest.TestCase):
+    def test_compact_uints_are_bounded_and_canonical(self) -> None:
+        self.assertEqual(_decode_compact_uint(b"\x00", 0, 100, "value"), (0, 1))
+        self.assertEqual(_decode_compact_uint(b"\xac\x02", 0, 1000, "value"), (300, 2))
+        for malformed in (b"\x80", b"\x80\x00", b"\xff\x7f"):
+            with self.subTest(payload=malformed), self.assertRaises(ArchiveFormatError):
+                _decode_compact_uint(malformed, 0, 1000, "value")
+
     def test_encoder_content_defined_chunks_each_file_only_once(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -57,6 +67,38 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(_decode_metadata_envelope(legacy), (legacy, False))
         with self.assertRaises(ArchiveFormatError):
             _decode_metadata_envelope(b"MDZ1\x01")
+
+    def test_decoder_retains_legacy_fixed_width_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "source", root / "legacy.msr", root / "out"
+            source.write_bytes(b"legacy metadata remains readable\n" * 4096)
+
+            def legacy_metadata(manifest, assignments, frame_counts):
+                raw_sizes = [0, 0, 0]
+                unique_records = [
+                    chunk
+                    for index, chunk in enumerate(manifest.chunks)
+                    if chunk.source_index == index
+                ]
+                for chunk, lane in zip(unique_records, assignments, strict=True):
+                    raw_sizes[lane] += chunk.size
+                return _metadata(
+                    manifest,
+                    assignments,
+                    tuple(raw_sizes),
+                    frame_counts,
+                )
+
+            with patch(
+                "mosaic_archive.solid_archive_v2._compact_metadata",
+                side_effect=legacy_metadata,
+            ):
+                encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), source.read_bytes())
 
     def test_decode_limits_reject_expansion_and_frame_budgets_before_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -172,6 +214,14 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             root = Path(temp_dir)
             source, archive, restored = root / "corpus", root / "corpus.msr", root / "out"
             generate_corpus(source)
+            for index, path in enumerate(
+                sorted(
+                    source.rglob("*"),
+                    key=lambda item: item.relative_to(source).as_posix(),
+                )
+            ):
+                timestamp = 1_700_000_000_000_000_000 + index * 123_456_789
+                os.utime(path, ns=(timestamp, timestamp))
             seven_zip_size = json.loads(
                 Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")
             )["comparisons"]["7z"]["archive_size"]
@@ -180,6 +230,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
                 source,
                 archive,
                 "correct horse battery staple",
+                padding_size=256,
                 kdf_log_n=14,
             )
             decoded = decode_solid_archive_v2(
@@ -189,6 +240,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             )
 
             self.assertEqual(archive.read_bytes()[:4], b"MSR2")
+            self.assertEqual(encoded.archive_size, 275859)
             self.assertEqual(encoded.compression_passes, 1)
             self.assertEqual(encoded.routing_trial_compressions, 0)
             self.assertLess(encoded.archive_size, seven_zip_size)

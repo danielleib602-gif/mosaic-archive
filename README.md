@@ -307,6 +307,15 @@ chunk boundaries and the 276,115-byte archive remain unchanged, while hosted
 encode time falls from 0.700 to 0.592 seconds (15.5%). The cumulative hosted
 improvement since v0.23 is 68.7%.
 
+The v0.30 metadata representation removes repeated fields from duplicate chunk
+records, derives file and lane sizes, packs lane IDs into two bits, and uses
+bounded canonical integers. Compact manifests are revalidated through the
+existing hardened manifest parser, while legacy fixed-width MSR2 metadata
+remains readable. Deterministic corpus timestamps make archived metadata
+reproducible across platforms. The hosted archive falls from 276,115 to
+275,859 bytes; encode time measured 0.607 instead of 0.592 seconds, so this is
+a 256-byte size win with a small 2.5% measured speed cost.
+
 ## Current limits
 
 - v0.3 deduplicates within one archive, but does not yet reuse chunks across

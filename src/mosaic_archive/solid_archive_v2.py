@@ -17,6 +17,10 @@ from mosaic_archive.cdc import DEFAULT_CHUNKING, ChunkingConfig
 from mosaic_archive.container_format import AEAD_CHACHA20_POLY1305, KDF_SCRYPT
 from mosaic_archive.crypto import AEAD_TAG_LENGTH, SALT_LENGTH, decrypt, derive_key, encrypt
 from mosaic_archive.dedup_archive import (
+    MAX_CHUNK_RECORDS,
+    ZERO_HASH,
+    ChunkRecord,
+    DedupEntry,
     DedupManifest,
     _apply_metadata,
     _scan_manifest,
@@ -32,7 +36,12 @@ from mosaic_archive.solid_frames import (
     write_precompressed_solid_lane_frames,
 )
 from mosaic_archive.solid_research import choose_solid_lane
-from mosaic_archive.stream_archive import ENTRY_DIRECTORY, KIND_FILE, KIND_FOLDER
+from mosaic_archive.stream_archive import (
+    ENTRY_DIRECTORY,
+    ENTRY_FILE,
+    KIND_FILE,
+    KIND_FOLDER,
+)
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT, frame_nonce
 
 MSR2_MAGIC: Final = b"MSR2"
@@ -44,6 +53,8 @@ _MAX_METADATA_CIPHERTEXT: Final = 64 * 1024 * 1024
 _METADATA_MAGIC: Final = b"MDZ1"
 _METADATA_ENVELOPE: Final = struct.Struct(">4sBQ")
 _RAW_LZMA2_CODEC: Final = 1
+_COMPACT_METADATA_MAGIC: Final = b"MC21"
+_MAX_COMPACT_UINT: Final = (1 << 64) - 1
 DEFAULT_MAX_OUTPUT_SIZE: Final = 1024 * 1024 * 1024 * 1024
 DEFAULT_MAX_FRAME_COUNT: Final = 1_000_000
 
@@ -113,6 +124,108 @@ def _metadata(
         output.extend(_LANE_RECORD.pack(raw_size, frame_count))
     output.extend(serialized)
     output.extend(assignments)
+    return bytes(output)
+
+
+def _encode_compact_uint(value: int) -> bytes:
+    if not 0 <= value <= _MAX_COMPACT_UINT:
+        raise ValueError("compact metadata integer is outside uint64")
+    output = bytearray()
+    while value >= 0x80:
+        output.append((value & 0x7F) | 0x80)
+        value >>= 7
+    output.append(value)
+    return bytes(output)
+
+
+def _decode_compact_uint(
+    payload: bytes,
+    position: int,
+    maximum: int,
+    description: str,
+) -> tuple[int, int]:
+    start = position
+    value = 0
+    shift = 0
+    while position < len(payload) and shift <= 63:
+        byte = payload[position]
+        position += 1
+        component = byte & 0x7F
+        if shift == 63 and component > 1:
+            break
+        value |= component << shift
+        if not byte & 0x80:
+            if (position - start > 1 and component == 0) or value > maximum:
+                break
+            return value, position
+        shift += 7
+    raise ArchiveFormatError(f"MSR2 compact {description} is invalid")
+
+
+def _encode_compact_sint(value: int) -> bytes:
+    if not -(1 << 63) <= value < 1 << 63:
+        raise ValueError("compact metadata integer is outside int64")
+    return _encode_compact_uint((value << 1) ^ (value >> 63))
+
+
+def _decode_compact_sint(
+    payload: bytes,
+    position: int,
+    description: str,
+) -> tuple[int, int]:
+    encoded, position = _decode_compact_uint(
+        payload,
+        position,
+        _MAX_COMPACT_UINT,
+        description,
+    )
+    return (encoded >> 1) ^ -(encoded & 1), position
+
+
+def _compact_metadata(
+    manifest: DedupManifest,
+    assignments: bytes,
+    frame_counts: tuple[int, int, int],
+) -> bytes:
+    output = bytearray(_COMPACT_METADATA_MAGIC)
+    root = manifest.root_name.encode("utf-8")
+    if manifest.kind not in {KIND_FILE, KIND_FOLDER}:
+        raise RuntimeError("internal MSR2 archive kind is invalid")
+    kind_bit = int(manifest.kind == KIND_FOLDER)
+    output.extend(_encode_compact_uint((len(root) << 1) | kind_bit))
+    output.extend(root)
+    output.extend(_encode_compact_uint(len(manifest.entries)))
+    output.extend(_encode_compact_uint(len(manifest.chunks)))
+    for frame_count in frame_counts:
+        output.extend(_encode_compact_uint(frame_count))
+    previous_mtime_ns = 0
+    for entry in manifest.entries:
+        path = entry.relative_path.encode("utf-8")
+        if entry.entry_type not in {ENTRY_FILE, ENTRY_DIRECTORY}:
+            raise RuntimeError("internal MSR2 entry type is invalid")
+        directory_bit = int(entry.entry_type == ENTRY_DIRECTORY)
+        output.extend(_encode_compact_uint((len(path) << 1) | directory_bit))
+        output.extend(path)
+        output.extend(_encode_compact_uint(entry.mode))
+        output.extend(_encode_compact_sint(entry.mtime_ns - previous_mtime_ns))
+        previous_mtime_ns = entry.mtime_ns
+        if entry.entry_type == ENTRY_FILE:
+            output.extend(_encode_compact_uint(entry.chunk_count))
+            output.extend(entry.digest)
+    for index, chunk in enumerate(manifest.chunks):
+        if chunk.source_index == index:
+            output.append(0)
+            output.extend(_encode_compact_uint(chunk.size))
+            output.extend(chunk.digest)
+        else:
+            output.append(1)
+            output.extend(_encode_compact_uint(chunk.source_index))
+    packed_assignments = bytearray((len(assignments) + 3) // 4)
+    for index, lane in enumerate(assignments):
+        if lane >= _LANE_COUNT:
+            raise RuntimeError("internal MSR2 lane assignment is invalid")
+        packed_assignments[index // 4] |= lane << ((index % 4) * 2)
+    output.extend(packed_assignments)
     return bytes(output)
 
 
@@ -241,7 +354,7 @@ def encode_solid_archive_v2(
             )
         frame_counts = cast(tuple[int, int, int], tuple(frame_count_values))
         metadata = _encode_metadata_envelope(
-            _metadata(manifest, assignments, raw_sizes, frame_counts)
+            _compact_metadata(manifest, assignments, frame_counts)
         )
         if len(metadata) > MAX_MANIFEST_CIPHERTEXT:
             raise ValueError("MSR2 encrypted metadata exceeds its resource limit")
@@ -372,6 +485,247 @@ def _read_header(stream: BinaryIO) -> tuple[bytes, Msr2Header]:
     return serialized, parse_msr2_header(serialized)
 
 
+def _take_compact_bytes(
+    payload: bytes,
+    position: int,
+    size: int,
+    description: str,
+) -> tuple[bytes, int]:
+    end = position + size
+    if end > len(payload):
+        raise ArchiveFormatError(f"MSR2 compact {description} is truncated")
+    return payload[position:end], end
+
+
+def _metadata_compatibility_header(
+    *,
+    unique_count: int,
+    config: ChunkingConfig,
+    padding_size: int,
+    salt: bytes,
+    nonce_prefix: bytes,
+) -> Msc3Header:
+    return Msc3Header(
+        MSC6_VERSION,
+        MSC3_FLAGS,
+        KDF_SCRYPT,
+        AEAD_CHACHA20_POLY1305,
+        config.min_size,
+        config.avg_size,
+        config.max_size,
+        padding_size,
+        salt,
+        nonce_prefix,
+        14,
+        8,
+        1,
+        unique_count + 1,
+    )
+
+
+def _parse_compact_metadata(
+    payload: bytes,
+    *,
+    unique_count: int,
+    config: ChunkingConfig,
+    padding_size: int,
+    salt: bytes,
+    nonce_prefix: bytes,
+) -> tuple[DedupManifest, bytes, tuple[int, int, int], tuple[int, int, int]]:
+    position = len(_COMPACT_METADATA_MAGIC)
+    root_descriptor, position = _decode_compact_uint(
+        payload, position, (65_535 << 1) | 1, "root descriptor"
+    )
+    kind = KIND_FOLDER if root_descriptor & 1 else KIND_FILE
+    root_length = root_descriptor >> 1
+    root_bytes, position = _take_compact_bytes(
+        payload, position, root_length, "root name"
+    )
+    try:
+        root_name = root_bytes.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ArchiveFormatError("MSR2 compact root name is invalid") from error
+    entry_count, position = _decode_compact_uint(
+        payload, position, 1_000_000, "entry count"
+    )
+    chunk_count, position = _decode_compact_uint(
+        payload, position, MAX_CHUNK_RECORDS, "chunk count"
+    )
+    frame_count_values: list[int] = []
+    for lane in range(_LANE_COUNT):
+        frame_count, position = _decode_compact_uint(
+            payload,
+            position,
+            DEFAULT_MAX_FRAME_COUNT,
+            f"lane {lane} frame count",
+        )
+        frame_count_values.append(frame_count)
+
+    entry_specs: list[tuple[int, str, int, int, int, bytes]] = []
+    previous_mtime_ns = 0
+    for index in range(entry_count):
+        path_descriptor, position = _decode_compact_uint(
+            payload,
+            position,
+            (65_535 << 1) | 1,
+            f"entry {index} path descriptor",
+        )
+        entry_type = ENTRY_DIRECTORY if path_descriptor & 1 else ENTRY_FILE
+        path_length = path_descriptor >> 1
+        path_bytes, position = _take_compact_bytes(
+            payload, position, path_length, f"entry {index} path"
+        )
+        try:
+            relative_path = path_bytes.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ArchiveFormatError(
+                f"MSR2 compact entry {index} path is invalid"
+            ) from error
+        mode, position = _decode_compact_uint(
+            payload, position, 0o777, f"entry {index} mode"
+        )
+        mtime_delta, position = _decode_compact_sint(
+            payload, position, f"entry {index} modification time"
+        )
+        mtime_ns = previous_mtime_ns + mtime_delta
+        if not -(1 << 63) <= mtime_ns < 1 << 63:
+            raise ArchiveFormatError(
+                f"MSR2 compact entry {index} modification time is invalid"
+            )
+        previous_mtime_ns = mtime_ns
+        if entry_type == ENTRY_FILE:
+            count, position = _decode_compact_uint(
+                payload, position, chunk_count, f"entry {index} chunk count"
+            )
+            digest, position = _take_compact_bytes(
+                payload, position, 32, f"entry {index} digest"
+            )
+        else:
+            count = 0
+            digest = ZERO_HASH
+        entry_specs.append(
+            (entry_type, relative_path, mode, mtime_ns, count, digest)
+        )
+
+    chunks: list[ChunkRecord] = []
+    compact_unique_count = 0
+    for index in range(chunk_count):
+        tag_bytes, position = _take_compact_bytes(
+            payload, position, 1, f"chunk {index} tag"
+        )
+        tag = tag_bytes[0]
+        if tag == 0:
+            size, position = _decode_compact_uint(
+                payload, position, config.max_size, f"chunk {index} size"
+            )
+            if size == 0:
+                raise ArchiveFormatError(f"MSR2 compact chunk {index} size is invalid")
+            digest, position = _take_compact_bytes(
+                payload, position, 32, f"chunk {index} digest"
+            )
+            chunks.append(ChunkRecord(digest, size, index))
+            compact_unique_count += 1
+        elif tag == 1:
+            if index == 0:
+                raise ArchiveFormatError("MSR2 compact first chunk cannot be duplicate")
+            source, position = _decode_compact_uint(
+                payload, position, index - 1, f"chunk {index} source"
+            )
+            canonical = chunks[source]
+            if canonical.source_index != source:
+                raise ArchiveFormatError("MSR2 compact duplicate chains are forbidden")
+            chunks.append(ChunkRecord(canonical.digest, canonical.size, source))
+        else:
+            raise ArchiveFormatError(f"MSR2 compact chunk {index} tag is invalid")
+    if compact_unique_count != unique_count:
+        raise ArchiveFormatError("MSR2 compact unique chunk count is inconsistent")
+
+    packed_size = (unique_count + 3) // 4
+    packed, position = _take_compact_bytes(
+        payload, position, packed_size, "lane assignments"
+    )
+    if position != len(payload):
+        raise ArchiveFormatError("MSR2 compact metadata contains trailing bytes")
+    if unique_count % 4 and packed and packed[-1] >> ((unique_count % 4) * 2):
+        raise ArchiveFormatError("MSR2 compact lane assignment padding is nonzero")
+    assignments_buffer = bytearray()
+    for index in range(unique_count):
+        lane = (packed[index // 4] >> ((index % 4) * 2)) & 0x03
+        if lane >= _LANE_COUNT:
+            raise ArchiveFormatError("MSR2 compact lane assignment is invalid")
+        assignments_buffer.append(lane)
+    assignments = bytes(assignments_buffer)
+
+    entries: list[DedupEntry] = []
+    next_chunk = 0
+    for entry_type, relative_path, mode, mtime_ns, count, digest in entry_specs:
+        if entry_type == ENTRY_DIRECTORY:
+            entries.append(
+                DedupEntry(
+                    entry_type,
+                    relative_path,
+                    mode,
+                    mtime_ns,
+                    0,
+                    0,
+                    0,
+                    ZERO_HASH,
+                )
+            )
+            continue
+        end = next_chunk + count
+        if end > len(chunks):
+            raise ArchiveFormatError("MSR2 compact file chunk range is invalid")
+        size = sum(chunk.size for chunk in chunks[next_chunk:end])
+        entries.append(
+            DedupEntry(
+                entry_type,
+                relative_path,
+                mode,
+                mtime_ns,
+                size,
+                next_chunk,
+                count,
+                digest,
+            )
+        )
+        next_chunk = end
+    if next_chunk != len(chunks):
+        raise ArchiveFormatError("MSR2 compact file chunks are unreferenced")
+
+    manifest = DedupManifest(kind, root_name, tuple(entries), tuple(chunks))
+    compatibility_header = _metadata_compatibility_header(
+        unique_count=unique_count,
+        config=config,
+        padding_size=padding_size,
+        salt=salt,
+        nonce_prefix=nonce_prefix,
+    )
+    manifest = parse_dedup_manifest(
+        serialize_dedup_manifest(manifest),
+        compatibility_header,
+    )
+    raw_sizes = [0, 0, 0]
+    unique_records = [
+        chunk
+        for index, chunk in enumerate(manifest.chunks)
+        if chunk.source_index == index
+    ]
+    for chunk, lane in zip(unique_records, assignments, strict=True):
+        raw_sizes[lane] += chunk.size
+    for raw_size, frame_count in zip(
+        raw_sizes, frame_count_values, strict=True
+    ):
+        if (raw_size == 0) != (frame_count == 0):
+            raise ArchiveFormatError("MSR2 compact lane frame count is inconsistent")
+    return (
+        manifest,
+        assignments,
+        cast(tuple[int, int, int], tuple(raw_sizes)),
+        cast(tuple[int, int, int], tuple(frame_count_values)),
+    )
+
+
 def _parse_metadata(
     payload: bytes,
     *,
@@ -381,6 +735,15 @@ def _parse_metadata(
     salt: bytes,
     nonce_prefix: bytes,
 ) -> tuple[DedupManifest, bytes, tuple[int, int, int], tuple[int, int, int]]:
+    if payload.startswith(_COMPACT_METADATA_MAGIC):
+        return _parse_compact_metadata(
+            payload,
+            unique_count=unique_count,
+            config=config,
+            padding_size=padding_size,
+            salt=salt,
+            nonce_prefix=nonce_prefix,
+        )
     required = _METADATA_PREFIX.size + _LANE_COUNT * _LANE_RECORD.size
     if len(payload) < required:
         raise ArchiveFormatError("MSR2 metadata is truncated")
@@ -403,21 +766,12 @@ def _parse_metadata(
     assignments = payload[position + manifest_size :]
     if any(lane >= _LANE_COUNT for lane in assignments):
         raise ArchiveFormatError("MSR2 lane assignment is invalid")
-    compatibility_header = Msc3Header(
-        MSC6_VERSION,
-        MSC3_FLAGS,
-        KDF_SCRYPT,
-        AEAD_CHACHA20_POLY1305,
-        config.min_size,
-        config.avg_size,
-        config.max_size,
-        padding_size,
-        salt,
-        nonce_prefix,
-        14,
-        8,
-        1,
-        unique_count + 1,
+    compatibility_header = _metadata_compatibility_header(
+        unique_count=unique_count,
+        config=config,
+        padding_size=padding_size,
+        salt=salt,
+        nonce_prefix=nonce_prefix,
     )
     manifest = parse_dedup_manifest(manifest_payload, compatibility_header)
     unique_records = [
