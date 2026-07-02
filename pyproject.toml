@@ -28,7 +28,7 @@ Documentation = "https://github.com/danielleib602-gif/mosaic-archive#readme"
 
 [project.optional-dependencies]
 dev = [
-  "mypy>=1.15,<2",
+  "mypy>=1.15,<3",
   "ruff>=0.12,<1",
 ]
 
