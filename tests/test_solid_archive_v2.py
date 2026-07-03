@@ -232,7 +232,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source, archive, restored = root / "corpus", root / "corpus.msr", root / "out"
-            generate_corpus(source)
+            generate_corpus(source, corpus_version=1)
             for index, path in enumerate(
                 sorted(
                     source.rglob("*"),

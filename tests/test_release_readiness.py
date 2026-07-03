@@ -13,7 +13,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_current_repository_is_seven_of_nine_gates_complete(self) -> None:
         report = evaluate_release_readiness(Path("."))
 
-        self.assertEqual(report.package_version, "0.34.0")
+        self.assertEqual(report.package_version, "0.35.0")
         self.assertEqual(report.completed_gates, 7)
         self.assertEqual(report.total_gates, 9)
         self.assertEqual(report.automatic_completed_gates, 7)

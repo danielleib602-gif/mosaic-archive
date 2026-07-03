@@ -110,7 +110,7 @@ class SolidLaneResearchTests(unittest.TestCase):
     def test_fixed_corpus_payload_leaves_room_to_beat_7zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            manifest = generate_corpus(root)
+            manifest = generate_corpus(root, corpus_version=1)
             chunks: list[bytes] = []
             seen: set[bytes] = set()
             for entry in manifest["files"]:

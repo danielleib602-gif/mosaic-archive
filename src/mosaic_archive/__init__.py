@@ -22,4 +22,4 @@ __all__ = [
     "inspect_path",
 ]
 
-__version__ = "0.34.0"
+__version__ = "0.35.0"
