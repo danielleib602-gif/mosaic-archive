@@ -54,8 +54,16 @@ def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     if not runs:
         raise ValueError("at least one benchmark run is required")
     result = dict(runs[0])
-    for field in ("archive_size", "original_size"):
-        expected = result.get(field)
+    volatile_fields = {
+        "decode_mib_per_second",
+        "decode_seconds",
+        "encode_mib_per_second",
+        "encode_seconds",
+        "peak_memory_bytes",
+    }
+    for field, expected in result.items():
+        if field in volatile_fields:
+            continue
         if any(run.get(field) != expected for run in runs[1:]):
             raise ValueError(f"{field} changed across repeated benchmark runs")
     verification_field = (
@@ -76,6 +84,9 @@ def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
                 "samples": samples,
                 "minimum": min(samples),
                 "median": median,
+                "median_absolute_deviation": statistics.median(
+                    abs(value - median) for value in samples
+                ),
                 "maximum": max(samples),
             }
     if timing:
@@ -95,6 +106,20 @@ def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
                     (original_size / (1024 * 1024)) / seconds if seconds > 0 else 0.0
                 )
     return result
+
+
+def _size_deltas(
+    mosaic: dict[str, Any],
+    comparisons: dict[str, dict[str, Any]],
+) -> dict[str, int]:
+    mosaic_size = mosaic.get("archive_size")
+    if not isinstance(mosaic_size, int):
+        return {}
+    return {
+        name: mosaic_size - archive_size
+        for name, comparison in comparisons.items()
+        if isinstance((archive_size := comparison.get("archive_size")), int)
+    }
 
 
 def _aggregate_comparisons(
@@ -184,6 +209,7 @@ def _category_benchmarks(
                 "original_size": sum(int(entry["size"]) for entry in entries),
                 "mosaic": mosaic,
                 "comparisons": comparisons,
+                "mosaic_size_delta_bytes": _size_deltas(mosaic, comparisons),
             }
     return results
 
@@ -295,6 +321,14 @@ def publish_benchmark(
             "seed": manifest["seed"],
             "unit_size": manifest["unit_size"],
             "total_bytes": mosaic["original_size"],
+            "benchmark_input_bytes": mosaic["original_size"],
+            "declared_data_bytes": sum(
+                int(entry["size"]) for entry in manifest["files"]
+            ),
+            "file_count": len(manifest["files"]),
+            "category_count": len(
+                {str(entry["category"]) for entry in manifest["files"]}
+            ),
             "manifest_sha256": _sha256(manifest_path),
         },
         "environment": {
@@ -317,6 +351,7 @@ def publish_benchmark(
         },
         "mosaic": mosaic,
         "comparisons": comparisons,
+        "mosaic_size_delta_bytes": _size_deltas(mosaic, comparisons),
         "categories": categories,
         "tool_versions": comparison_tool_versions(),
     }

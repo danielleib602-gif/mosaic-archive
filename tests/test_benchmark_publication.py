@@ -48,6 +48,12 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             self.assertEqual(report["package_version"], "0.35.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 2)
+            self.assertEqual(report["corpus"]["category_count"], 13)
+            self.assertEqual(report["corpus"]["file_count"], 78)
+            self.assertLess(
+                report["corpus"]["declared_data_bytes"],
+                report["corpus"]["benchmark_input_bytes"],
+            )
             self.assertEqual(report["measurement"]["independent_runs"], 3)
             self.assertEqual(
                 len(report["mosaic"]["timing"]["encode_seconds"]["samples"]),
@@ -57,6 +63,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             self.assertTrue(report["comparisons"]["zip"]["verified"])
             self.assertTrue(report["comparisons"]["gzip"]["verified"])
             self.assertIn("7z-encrypted", report["comparisons"])
+            self.assertIn("zip", report["mosaic_size_delta_bytes"])
             self.assertEqual(
                 set(report["categories"]),
                 {
@@ -132,6 +139,10 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             [3.0, 1.0, 2.0],
         )
         self.assertEqual(aggregate["peak_memory_bytes"], 30)
+        self.assertEqual(
+            aggregate["timing"]["encode_seconds"]["median_absolute_deviation"],
+            1.0,
+        )
         changed_size = [dict(run) for run in runs]
         changed_size[-1]["archive_size"] = 101
         with self.assertRaisesRegex(ValueError, "archive_size"):
