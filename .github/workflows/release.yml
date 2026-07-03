@@ -36,6 +36,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --frozen
+      - run: uv run --frozen msc readiness --require-automatic --json
       - name: Build native one-file executable
         run: >
           uv run --frozen --with pyinstaller==6.21.0 pyinstaller

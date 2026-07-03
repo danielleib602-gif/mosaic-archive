@@ -23,6 +23,9 @@ class ReleaseReadiness:
     total_gates: int
     completion_percent: float
     ready_for_1_0: bool
+    automatic_completed_gates: int
+    automatic_total_gates: int
+    automatic_ready: bool
     gates: tuple[ReadinessGate, ...]
 
 
@@ -139,11 +142,17 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
     gates = automatic_gates[:3] + external_gates[:1] + automatic_gates[3:] + external_gates[1:]
     completed = sum(gate.complete for gate in gates)
     total = len(gates)
+    repository_gates = tuple(gate for gate in gates if not gate.external)
+    automatic_completed = sum(gate.complete for gate in repository_gates)
+    automatic_total = len(repository_gates)
     return ReleaseReadiness(
         package_version,
         completed,
         total,
         (completed / total) * 100,
         completed == total,
+        automatic_completed,
+        automatic_total,
+        automatic_completed == automatic_total,
         gates,
     )
