@@ -12,6 +12,7 @@ on:
       - "src/mosaic_archive/solid_frames.py"
       - "src/mosaic_archive/solid_research.py"
       - "tests/test_benchmark_publication.py"
+      - "tests/test_corpus.py"
       - ".github/workflows/benchmark.yml"
   workflow_dispatch:
   schedule:
@@ -35,20 +36,14 @@ jobs:
       - run: uv run --frozen python -m mosaic_archive.corpus benchmark-corpus
       - run: >
           uv run --frozen python -m mosaic_archive.benchmark_publication
-          benchmark-corpus published-benchmark --release 0.12.0
+          benchmark-corpus published-benchmark --release 0.35.0
           --source-commit ${{ github.event.pull_request.head.sha || github.sha }}
-          --kdf-log-n 14
-      - run: >
-          uv run --frozen msc benchmark --format solid benchmark-corpus
-          --padding-size 256 --kdf-log-n 14
-          --password mosaic-public-encrypted-comparison
-          --compare --json > solid-benchmark.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+          --kdf-log-n 14 --repeats 5 --format solid
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: mosaic-benchmark-v0.12.0-${{ github.sha }}
+          name: mosaic-benchmark-v0.35.0-${{ github.sha }}
           path: |
             benchmark-corpus/manifest.json
             published-benchmark/report.json
             published-benchmark/report.md
-            solid-benchmark.json
           if-no-files-found: error

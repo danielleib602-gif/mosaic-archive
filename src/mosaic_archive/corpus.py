@@ -12,7 +12,7 @@ import zlib
 from pathlib import Path
 from typing import Any
 
-CORPUS_VERSION = 1
+CORPUS_VERSION = 2
 DEFAULT_SEED = 20260629
 DEFAULT_UNIT_SIZE = 64 * 1024
 MANIFEST_NAME = "manifest.json"
@@ -55,6 +55,49 @@ def _numeric_ramp(size: int) -> bytes:
     return data[:size]
 
 
+def _sparse_measurements(seed: int, size: int) -> bytes:
+    rng = random.Random(seed)
+    data = bytearray(size)
+    for offset in range(0, size, 4096):
+        sample = rng.randbytes(min(32, size - offset))
+        data[offset : offset + len(sample)] = sample
+    return bytes(data)
+
+
+def _tabular_measurements(size: int) -> bytes:
+    output = bytearray(b"timestamp,sensor_id,temperature,pressure,status\n")
+    index = 0
+    while len(output) < size:
+        output.extend(
+            (
+                f"2026-06-29T12:{index % 60:02d}:{(index * 7) % 60:02d}Z,"
+                f"sensor-{index % 23:02d},{18 + (index % 17) / 10:.1f},"
+                f"{990 + index % 31},"
+                f"{'ok' if index % 19 else 'calibrating'}\n"
+            ).encode("ascii")
+        )
+        index += 1
+    return bytes(output[:size])
+
+
+def _rgba_gradient(size: int) -> bytes:
+    output = bytearray()
+    pixel = 0
+    while len(output) < size:
+        x = pixel % 256
+        y = (pixel // 256) % 256
+        output.extend((x, y, (x + y) // 2, 255))
+        pixel += 1
+    return bytes(output[:size])
+
+
+def _valid_utf8_to_size(fragment: str, size: int) -> bytes:
+    encoded = fragment.encode("utf-8")
+    repeats = size // len(encoded)
+    result = encoded * repeats
+    return result + (b" " * (size - len(result)))
+
+
 def generate_corpus(
     root: Path,
     *,
@@ -81,7 +124,7 @@ def generate_corpus(
         ),
         unit_size * 2,
     )
-    files: tuple[tuple[str, str, bytes], ...] = (
+    files: list[tuple[str, str, bytes]] = [
         ("text/prose.txt", "text", prose),
         (
             "structured/events.jsonl",
@@ -99,6 +142,49 @@ def generate_corpus(
             zlib.compress(random_bytes, level=9),
         ),
         ("empty/empty.bin", "empty", b""),
+        (
+            "source/parser.py",
+            "source",
+            _repeat_to_size(
+                (
+                    b"def parse_record(record: bytes) -> tuple[int, bytes]:\n"
+                    b"    size = int.from_bytes(record[:4], 'big')\n"
+                    b"    return size, record[4:4 + size]\n\n"
+                ),
+                unit_size * 2,
+            ),
+        ),
+        (
+            "sparse/measurements.bin",
+            "sparse",
+            _sparse_measurements(seed + 2, unit_size * 2),
+        ),
+        (
+            "tabular/sensors.csv",
+            "tabular",
+            _tabular_measurements(unit_size * 2),
+        ),
+        (
+            "unicode/multilingual.txt",
+            "unicode",
+            _valid_utf8_to_size(
+                "Compression • ضغط البيانات • דחיסת נתונים • 圧縮 • сжатие\n",
+                unit_size * 2,
+            ),
+        ),
+        (
+            "image-like/gradient-rgba.bin",
+            "image-like",
+            _rgba_gradient(unit_size * 2),
+        ),
+    ]
+    files.extend(
+        (
+            f"tiny-files/record-{index:03d}.txt",
+            "tiny-files",
+            f"id={index}\nstate={'active' if index % 3 else 'idle'}\n".encode(),
+        )
+        for index in range(64)
     )
 
     entries: list[dict[str, Any]] = []

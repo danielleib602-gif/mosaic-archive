@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 
 from mosaic_archive.corpus import (
-    CORPUS_VERSION,
     CORPUS_MTIME_NS,
+    CORPUS_VERSION,
     MANIFEST_NAME,
     generate_corpus,
     verify_corpus,
@@ -40,7 +40,7 @@ class ReproducibleCorpusTests(unittest.TestCase):
             self.assertNotIn(b"\r\n", manifest)
             self.assertEqual(
                 hashlib.sha256(manifest).hexdigest(),
-                "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+                "57bd4b92efbdeb8be023b2e1c92c586bebe56f90f5cd219f2df97c8f74f20d13",
             )
             self.assertEqual(CORPUS_VERSION, 2)
 
