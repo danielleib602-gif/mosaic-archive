@@ -83,7 +83,7 @@ binary release. The v0.33 maintainer review is documented in
 ## Verification snapshot
 
 The publication checkout passes 155 unit/integration tests on Python 3.13.
-Exact source coverage is 3,129 of 3,547 executable lines (88.215393%). Ruff,
+Exact source coverage is 3,205 of 3,634 executable lines (88.194827%). Ruff,
 strict mypy, Bandit, dependency audit, bytecode compilation, source/wheel
 builds, and package-metadata validation pass. A clean isolated installation of
 the built wheel reports `msc 0.33.0` and completes a verified encrypted MSR2
