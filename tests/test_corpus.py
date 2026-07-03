@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from mosaic_archive.corpus import (
+    CORPUS_VERSION,
     CORPUS_MTIME_NS,
     MANIFEST_NAME,
     generate_corpus,
@@ -41,6 +42,7 @@ class ReproducibleCorpusTests(unittest.TestCase):
                 hashlib.sha256(manifest).hexdigest(),
                 "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
             )
+            self.assertEqual(CORPUS_VERSION, 2)
 
     def test_generation_is_deterministic_and_self_verifying(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -65,11 +67,17 @@ class ReproducibleCorpusTests(unittest.TestCase):
                 {
                     "dedup",
                     "empty",
+                    "image-like",
                     "numeric",
                     "precompressed",
                     "random",
+                    "source",
+                    "sparse",
                     "structured",
+                    "tabular",
                     "text",
+                    "tiny-files",
+                    "unicode",
                 },
             )
 
