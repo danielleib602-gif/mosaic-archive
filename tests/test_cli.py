@@ -21,11 +21,21 @@ class CliTests(unittest.TestCase):
             env=environment,
         )
 
-    def test_reports_v0_32_package_version(self) -> None:
+    def test_reports_v0_33_package_version(self) -> None:
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), "msc 0.32.0")
+        self.assertEqual(completed.stdout.strip(), "msc 0.33.0")
+
+    def test_reports_machine_readable_one_zero_readiness(self) -> None:
+        completed = self.run_cli("readiness", "--json")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["operation"], "readiness")
+        self.assertEqual(report["completed_gates"], 7)
+        self.assertEqual(report["total_gates"], 9)
+        self.assertFalse(report["ready_for_1_0"])
 
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
