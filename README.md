@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.34 does
+## What v0.35 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -77,7 +77,9 @@ focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
   keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases;
 - builds deterministic source-review bundles from exact Git objects, hashes
   every tracked payload, and binds the reviewed source bundle into release
-  checksums and provenance.
+  checksums and provenance;
+- publishes repeated-run medians, raw timing samples, dispersion, and
+  per-category size comparisons on a 78-file, 13-category deterministic corpus.
 
 ## Install
 
@@ -378,6 +380,17 @@ and attaches that source bundle to tagged-release checksums and provenance.
 The readiness evaluator now requires structured external evidence and refuses
 to accept an attested release built from a commit different from the reviewed
 one.
+
+The v0.35 evidence pass replaces the single-run benchmark with schema-v2
+median reporting and expands the deterministic corpus from seven to thirteen
+workload categories. On the committed local Windows run, encrypted and padded
+MSR2 produces a 293,523-byte archive from 1,719,961 benchmark input bytes. It
+beats ZIP by 540,213 bytes overall and is smaller in ten of thirteen meaningful
+nonempty categories. It loses by 269 bytes on precompressed data and 345 bytes
+on random data; its 325-byte empty archive is 107 bytes larger than ZIP. The
+five-run median encode time is 0.441192 seconds with 0.011131-second median
+absolute deviation. Local 7-Zip and zstd were unavailable, so their v0.35
+comparisons remain pending the hosted workflow.
 
 ## Current limits
 

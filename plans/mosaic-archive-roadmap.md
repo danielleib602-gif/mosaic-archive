@@ -236,6 +236,11 @@ bundle is built from exact Git objects, every tracked payload is hashed in an
 embedded manifest, tagged releases bind that bundle into checksums and signed
 provenance, and structured gate validation requires the released commit to
 match the independently reviewed commit.
+Package v0.35 promotes repeated timing medians and raw samples into benchmark
+schema v2, expands the deterministic public corpus to 78 files across 13
+categories, rejects nondeterministic repeated evidence, and publishes
+per-category byte deltas so aggregate deduplication wins cannot hide losses on
+random, precompressed, or empty inputs.
 
 Parallel research tracks:
 

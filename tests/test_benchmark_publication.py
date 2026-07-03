@@ -23,6 +23,29 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             all(result["verified"] for result in report["comparisons"].values())
         )
 
+    def test_committed_v0_35_report_has_repeated_category_evidence(self) -> None:
+        report = json.loads(
+            Path("benchmarks/v0.35.0/report.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(report["release"], "0.35.0")
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["corpus"]["version"], 2)
+        self.assertEqual(report["corpus"]["category_count"], 13)
+        self.assertEqual(report["measurement"]["independent_runs"], 5)
+        self.assertEqual(
+            len(report["mosaic"]["timing"]["encode_seconds"]["samples"]),
+            5,
+        )
+        self.assertTrue(report["mosaic"]["round_trip_verified"])
+        self.assertTrue(
+            all(
+                result["mosaic"]["round_trip_verified"]
+                for result in report["categories"].values()
+            )
+        )
+        self.assertLess(report["mosaic_size_delta_bytes"]["zip"], 0)
+
     def test_publication_is_versioned_verified_and_machine_readable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

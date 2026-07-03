@@ -4,6 +4,27 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.35.0] - 2026-07-03
+
+### Added
+
+- Benchmark schema v2 with odd-count repeated runs, median/minimum/maximum/MAD
+  timing summaries, and the raw timing samples.
+- Deterministic corpus v2 with 78 files across 13 categories, adding source,
+  sparse, tabular, Unicode, image-like, and tiny-file workloads.
+- Per-category Mosaic and mature-tool archive sizes plus explicit byte deltas.
+- A versioned local v0.35 evidence report covering five full-corpus runs and
+  one verified run per category.
+
+### Changed
+
+- The standard benchmark now measures encrypted, padded MSR2 and includes the
+  encrypted 7-Zip adapter when available.
+- Publication aborts if any deterministic result changes across repetitions or
+  any round trip fails.
+- Hosted benchmark artifacts now identify the current package release instead
+  of retaining the historical v0.12 label.
+
 ## [0.34.0] - 2026-07-03
 
 ### Added

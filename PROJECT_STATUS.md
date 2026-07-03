@@ -1,10 +1,10 @@
 # Project status
 
-- Package version: 0.34.0
+- Package version: 0.35.0
 - Publication status: READY for source publication; tagged binary release
   BLOCKED by the GitHub Actions account gate described below
 - Stable-format status: MSC6 is frozen for the planned 1.0 line
-- Repository status at this snapshot: private; no `v0.34.0` tag has been created
+- Repository status at this snapshot: private; no `v0.35.0` tag has been created
 
 ## What is ready now
 
@@ -14,7 +14,7 @@
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
 - Linux, Windows, and macOS binary builds are smoke-tested in CI. A matching
-  `v0.34.0` tag triggers checksum generation, keyless GitHub/Sigstore build
+  `v0.35.0` tag triggers checksum generation, keyless GitHub/Sigstore build
   provenance, an exact-source review bundle, and immutable GitHub release
   assets.
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
@@ -24,6 +24,21 @@
   release, compatibility, format, benchmark, and threat-model documentation.
 
 ## Measured capability
+
+The schema-v2 local Windows report in `benchmarks/v0.35.0/report.json` covers
+five full-corpus runs plus one verified run for each of 13 categories. The
+expanded corpus has 78 declared files and presents 1,719,961 bytes to the
+archive after including its manifest. Encrypted, authenticated, 256-byte-padded
+MSR2 produces 293,523 bytes. Median encode time is 0.441192 seconds with a
+0.011131-second median absolute deviation; median decode time is 0.084800
+seconds.
+
+Mosaic is 540,213 bytes smaller than ZIP overall. It is smaller on deduplicated,
+image-like, numeric, source, sparse, structured, tabular, text, tiny-file, and
+Unicode categories. It is 269 bytes larger on precompressed data, 345 bytes
+larger on random data, and its 325-byte empty archive is 107 bytes larger.
+Local 7-Zip and zstd executables were unavailable, so the committed report
+marks those comparisons unavailable rather than substituting estimates.
 
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
@@ -72,7 +87,7 @@ reviewed commit.
   valid paths: make the repository public or resolve billing while it remains
   private. GitHub documents that standard GitHub-hosted runners are free for
   public repositories. Then rerun the required workflows on `main` before
-  creating `v0.34.0`; otherwise the tag cannot produce the promised binary
+  creating `v0.35.0`; otherwise the tag cannot produce the promised binary
   assets.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
@@ -109,12 +124,12 @@ contains no sensitive information.
 
 The immediate current work is to rerun the required workflows on `main`. That
 requires making the repository public or resolving the private-repository
-GitHub Actions account gate. After the v0.34 alpha is published, the next
+GitHub Actions account gate. After the v0.35 alpha is published, the next
 priorities are:
 
 1. complete an independent security review and resolve or document its findings;
-2. promote repeated benchmark medians into the standard CI report schema;
-3. expand corpus diversity before making broader compression claims;
+2. use the hosted v0.35 workflow to fill the encrypted 7-Zip and zstd rows;
+3. investigate the measured 269-345-byte random/precompressed overhead;
 4. decide whether and how MSR2 should graduate from opt-in research format;
 5. add PyPI trusted publishing only if a Python-package release channel is
    desired.
@@ -129,7 +144,7 @@ The detailed milestone history and rollback rules remain in
    keeping it private.
 3. Rerun the required workflows on `main`.
 4. Confirm every `main` and release-binary check is green.
-5. Create and push the annotated tag `v0.34.0`.
+5. Create and push the annotated tag `v0.35.0`.
 6. Let the release workflow build, attest, and publish all three binaries.
 7. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.
 8. Keep the experimental-alpha and no-independent-audit language in the
