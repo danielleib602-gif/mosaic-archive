@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "gates": {
+    "independent_security_review": {
+      "complete": false,
+      "evidence": "Commission and publish an independent review of the current release candidate."
+    },
+    "first_attested_binary_release": {
+      "complete": false,
+      "evidence": "Publish and independently verify checksums and GitHub build provenance for a reviewed tag."
+    }
+  }
+}

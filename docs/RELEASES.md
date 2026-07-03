@@ -48,3 +48,7 @@ even after the provenance verifies.
    assets. It refuses to publish assets for an unverified tag.
 5. Download one released binary and run both checksum and attestation
    verification before announcing the release.
+
+Before tagging, run `msc readiness --json`. A 1.0 tag additionally requires
+both external gates in `docs/1.0-external-gates.json` to reference reviewable
+evidence.

@@ -4,6 +4,22 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.33.0] - 2026-07-03
+
+### Added
+
+- Caller-overridable restored-size, frame/block-count, and legacy MSC1
+  archive-size limits across decode, inspect, Python APIs, and the CLI.
+- Machine-readable `msc readiness --json` evaluation of all nine MSC 1.0 gates.
+- Current internal security review with findings, fixes, and residual risks.
+
+### Security
+
+- Restored-size and frame limits are enforced before destination creation.
+- Whole-buffer MSC1 ciphertext allocation is capped before reading.
+- MSR2 metadata decoding no longer ends with an unbounded decompressor flush.
+- MSC1 inspection hashes into a null writer instead of retaining output bytes.
+
 ## [0.32.0] - 2026-07-02
 
 ### Added

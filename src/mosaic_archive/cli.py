@@ -16,6 +16,7 @@ from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.benchmark import benchmark_path
 from mosaic_archive.compatibility import current_policy
 from mosaic_archive.exceptions import MosaicError
+from mosaic_archive.release_readiness import evaluate_release_readiness
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
     DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
@@ -186,7 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.32.0")
+    parser.add_argument("--version", action="version", version="msc 0.33.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")
@@ -241,12 +242,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="show format, upgrade, and deprecation guarantees",
     )
     compatibility_parser.add_argument("--json", action="store_true")
+
+    readiness_parser = subparsers.add_parser(
+        "readiness",
+        help="evaluate the nine committed MSC 1.0 release gates",
+    )
+    readiness_parser.add_argument("--root", type=Path, default=Path("."))
+    readiness_parser.add_argument("--json", action="store_true")
     return parser
 
 
 def _run(arguments: argparse.Namespace) -> None:
     if arguments.command == "compatibility":
         _print_result(arguments.command, current_policy(), arguments.json)
+        return
+    if arguments.command == "readiness":
+        _print_result(
+            arguments.command,
+            evaluate_release_readiness(arguments.root),
+            arguments.json,
+        )
         return
     password = _password_from_args(arguments)
     progress = None
