@@ -5,6 +5,7 @@ on:
     paths:
       - "src/**"
       - "scripts/prepare_release_binary.py"
+      - "scripts/prepare_review_bundle.py"
       - "tests/test_release_binaries.py"
       - "pyproject.toml"
       - "uv.lock"
@@ -45,7 +46,7 @@ jobs:
       - name: Name and smoke-test executable
         run: >
           uv run --frozen python scripts/prepare_release_binary.py
-          dist/msc release --expected-version 0.33.0
+          dist/msc release --expected-version 0.34.0
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: mosaic-${{ runner.os }}-${{ runner.arch }}
@@ -72,9 +73,14 @@ jobs:
         with:
           path: release
           merge-multiple: true
+      - name: Build and verify deterministic source review bundle
+        shell: bash
+        run: |
+          python scripts/prepare_review_bundle.py build "release/mosaic-review-${GITHUB_SHA}.zip" --revision "$GITHUB_SHA"
+          python scripts/prepare_review_bundle.py verify "release/mosaic-review-${GITHUB_SHA}.zip"
       - name: Generate checksums
         working-directory: release
-        run: sha256sum msc-* > SHA256SUMS
+        run: sha256sum msc-* mosaic-review-*.zip > SHA256SUMS
       - name: Sign SLSA build provenance with Sigstore
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:

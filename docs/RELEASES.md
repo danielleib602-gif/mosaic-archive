@@ -3,7 +3,7 @@
 Mosaic Archive publishes native one-file command-line executables for Linux,
 Windows, and macOS. Each version tag builds independently on the matching
 GitHub-hosted operating system, runs `msc --version`, and publishes the resulting
-executables with a `SHA256SUMS` file.
+executables, a deterministic source-review bundle, and a `SHA256SUMS` file.
 
 ## Verify a download
 
@@ -25,6 +25,17 @@ Use the downloaded executable's actual filename on Windows or macOS. Verificatio
 requires GitHub CLI 2.49 or newer and network access. GitHub's signed SLSA
 provenance records the source repository, commit, workflow, and build environment.
 
+Verify the source-review bundle's internal manifest from a checkout of the
+release commit:
+
+```console
+python scripts/prepare_review_bundle.py verify mosaic-review-COMMIT.zip
+```
+
+Rebuilding it with `build ... --revision COMMIT` must produce identical bytes.
+The bundle's checksum and GitHub attestation bind reviewed source to the same
+release record as the executables.
+
 ## What “signed” means
 
 Release binaries have cryptographically signed build provenance produced from a
@@ -44,8 +55,9 @@ even after the provenance verifies.
    `vX.Y.Z` tag.
 2. Wait for all branch checks, including all three binary jobs, to pass.
 3. Create and push the version tag.
-4. The release workflow rebuilds, smoke-tests, hashes, attests, and publishes the
-   assets. It refuses to publish assets for an unverified tag.
+4. The release workflow rebuilds, smoke-tests, creates and verifies the exact
+   source-review bundle, hashes, attests, and publishes the assets. It refuses
+   to publish assets for an unverified tag.
 5. Download one released binary and run both checksum and attestation
    verification before announcing the release.
 

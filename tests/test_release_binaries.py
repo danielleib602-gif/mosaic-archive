@@ -38,8 +38,8 @@ class ReleaseBinaryTests(unittest.TestCase):
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
-        self.assertEqual(project["project"]["version"], "0.33.0")
-        self.assertIn("--expected-version 0.33.0", workflow)
+        self.assertEqual(project["project"]["version"], "0.34.0")
+        self.assertIn("--expected-version 0.34.0", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
@@ -67,7 +67,19 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
+        self.assertIn("prepare_review_bundle.py build", workflow)
+        self.assertIn("prepare_review_bundle.py verify", workflow)
+        self.assertIn("mosaic-review-*.zip", workflow)
         self.assertIn("gh release", workflow)
+
+    def test_review_bundle_workflow_builds_the_checked_out_commit(self) -> None:
+        workflow = Path(".github/workflows/review-bundle.yml").read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn('fetch-depth: 0', workflow)
+        self.assertIn('--revision "$GITHUB_SHA"', workflow)
+        self.assertIn("prepare_review_bundle.py verify", workflow)
+        self.assertIn("actions/upload-artifact@", workflow)
 
     def test_release_verification_is_documented(self) -> None:
         documentation = Path("docs/RELEASES.md").read_text(encoding="utf-8")

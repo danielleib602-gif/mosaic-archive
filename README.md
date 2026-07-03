@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.33 does
+## What v0.34 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -74,7 +74,10 @@ focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 - publishes reproducible, versioned JSON and Markdown results against ZIP,
   tar+gzip, tar+zstd, and 7-Zip on the identical generated corpus;
 - builds smoke-tested native Linux, Windows, and macOS executables and attaches
-  keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases.
+  keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases;
+- builds deterministic source-review bundles from exact Git objects, hashes
+  every tracked payload, and binds the reviewed source bundle into release
+  checksums and provenance.
 
 ## Install
 
@@ -368,6 +371,13 @@ flush, and prevents MSC1 inspection from retaining restored bytes. The new
 `msc readiness --json` command evaluates all nine committed 1.0 roadmap gates;
 seven are complete, while independent review and the first attested release
 remain.
+
+The v0.34 review-evidence pass builds a byte-reproducible source ZIP from an
+exact Git commit, verifies every tracked payload against its embedded manifest,
+and attaches that source bundle to tagged-release checksums and provenance.
+The readiness evaluator now requires structured external evidence and refuses
+to accept an attested release built from a commit different from the reviewed
+one.
 
 ## Current limits
 

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,13 +55,66 @@ def _external_gate_state(root: Path) -> dict[str, dict[str, object]]:
         payload = json.loads(
             (root / "docs/1.0-external-gates.json").read_text(encoding="utf-8")
         )
+        if payload.get("schema_version") != 2:
+            return {}
         return {
             str(name): value
             for name, value in payload["gates"].items()
             if isinstance(value, dict)
         }
-    except (OSError, KeyError, TypeError, json.JSONDecodeError):
+    except (AttributeError, OSError, KeyError, TypeError, json.JSONDecodeError):
         return {}
+
+
+def _is_https_url(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed = urlsplit(value)
+    return parsed.scheme == "https" and bool(parsed.netloc)
+
+
+def _is_commit(value: object) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
+
+
+def _is_nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _is_date(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _security_review_complete(state: dict[str, object]) -> bool:
+    return (
+        state.get("complete") is True
+        and _is_https_url(state.get("evidence"))
+        and _is_nonempty_string(state.get("reviewer"))
+        and _is_commit(state.get("reviewed_commit"))
+        and _is_date(state.get("completed_at"))
+    )
+
+
+def _attested_release_complete(
+    state: dict[str, object],
+    reviewed_commit: object,
+) -> bool:
+    return (
+        state.get("complete") is True
+        and _is_https_url(state.get("evidence"))
+        and _is_commit(state.get("source_commit"))
+        and state.get("source_commit") == reviewed_commit
+        and _is_https_url(state.get("checksum_manifest_url"))
+        and _is_https_url(state.get("attestation_url"))
+        and _is_nonempty_string(state.get("verified_by"))
+        and _is_date(state.get("verified_at"))
+    )
 
 
 def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
@@ -127,17 +183,24 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
         ),
     )
 
-    external_gates = tuple(
+    review_state = external.get("independent_security_review", {})
+    release_state = external.get("first_attested_binary_release", {})
+    external_gates = (
         ReadinessGate(
-            name,
-            bool(external.get(name, {}).get("complete", False)),
-            str(external.get(name, {}).get("evidence", "external evidence required")),
-            True,
-        )
-        for name in (
             "independent_security_review",
+            _security_review_complete(review_state),
+            str(review_state.get("evidence", "external evidence required")),
+            True,
+        ),
+        ReadinessGate(
             "first_attested_binary_release",
-        )
+            _attested_release_complete(
+                release_state,
+                review_state.get("reviewed_commit"),
+            ),
+            str(release_state.get("evidence", "external evidence required")),
+            True,
+        ),
     )
     gates = automatic_gates[:3] + external_gates[:1] + automatic_gates[3:] + external_gates[1:]
     completed = sum(gate.complete for gate in gates)
