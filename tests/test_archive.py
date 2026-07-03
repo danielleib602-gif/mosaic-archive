@@ -78,6 +78,29 @@ class ArchiveTests(unittest.TestCase):
             decode_file(archive, output, "wrong password")
         self.assertFalse(output.exists())
 
+    def test_decode_limits_reject_legacy_archive_before_output(self) -> None:
+        source = self.root / "bounded.bin"
+        archive = self.root / "bounded.msc"
+        output = self.root / "must-not-exist.bin"
+        source.write_bytes(b"bounded legacy payload" * 100)
+        encode_file(source, archive, PASSWORD, kdf_log_n=14)
+
+        with self.assertRaises(ArchiveFormatError):
+            decode_file(
+                archive,
+                output,
+                PASSWORD,
+                max_output_size=source.stat().st_size - 1,
+            )
+        self.assertFalse(output.exists())
+
+        with self.assertRaises(ArchiveFormatError):
+            inspect_archive(
+                archive,
+                PASSWORD,
+                max_archive_size=archive.stat().st_size - 1,
+            )
+
     def test_ciphertext_tampering_is_detected(self) -> None:
         source = self.root / "source.bin"
         archive = self.root / "source.msc"

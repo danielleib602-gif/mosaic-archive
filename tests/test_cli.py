@@ -115,6 +115,38 @@ class CliTests(unittest.TestCase):
             self.assertIn("wrong password or archive was modified", decoded.stderr.lower())
             self.assertNotIn("Traceback", decoded.stderr)
 
+    def test_decode_exposes_restored_size_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "bounded.txt"
+            archive = root / "bounded.msc"
+            output = root / "must-not-exist.txt"
+            source.write_bytes(b"bounded CLI payload" * 100)
+            encoded = self.run_cli(
+                "encode",
+                str(source),
+                str(archive),
+                "--password",
+                "test-password",
+                "--kdf-log-n",
+                "14",
+            )
+            self.assertEqual(encoded.returncode, 0, encoded.stderr)
+
+            decoded = self.run_cli(
+                "decode",
+                str(archive),
+                str(output),
+                "--password",
+                "test-password",
+                "--max-output-size",
+                "1",
+            )
+
+            self.assertEqual(decoded.returncode, 2)
+            self.assertIn("restored size exceeds", decoded.stderr)
+            self.assertFalse(output.exists())
+
     def test_folder_encode_inspect_and_decode(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
+from mosaic_archive.exceptions import ArchiveFormatError
 from mosaic_archive.stream_archive import encode_stream_archive
 
 PASSWORD = "dedup integration password"
@@ -97,6 +98,29 @@ class DedupArchiveTests(unittest.TestCase):
         self.assertEqual(stats.logical_chunk_count, 0)
         self.assertEqual(stats.unique_chunk_count, 0)
 
+    def test_stable_decode_limits_apply_before_destination_creation(self) -> None:
+        source = self.root / "bounded.bin"
+        archive = self.root / "bounded.msc"
+        output = self.root / "must-not-exist.bin"
+        source.write_bytes(b"stable bounded payload" * 1000)
+        encode_path(source, archive, PASSWORD, kdf_log_n=14)
+
+        with self.assertRaises(ArchiveFormatError):
+            decode_path(
+                archive,
+                output,
+                PASSWORD,
+                max_output_size=source.stat().st_size - 1,
+            )
+        self.assertFalse(output.exists())
+
+        with self.assertRaises(ArchiveFormatError):
+            inspect_path(
+                archive,
+                PASSWORD,
+                max_output_size=source.stat().st_size - 1,
+            )
+
     def test_msc2_archive_remains_decodable(self) -> None:
         source = self.root / "legacy-v2.txt"
         archive = self.root / "legacy-v2.msc"
@@ -108,6 +132,22 @@ class DedupArchiveTests(unittest.TestCase):
 
         self.assertEqual(restored.read_bytes(), source.read_bytes())
         self.assertEqual(decoded.format_version, 2)
+
+    def test_msc2_decode_limits_apply_before_destination_creation(self) -> None:
+        source = self.root / "legacy-v2.txt"
+        archive = self.root / "legacy-v2.msc"
+        output = self.root / "must-not-exist.txt"
+        source.write_bytes(b"bounded MSC2 payload" * 1000)
+        encode_stream_archive(source, archive, PASSWORD, kdf_log_n=14)
+
+        with self.assertRaises(ArchiveFormatError):
+            decode_path(
+                archive,
+                output,
+                PASSWORD,
+                max_output_size=source.stat().st_size - 1,
+            )
+        self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":
