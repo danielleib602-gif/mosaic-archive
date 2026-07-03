@@ -57,6 +57,19 @@ class ReproducibleCorpusTests(unittest.TestCase):
             self.assertTrue(verify_corpus(first))
             self.assertTrue(verify_corpus(second))
 
+    def test_historical_v1_corpus_remains_reproducible(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest = generate_corpus(root, corpus_version=1)
+
+            self.assertEqual(manifest["corpus_version"], 1)
+            self.assertEqual(len(manifest["files"]), 9)
+            self.assertEqual(
+                hashlib.sha256((root / MANIFEST_NAME).read_bytes()).hexdigest(),
+                "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+            )
+            self.assertTrue(verify_corpus(root))
+
     def test_corpus_covers_general_purpose_categories(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "corpus"

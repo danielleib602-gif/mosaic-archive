@@ -103,10 +103,13 @@ def generate_corpus(
     *,
     seed: int = DEFAULT_SEED,
     unit_size: int = DEFAULT_UNIT_SIZE,
+    corpus_version: int = CORPUS_VERSION,
 ) -> dict[str, Any]:
     """Create a deterministic multi-category corpus and return its manifest."""
     if not 1024 <= unit_size <= 16 * 1024 * 1024:
         raise ValueError("unit size must be between 1 KiB and 16 MiB")
+    if corpus_version not in {1, 2}:
+        raise ValueError("corpus version must be 1 or 2")
     if root.exists():
         if not root.is_dir():
             raise FileExistsError(f"corpus destination is not a directory: {root}")
@@ -142,50 +145,55 @@ def generate_corpus(
             zlib.compress(random_bytes, level=9),
         ),
         ("empty/empty.bin", "empty", b""),
-        (
-            "source/parser.py",
-            "source",
-            _repeat_to_size(
-                (
-                    b"def parse_record(record: bytes) -> tuple[int, bytes]:\n"
-                    b"    size = int.from_bytes(record[:4], 'big')\n"
-                    b"    return size, record[4:4 + size]\n\n"
-                ),
-                unit_size * 2,
-            ),
-        ),
-        (
-            "sparse/measurements.bin",
-            "sparse",
-            _sparse_measurements(seed + 2, unit_size * 2),
-        ),
-        (
-            "tabular/sensors.csv",
-            "tabular",
-            _tabular_measurements(unit_size * 2),
-        ),
-        (
-            "unicode/multilingual.txt",
-            "unicode",
-            _valid_utf8_to_size(
-                "Compression • ضغط البيانات • דחיסת נתונים • 圧縮 • сжатие\n",
-                unit_size * 2,
-            ),
-        ),
-        (
-            "image-like/gradient-rgba.bin",
-            "image-like",
-            _rgba_gradient(unit_size * 2),
-        ),
     ]
-    files.extend(
-        (
-            f"tiny-files/record-{index:03d}.txt",
-            "tiny-files",
-            f"id={index}\nstate={'active' if index % 3 else 'idle'}\n".encode(),
+    if corpus_version >= 2:
+        files.extend(
+            [
+                (
+                    "source/parser.py",
+                    "source",
+                    _repeat_to_size(
+                        (
+                            b"def parse_record(record: bytes) -> tuple[int, bytes]:\n"
+                            b"    size = int.from_bytes(record[:4], 'big')\n"
+                            b"    return size, record[4:4 + size]\n\n"
+                        ),
+                        unit_size * 2,
+                    ),
+                ),
+                (
+                    "sparse/measurements.bin",
+                    "sparse",
+                    _sparse_measurements(seed + 2, unit_size * 2),
+                ),
+                (
+                    "tabular/sensors.csv",
+                    "tabular",
+                    _tabular_measurements(unit_size * 2),
+                ),
+                (
+                    "unicode/multilingual.txt",
+                    "unicode",
+                    _valid_utf8_to_size(
+                        "Compression • ضغط البيانات • דחיסת נתונים • 圧縮 • сжатие\n",
+                        unit_size * 2,
+                    ),
+                ),
+                (
+                    "image-like/gradient-rgba.bin",
+                    "image-like",
+                    _rgba_gradient(unit_size * 2),
+                ),
+            ]
         )
-        for index in range(64)
-    )
+        files.extend(
+            (
+                f"tiny-files/record-{index:03d}.txt",
+                "tiny-files",
+                f"id={index}\nstate={'active' if index % 3 else 'idle'}\n".encode(),
+            )
+            for index in range(64)
+        )
 
     entries: list[dict[str, Any]] = []
     for relative, category, data in files:
@@ -202,7 +210,7 @@ def generate_corpus(
         )
     (root / "empty" / "empty-dir").mkdir()
     manifest: dict[str, Any] = {
-        "corpus_version": CORPUS_VERSION,
+        "corpus_version": corpus_version,
         "directories": ["empty/empty-dir"],
         "files": entries,
         "seed": seed,
@@ -250,11 +258,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("output", type=Path)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--unit-size", type=int, default=DEFAULT_UNIT_SIZE)
+    parser.add_argument(
+        "--corpus-version",
+        type=int,
+        choices=(1, 2),
+        default=CORPUS_VERSION,
+    )
     arguments = parser.parse_args(argv)
     manifest = generate_corpus(
         arguments.output,
         seed=arguments.seed,
         unit_size=arguments.unit_size,
+        corpus_version=arguments.corpus_version,
     )
     print(
         json.dumps(

@@ -29,7 +29,7 @@ class ExperimentalSolidArchiveTests(unittest.TestCase):
             source = root / "corpus"
             archive = root / "corpus.msr"
             restored = root / "restored"
-            generate_corpus(source)
+            generate_corpus(source, corpus_version=1)
             seven_zip_size = json.loads(
                 Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")
             )["comparisons"]["7z"]["archive_size"]

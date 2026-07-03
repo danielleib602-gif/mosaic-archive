@@ -101,8 +101,8 @@ reviewed commit.
 
 ## Verification snapshot
 
-The publication checkout passes 162 unit/integration tests on Python 3.13.
-Exact source coverage is 3,225 of 3,658 executable lines (88.162931%); the
+The publication checkout passes 165 unit/integration tests on Python 3.13.
+Exact source coverage is 3,344 of 3,789 executable lines (88.255476%); the
 branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
 bytecode compilation, source/wheel builds, and package-metadata validation
 pass. The deterministic review bundle rejects payload tampering, compressed

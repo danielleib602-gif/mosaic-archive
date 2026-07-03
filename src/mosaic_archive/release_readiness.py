@@ -157,7 +157,8 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
             _contains(
                 root / ".github/workflows/benchmark.yml",
                 "mosaic_archive.corpus",
-                "solid-benchmark.json",
+                "--repeats 5",
+                "--format solid",
             ),
             ".github/workflows/benchmark.yml",
         ),
