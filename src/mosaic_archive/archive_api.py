@@ -24,6 +24,12 @@ from mosaic_archive.dedup_archive import (
 )
 from mosaic_archive.dedup_format import MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC
 from mosaic_archive.exceptions import ArchiveFormatError
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+    validate_decode_limits,
+)
 from mosaic_archive.solid_archive_v2 import (
     MSR2_MAGIC,
     SolidArchiveV2DecodeStats,
@@ -131,20 +137,51 @@ def decode_path(
     password: str | bytes,
     *,
     progress: ProgressCallback | None = None,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
+    max_legacy_archive_size: int = DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
 ) -> DecodeStats | StreamDecodeStats | DedupDecodeStats | SolidArchiveV2DecodeStats:
+    validate_decode_limits(
+        max_output_size,
+        max_frame_count,
+        max_legacy_archive_size,
+    )
     magic = _magic(archive_path)
     if magic == MSR2_MAGIC:
-        return decode_solid_archive_v2(archive_path, output_path, password)
+        return decode_solid_archive_v2(
+            archive_path,
+            output_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+        )
     if magic in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC}:
         return decode_dedup_archive(
-            archive_path, output_path, password, progress=progress
+            archive_path,
+            output_path,
+            password,
+            progress=progress,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
         )
     if magic == MSC2_MAGIC:
         return decode_stream_archive(
-            archive_path, output_path, password, progress=progress
+            archive_path,
+            output_path,
+            password,
+            progress=progress,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
         )
     if magic == MAGIC:
-        return decode_file(archive_path, output_path, password)
+        return decode_file(
+            archive_path,
+            output_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+            max_archive_size=max_legacy_archive_size,
+        )
     raise ArchiveFormatError(
         "not a supported Mosaic Archive (expected MSC1 through MSC6 or MSR2)"
     )
@@ -153,16 +190,46 @@ def decode_path(
 def inspect_path(
     archive_path: str | os.PathLike[str],
     password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
+    max_legacy_archive_size: int = DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
 ) -> ArchiveInfo | StreamArchiveInfo | DedupArchiveInfo | SolidArchiveV2DecodeStats:
+    validate_decode_limits(
+        max_output_size,
+        max_frame_count,
+        max_legacy_archive_size,
+    )
     magic = _magic(archive_path)
     if magic == MSR2_MAGIC:
-        return inspect_solid_archive_v2(archive_path, password)
+        return inspect_solid_archive_v2(
+            archive_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+        )
     if magic in {MSC3_MAGIC, MSC4_MAGIC, MSC5_MAGIC, MSC6_MAGIC}:
-        return inspect_dedup_archive(archive_path, password)
+        return inspect_dedup_archive(
+            archive_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+        )
     if magic == MSC2_MAGIC:
-        return inspect_stream_archive(archive_path, password)
+        return inspect_stream_archive(
+            archive_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+        )
     if magic == MAGIC:
-        return inspect_archive(archive_path, password)
+        return inspect_archive(
+            archive_path,
+            password,
+            max_output_size=max_output_size,
+            max_frame_count=max_frame_count,
+            max_archive_size=max_legacy_archive_size,
+        )
     raise ArchiveFormatError(
         "not a supported Mosaic Archive (expected MSC1 through MSC6 or MSR2)"
     )

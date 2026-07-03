@@ -16,6 +16,11 @@ from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.benchmark import benchmark_path
 from mosaic_archive.compatibility import current_policy
 from mosaic_archive.exceptions import MosaicError
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+)
 from mosaic_archive.stream_archive import ProgressEvent
 
 
@@ -67,6 +72,27 @@ def _add_progress_option(parser: argparse.ArgumentParser) -> None:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="show or suppress progress (default: show on an interactive terminal)",
+    )
+
+
+def _add_decode_limit_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-output-size",
+        type=int,
+        default=DEFAULT_MAX_OUTPUT_SIZE,
+        help="maximum restored bytes (default: 1 TiB)",
+    )
+    parser.add_argument(
+        "--max-frame-count",
+        type=int,
+        default=DEFAULT_MAX_FRAME_COUNT,
+        help="maximum authenticated data frames or blocks (default: 1000000)",
+    )
+    parser.add_argument(
+        "--max-legacy-archive-size",
+        type=int,
+        default=DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+        help="maximum whole-buffer MSC1 archive bytes (default: 1 GiB)",
     )
 
 
@@ -182,11 +208,13 @@ def build_parser() -> argparse.ArgumentParser:
     decode_parser.add_argument("output", type=Path)
     _add_password_options(decode_parser)
     _add_progress_option(decode_parser)
+    _add_decode_limit_options(decode_parser)
     decode_parser.add_argument("--json", action="store_true")
 
     inspect_parser = subparsers.add_parser("inspect", help="verify and explain an archive")
     inspect_parser.add_argument("archive", type=Path)
     _add_password_options(inspect_parser)
+    _add_decode_limit_options(inspect_parser)
     inspect_parser.add_argument("--json", action="store_true")
 
     benchmark_parser = subparsers.add_parser(
@@ -245,10 +273,22 @@ def _run(arguments: argparse.Namespace) -> None:
         )
     elif arguments.command == "decode":
         result = decode_path(
-            arguments.archive, arguments.output, password, progress=progress
+            arguments.archive,
+            arguments.output,
+            password,
+            progress=progress,
+            max_output_size=arguments.max_output_size,
+            max_frame_count=arguments.max_frame_count,
+            max_legacy_archive_size=arguments.max_legacy_archive_size,
         )
     elif arguments.command == "inspect":
-        result = inspect_path(arguments.archive, password)
+        result = inspect_path(
+            arguments.archive,
+            password,
+            max_output_size=arguments.max_output_size,
+            max_frame_count=arguments.max_frame_count,
+            max_legacy_archive_size=arguments.max_legacy_archive_size,
+        )
     elif arguments.command == "benchmark":
         result = benchmark_path(
             arguments.input,

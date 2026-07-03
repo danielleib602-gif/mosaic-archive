@@ -15,8 +15,8 @@ from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
     _decode_compact_uint,
     _decode_metadata_envelope,
+    _encode_metadata_envelope,
     _metadata,
-    _metadata_envelope,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
@@ -71,7 +71,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
 
     def test_metadata_envelope_does_not_use_an_unbounded_final_flush(self) -> None:
         payload = b"bounded metadata payload" * 100
-        envelope = _metadata_envelope(payload)
+        envelope = _encode_metadata_envelope(payload)
         decoder = __import__("zlib").decompressobj()
 
         class FlushRejectingDecoder:

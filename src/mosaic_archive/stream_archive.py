@@ -30,6 +30,12 @@ from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_best_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
 from mosaic_archive.paths import validate_relative_path
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+    validate_decode_limits,
+)
 from mosaic_archive.stream_format import (
     FRAME_DATA,
     FRAME_HEADER,
@@ -728,7 +734,14 @@ def _decode_or_inspect(
     password: str | bytes,
     destination: Path | None,
     progress: ProgressCallback | None,
+    max_output_size: int,
+    max_frame_count: int,
 ) -> tuple[StreamDecodeStats, StreamArchiveInfo]:
+    validate_decode_limits(
+        max_output_size,
+        max_frame_count,
+        DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    )
     started = time.perf_counter()
     normalize_password(password)
     archive_size = archive_path.stat().st_size
@@ -754,13 +767,17 @@ def _decode_or_inspect(
             header=header,
         )
         manifest = parse_manifest(manifest_payload, header)
+        total_bytes = sum(entry.size for entry in manifest.entries)
+        if total_bytes > max_output_size:
+            raise ArchiveFormatError("MSC2 restored size exceeds the decode limit")
+        if header.frame_count - 1 > max_frame_count:
+            raise ArchiveFormatError("MSC2 frame count exceeds the decode limit")
         output_root, temporary_root = _prepare_output(destination, manifest)
         distribution: Counter[str] = Counter()
         compressed_size = len(manifest_payload)
         padded_size = manifest_padded_size
         frame_index = 1
         total_files = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
-        total_bytes = sum(entry.size for entry in manifest.entries)
         completed_bytes = 0
         completed_files = 0
         if progress is not None:
@@ -908,9 +925,16 @@ def decode_stream_archive(
     password: str | bytes,
     *,
     progress: ProgressCallback | None = None,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
 ) -> StreamDecodeStats:
     stats, _ = _decode_or_inspect(
-        Path(archive_path), password, Path(output_path), progress
+        Path(archive_path),
+        password,
+        Path(output_path),
+        progress,
+        max_output_size,
+        max_frame_count,
     )
     return stats
 
@@ -918,8 +942,18 @@ def decode_stream_archive(
 def inspect_stream_archive(
     archive_path: str | os.PathLike[str],
     password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
 ) -> StreamArchiveInfo:
-    _, info = _decode_or_inspect(Path(archive_path), password, None, None)
+    _, info = _decode_or_inspect(
+        Path(archive_path),
+        password,
+        None,
+        None,
+        max_output_size,
+        max_frame_count,
+    )
     return info
 
 
