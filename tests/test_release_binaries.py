@@ -40,6 +40,7 @@ class ReleaseBinaryTests(unittest.TestCase):
 
         self.assertEqual(project["project"]["version"], "0.33.0")
         self.assertIn("--expected-version 0.33.0", workflow)
+        self.assertIn("msc readiness --require-automatic --json", workflow)
 
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")

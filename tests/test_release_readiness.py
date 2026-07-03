@@ -13,6 +13,9 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertEqual(report.package_version, "0.33.0")
         self.assertEqual(report.completed_gates, 7)
         self.assertEqual(report.total_gates, 9)
+        self.assertEqual(report.automatic_completed_gates, 7)
+        self.assertEqual(report.automatic_total_gates, 7)
+        self.assertTrue(report.automatic_ready)
         self.assertAlmostEqual(report.completion_percent, 77.777778, places=6)
         self.assertFalse(report.ready_for_1_0)
         self.assertEqual(

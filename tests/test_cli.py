@@ -28,13 +28,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(completed.stdout.strip(), "msc 0.33.0")
 
     def test_reports_machine_readable_one_zero_readiness(self) -> None:
-        completed = self.run_cli("readiness", "--json")
+        completed = self.run_cli("readiness", "--require-automatic", "--json")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         report = json.loads(completed.stdout)
         self.assertEqual(report["operation"], "readiness")
         self.assertEqual(report["completed_gates"], 7)
         self.assertEqual(report["total_gates"], 9)
+        self.assertTrue(report["automatic_ready"])
         self.assertFalse(report["ready_for_1_0"])
 
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:

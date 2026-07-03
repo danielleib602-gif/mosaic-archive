@@ -28,6 +28,7 @@ class CiConfigurationTests(unittest.TestCase):
             "mypy src",
             "bandit -q -r src -lll",
             "pip-audit",
+            "msc readiness --require-automatic --json",
         ):
             self.assertIn(command, workflow)
 
