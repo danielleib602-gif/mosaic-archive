@@ -83,6 +83,29 @@ class ReviewBundleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "digest mismatch"):
                 verify_review_bundle(tampered)
 
+    def test_verifier_rejects_compressed_members(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._repository(root)
+            bundle = root.parent / f"{root.name}-bundle.zip"
+            compressed = root.parent / f"{root.name}-compressed.zip"
+            self.addCleanup(bundle.unlink, missing_ok=True)
+            self.addCleanup(compressed.unlink, missing_ok=True)
+            build_review_bundle(root, bundle, "HEAD")
+
+            with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(
+                compressed, "w", compression=zipfile.ZIP_DEFLATED
+            ) as target:
+                for info in source.infolist():
+                    target.writestr(
+                        info.filename,
+                        source.read(info.filename),
+                        compress_type=zipfile.ZIP_DEFLATED,
+                    )
+
+            with self.assertRaisesRegex(ValueError, "stored without compression"):
+                verify_review_bundle(compressed)
+
     def test_manifest_has_a_digest_for_every_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
