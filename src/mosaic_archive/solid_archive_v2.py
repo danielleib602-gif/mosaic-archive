@@ -30,6 +30,10 @@ from mosaic_archive.dedup_archive import (
 from mosaic_archive.dedup_format import MSC3_FLAGS, MSC6_VERSION, Msc3Header
 from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.padding import pad_payload, unpad_payload
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_OUTPUT_SIZE,
+)
 from mosaic_archive.solid_frames import (
     compress_solid_lane,
     read_solid_lane_frames,
@@ -55,8 +59,6 @@ _METADATA_ENVELOPE: Final = struct.Struct(">4sBQ")
 _RAW_LZMA2_CODEC: Final = 1
 _COMPACT_METADATA_MAGIC: Final = b"MC21"
 _MAX_COMPACT_UINT: Final = (1 << 64) - 1
-DEFAULT_MAX_OUTPUT_SIZE: Final = 1024 * 1024 * 1024 * 1024
-DEFAULT_MAX_FRAME_COUNT: Final = 1_000_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -257,7 +259,6 @@ def _decode_metadata_envelope(payload: bytes) -> tuple[bytes, bool]:
         )
         if len(decoded) > expected_size or decoder.unconsumed_tail:
             raise ArchiveFormatError("MSR2 compressed metadata exceeds its size bound")
-        decoded += decoder.flush()
     except zlib.error as error:
         raise ArchiveFormatError("MSR2 compressed metadata is malformed") from error
     if (

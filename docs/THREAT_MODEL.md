@@ -1,6 +1,6 @@
 # Threat model
 
-Mosaic Archive v0.10 aims to provide a defensible experimental container around
+Mosaic Archive v0.33 aims to provide a defensible experimental container around
 an intentionally simple compression engine. It does not claim cryptographic
 novelty.
 
@@ -64,7 +64,9 @@ round-trips a streaming 256 MiB file. Atheris additionally runs bounded
 coverage-guided campaigns from valid seeds for outer headers, frame headers,
 encrypted-manifest parsers, and all compression modes. Larger soak tiers and
 race-resistant source traversal are still required before a stable large-file
-release.
+release. Decode and inspect callers can lower the shared 1 TiB restored-output
+and 1,000,000-frame ceilings. Legacy whole-buffer MSC1 input defaults to a
+separate 1 GiB archive cap.
 
 Deterministic mutation tests exercise authenticated archive corruption, every
 public header/frame parser, both encrypted-manifest parsers, and malformed
@@ -90,5 +92,5 @@ temporary disk-backed cache capped indirectly by authenticated unique content.
 
 The Python `cryptography` package supplies the cryptographic primitives.
 Mosaic's format composition and implementation have not received an independent
-security audit. Treat v0.10 as a research and learning tool, not as the sole
+security audit. Treat v0.33 as a research and learning tool, not as the sole
 protection for irreplaceable or high-risk secrets.

@@ -16,6 +16,12 @@ from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.benchmark import benchmark_path
 from mosaic_archive.compatibility import current_policy
 from mosaic_archive.exceptions import MosaicError
+from mosaic_archive.release_readiness import evaluate_release_readiness
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+)
 from mosaic_archive.stream_archive import ProgressEvent
 
 
@@ -67,6 +73,27 @@ def _add_progress_option(parser: argparse.ArgumentParser) -> None:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="show or suppress progress (default: show on an interactive terminal)",
+    )
+
+
+def _add_decode_limit_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-output-size",
+        type=int,
+        default=DEFAULT_MAX_OUTPUT_SIZE,
+        help="maximum restored bytes (default: 1 TiB)",
+    )
+    parser.add_argument(
+        "--max-frame-count",
+        type=int,
+        default=DEFAULT_MAX_FRAME_COUNT,
+        help="maximum authenticated data frames or blocks (default: 1000000)",
+    )
+    parser.add_argument(
+        "--max-legacy-archive-size",
+        type=int,
+        default=DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+        help="maximum whole-buffer MSC1 archive bytes (default: 1 GiB)",
     )
 
 
@@ -160,7 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="msc",
         description="Adaptive, padded, authenticated file/folder archives (experimental alpha).",
     )
-    parser.add_argument("--version", action="version", version="msc 0.32.0")
+    parser.add_argument("--version", action="version", version="msc 0.33.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     encode_parser = subparsers.add_parser("encode", help="create an encrypted .msc archive")
@@ -182,11 +209,13 @@ def build_parser() -> argparse.ArgumentParser:
     decode_parser.add_argument("output", type=Path)
     _add_password_options(decode_parser)
     _add_progress_option(decode_parser)
+    _add_decode_limit_options(decode_parser)
     decode_parser.add_argument("--json", action="store_true")
 
     inspect_parser = subparsers.add_parser("inspect", help="verify and explain an archive")
     inspect_parser.add_argument("archive", type=Path)
     _add_password_options(inspect_parser)
+    _add_decode_limit_options(inspect_parser)
     inspect_parser.add_argument("--json", action="store_true")
 
     benchmark_parser = subparsers.add_parser(
@@ -213,12 +242,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="show format, upgrade, and deprecation guarantees",
     )
     compatibility_parser.add_argument("--json", action="store_true")
+
+    readiness_parser = subparsers.add_parser(
+        "readiness",
+        help="evaluate the nine committed MSC 1.0 release gates",
+    )
+    readiness_parser.add_argument("--root", type=Path, default=Path("."))
+    readiness_parser.add_argument(
+        "--require-automatic",
+        action="store_true",
+        help="fail when any repository-verifiable 1.0 gate is incomplete",
+    )
+    readiness_parser.add_argument("--json", action="store_true")
     return parser
 
 
 def _run(arguments: argparse.Namespace) -> None:
     if arguments.command == "compatibility":
         _print_result(arguments.command, current_policy(), arguments.json)
+        return
+    if arguments.command == "readiness":
+        readiness = evaluate_release_readiness(arguments.root)
+        if arguments.require_automatic and not readiness.automatic_ready:
+            raise ValueError("one or more automatic MSC 1.0 gates are incomplete")
+        _print_result(
+            arguments.command,
+            readiness,
+            arguments.json,
+        )
         return
     password = _password_from_args(arguments)
     progress = None
@@ -245,10 +296,22 @@ def _run(arguments: argparse.Namespace) -> None:
         )
     elif arguments.command == "decode":
         result = decode_path(
-            arguments.archive, arguments.output, password, progress=progress
+            arguments.archive,
+            arguments.output,
+            password,
+            progress=progress,
+            max_output_size=arguments.max_output_size,
+            max_frame_count=arguments.max_frame_count,
+            max_legacy_archive_size=arguments.max_legacy_archive_size,
         )
     elif arguments.command == "inspect":
-        result = inspect_path(arguments.archive, password)
+        result = inspect_path(
+            arguments.archive,
+            password,
+            max_output_size=arguments.max_output_size,
+            max_frame_count=arguments.max_frame_count,
+            max_legacy_archive_size=arguments.max_legacy_archive_size,
+        )
     elif arguments.command == "benchmark":
         result = benchmark_path(
             arguments.input,

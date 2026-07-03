@@ -56,5 +56,6 @@ jobs:
       - run: uv run --frozen --with coverage coverage report --fail-under=80
       - run: uv run --frozen --with bandit==1.9.4 bandit -q -r src -lll
       - run: uv run --frozen --with pip-audit pip-audit --local
+      - run: uv run --frozen msc readiness --require-automatic --json
       - run: uv build
       - run: uv run --frozen python -m mosaic_archive.corpus .ci-corpus --unit-size 4096

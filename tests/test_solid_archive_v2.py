@@ -15,6 +15,7 @@ from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
     _decode_compact_uint,
     _decode_metadata_envelope,
+    _encode_metadata_envelope,
     _metadata,
     decode_solid_archive_v2,
     encode_solid_archive_v2,
@@ -67,6 +68,24 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(_decode_metadata_envelope(legacy), (legacy, False))
         with self.assertRaises(ArchiveFormatError):
             _decode_metadata_envelope(b"MDZ1\x01")
+
+    def test_metadata_envelope_does_not_use_an_unbounded_final_flush(self) -> None:
+        payload = b"bounded metadata payload" * 100
+        envelope = _encode_metadata_envelope(payload)
+        decoder = __import__("zlib").decompressobj()
+
+        class FlushRejectingDecoder:
+            def __getattr__(self, name):
+                return getattr(decoder, name)
+
+            def flush(self):
+                raise AssertionError("unbounded decompressor flush was used")
+
+        with patch(
+            "mosaic_archive.solid_archive_v2.zlib.decompressobj",
+            return_value=FlushRejectingDecoder(),
+        ):
+            self.assertEqual(_decode_metadata_envelope(envelope), (payload, True))
 
     def test_decoder_retains_legacy_fixed_width_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

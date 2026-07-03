@@ -30,6 +30,12 @@ from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_routed_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
 from mosaic_archive.paths import validate_relative_path
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+    validate_decode_limits,
+)
 from mosaic_archive.stream_archive import (
     ENTRY_DIRECTORY,
     ENTRY_FILE,
@@ -621,7 +627,14 @@ def _decode(
     password: str | bytes,
     destination: Path | None,
     progress: ProgressCallback | None,
+    max_output_size: int,
+    max_frame_count: int,
 ) -> tuple[DedupDecodeStats, DedupArchiveInfo]:
+    validate_decode_limits(
+        max_output_size,
+        max_frame_count,
+        DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    )
     started = time.perf_counter()
     archive_size = archive.stat().st_size
     temporary_root: Path | None = None
@@ -636,6 +649,11 @@ def _decode(
             stream, 0, FRAME_MANIFEST, key, global_header, header
         )
         manifest = parse_dedup_manifest(manifest_payload, header)
+        total_size = sum(entry.size for entry in manifest.entries)
+        if total_size > max_output_size:
+            raise ArchiveFormatError("MSC3 restored size exceeds the decode limit")
+        if header.frame_count - 1 > max_frame_count:
+            raise ArchiveFormatError("MSC3 frame count exceeds the decode limit")
         if destination is None:
             output_root = None
         elif manifest.kind == KIND_FOLDER:
@@ -664,7 +682,6 @@ def _decode(
         frame_index = 1
         compressed, padded_total = len(manifest_payload), manifest_padded
         completed_bytes = completed_files = 0
-        total_size = sum(entry.size for entry in manifest.entries)
         file_count = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
         if progress:
             progress(ProgressEvent("decode", 0, total_size, 0, file_count))
@@ -840,11 +857,31 @@ def decode_dedup_archive(
     password: str | bytes,
     *,
     progress: ProgressCallback | None = None,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
 ) -> DedupDecodeStats:
-    return _decode(Path(archive_path), password, Path(output_path), progress)[0]
+    return _decode(
+        Path(archive_path),
+        password,
+        Path(output_path),
+        progress,
+        max_output_size,
+        max_frame_count,
+    )[0]
 
 
 def inspect_dedup_archive(
-    archive_path: str | os.PathLike[str], password: str | bytes
+    archive_path: str | os.PathLike[str],
+    password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
 ) -> DedupArchiveInfo:
-    return _decode(Path(archive_path), password, None, None)[1]
+    return _decode(
+        Path(archive_path),
+        password,
+        None,
+        None,
+        max_output_size,
+        max_frame_count,
+    )[1]

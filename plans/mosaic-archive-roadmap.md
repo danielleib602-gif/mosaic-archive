@@ -226,6 +226,11 @@ boundary signal. Five contemporaneous hosted Linux runs per revision improve
 median encode time from 0.618 to 0.437 seconds. The padded archive remains
 275,859 bytes, maximum frame payload improves by 8 bytes, and existing
 insertion-shift and cross-file dedup recovery tests remain green.
+Package v0.33 applies caller-overridable restored-size and frame/block limits
+to every decoder, caps whole-buffer MSC1 input before allocation, removes the
+unbounded final MSR2 metadata decompressor flush, and adds a machine-readable
+nine-gate 1.0 readiness report. The internal review leaves the independent
+review and first verified attested release as the two formal open gates.
 
 Parallel research tracks:
 
@@ -247,7 +252,8 @@ decoders retain compatibility.
 
 Dependencies: B and C; selected D work only when proven.
 
-Status: foundation started. The public corpus, cross-platform automation,
+Status: release candidate foundation complete (7/9 gates). The public corpus,
+cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
 fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
 the frozen compatibility policy, versioned mature-compressor results, and the

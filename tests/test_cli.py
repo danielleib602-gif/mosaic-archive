@@ -21,11 +21,22 @@ class CliTests(unittest.TestCase):
             env=environment,
         )
 
-    def test_reports_v0_32_package_version(self) -> None:
+    def test_reports_v0_33_package_version(self) -> None:
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), "msc 0.32.0")
+        self.assertEqual(completed.stdout.strip(), "msc 0.33.0")
+
+    def test_reports_machine_readable_one_zero_readiness(self) -> None:
+        completed = self.run_cli("readiness", "--require-automatic", "--json")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["operation"], "readiness")
+        self.assertEqual(report["completed_gates"], 7)
+        self.assertEqual(report["total_gates"], 9)
+        self.assertTrue(report["automatic_ready"])
+        self.assertFalse(report["ready_for_1_0"])
 
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -114,6 +125,38 @@ class CliTests(unittest.TestCase):
             self.assertEqual(decoded.returncode, 2)
             self.assertIn("wrong password or archive was modified", decoded.stderr.lower())
             self.assertNotIn("Traceback", decoded.stderr)
+
+    def test_decode_exposes_restored_size_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "bounded.txt"
+            archive = root / "bounded.msc"
+            output = root / "must-not-exist.txt"
+            source.write_bytes(b"bounded CLI payload" * 100)
+            encoded = self.run_cli(
+                "encode",
+                str(source),
+                str(archive),
+                "--password",
+                "test-password",
+                "--kdf-log-n",
+                "14",
+            )
+            self.assertEqual(encoded.returncode, 0, encoded.stderr)
+
+            decoded = self.run_cli(
+                "decode",
+                str(archive),
+                str(output),
+                "--password",
+                "test-password",
+                "--max-output-size",
+                "1",
+            )
+
+            self.assertEqual(decoded.returncode, 2)
+            self.assertIn("restored size exceeds", decoded.stderr)
+            self.assertFalse(output.exists())
 
     def test_folder_encode_inspect_and_decode(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -40,6 +40,12 @@ from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_best_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
+from mosaic_archive.resource_limits import (
+    DEFAULT_MAX_FRAME_COUNT,
+    DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
+    DEFAULT_MAX_OUTPUT_SIZE,
+    validate_decode_limits,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,12 +296,16 @@ def _parse_inner(
     header: PublicHeader,
     archive_size: int,
     padded_plaintext_size: int,
+    max_output_size: int,
+    max_frame_count: int,
 ) -> _DecodedArchive:
     stream = io.BytesIO(inner)
     prefix = _read_exact(stream, INNER_PREFIX.size, "manifest prefix")
     magic, original_size, name_length = INNER_PREFIX.unpack(prefix)
     if magic != INNER_MAGIC:
         raise ArchiveFormatError("encrypted payload has invalid inner magic")
+    if original_size > max_output_size:
+        raise ArchiveFormatError("MSC1 restored size exceeds the decode limit")
     name_bytes = _read_exact(stream, name_length, "filename")
     try:
         file_name = name_bytes.decode("utf-8")
@@ -307,7 +317,7 @@ def _parse_inner(
     (block_count,) = BLOCK_COUNT.unpack(
         _read_exact(stream, BLOCK_COUNT.size, "block count")
     )
-    if block_count > MAX_BLOCK_COUNT:
+    if block_count > MAX_BLOCK_COUNT or block_count > max_frame_count:
         raise ArchiveFormatError("archive declares too many blocks")
 
     records: list[_EncodedRecord] = []
@@ -345,9 +355,16 @@ def _parse_inner(
 def _open_archive(
     archive_path: Path,
     password: str | bytes,
+    *,
+    max_output_size: int,
+    max_frame_count: int,
+    max_archive_size: int,
 ) -> _DecodedArchive:
+    validate_decode_limits(max_output_size, max_frame_count, max_archive_size)
     normalize_password(password)
     archive_size = archive_path.stat().st_size
+    if archive_size > max_archive_size:
+        raise ArchiveFormatError("MSC1 archive exceeds the legacy decode limit")
     with archive_path.open("rb") as archive:
         associated_data = archive.read(PUBLIC_HEADER.size)
         header = parse_public_header(associated_data)
@@ -365,7 +382,19 @@ def _open_archive(
     if len(padded) % header.padding_size:
         raise ArchiveFormatError("decrypted payload violates its padding policy")
     inner = unpad_payload(padded)
-    return _parse_inner(inner, header, archive_size, len(padded))
+    return _parse_inner(
+        inner,
+        header,
+        archive_size,
+        len(padded),
+        max_output_size,
+        max_frame_count,
+    )
+
+
+class _NullWriter:
+    def write(self, data: bytes) -> int:
+        return len(data)
 
 
 def _decode_records(decoded: _DecodedArchive, sink: BinaryIO) -> tuple[Counter[str], bytes]:
@@ -384,6 +413,10 @@ def decode_file(
     archive_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
     password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
+    max_archive_size: int = DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
 ) -> DecodeStats:
     """Authenticate, decode, verify, and atomically restore one file."""
     started = time.perf_counter()
@@ -391,7 +424,13 @@ def decode_file(
     destination = Path(output_path)
     if archive.resolve() == destination.resolve():
         raise ValueError("archive and output paths must be different")
-    decoded = _open_archive(archive, password)
+    decoded = _open_archive(
+        archive,
+        password,
+        max_output_size=max_output_size,
+        max_frame_count=max_frame_count,
+        max_archive_size=max_archive_size,
+    )
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
@@ -429,11 +468,24 @@ def decode_file(
 def inspect_archive(
     archive_path: str | os.PathLike[str],
     password: str | bytes,
+    *,
+    max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
+    max_frame_count: int = DEFAULT_MAX_FRAME_COUNT,
+    max_archive_size: int = DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
 ) -> ArchiveInfo:
     """Authenticate and fully decode to a hash sink without writing output."""
     archive = Path(archive_path)
-    decoded = _open_archive(archive, password)
-    distribution, actual_hash = _decode_records(decoded, io.BytesIO())
+    decoded = _open_archive(
+        archive,
+        password,
+        max_output_size=max_output_size,
+        max_frame_count=max_frame_count,
+        max_archive_size=max_archive_size,
+    )
+    distribution, actual_hash = _decode_records(
+        decoded,
+        cast(BinaryIO, _NullWriter()),
+    )
     hash_verified = actual_hash == decoded.expected_hash
     if not hash_verified:
         raise IntegrityError("archive failed SHA-256 verification")

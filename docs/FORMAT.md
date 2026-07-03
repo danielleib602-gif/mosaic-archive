@@ -1,6 +1,6 @@
 # MSC format specification
 
-Status: frozen for MSC 1.0, package version 0.16. Integer fields are unsigned and big-endian
+Status: frozen for MSC 1.0, package version 0.33. Integer fields are unsigned and big-endian
 unless stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and

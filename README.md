@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.32 does
+## What v0.33 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -122,6 +122,14 @@ uv run python -m mosaic_archive.reliability fuzz --cases 1000
 uv run python -m mosaic_archive.reliability soak --size-mib 256
 uv run python -m mosaic_archive.coverage_fuzzing fuzz-corpus
 uv run msc compatibility --json
+uv run msc readiness --json
+```
+
+Decode and inspect accept caller-defined resource ceilings:
+
+```console
+uv run msc decode archive.msc restored \
+  --max-output-size 1073741824 --max-frame-count 100000
 ```
 
 For scripts, read the password from an environment variable:
@@ -351,6 +359,15 @@ covered by tests. Five contemporaneous hosted Linux runs per revision show
 median encode time falling from 0.618 to 0.437 seconds (29.2%). The archive
 remains 275,859 bytes, while maximum frame payload improves by 8 bytes. The
 cumulative hosted encode improvement since v0.23 is 76.8%.
+
+The v0.33 release-hardening pass applies one caller-overridable decode resource
+policy to MSC1 through MSC6 and MSR2. It caps restored bytes and frame/block
+counts before destination creation, bounds whole-buffer legacy MSC1 archives
+before ciphertext allocation, removes an unbounded MSR2 metadata-decompressor
+flush, and prevents MSC1 inspection from retaining restored bytes. The new
+`msc readiness --json` command evaluates all nine committed 1.0 roadmap gates;
+seven are complete, while independent review and the first attested release
+remain.
 
 ## Current limits
 
