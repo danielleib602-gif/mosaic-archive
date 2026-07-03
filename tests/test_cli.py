@@ -21,11 +21,11 @@ class CliTests(unittest.TestCase):
             env=environment,
         )
 
-    def test_reports_v0_33_package_version(self) -> None:
+    def test_reports_v0_34_package_version(self) -> None:
         completed = self.run_cli("--version")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), "msc 0.33.0")
+        self.assertEqual(completed.stdout.strip(), "msc 0.34.0")
 
     def test_reports_machine_readable_one_zero_readiness(self) -> None:
         completed = self.run_cli("readiness", "--require-automatic", "--json")

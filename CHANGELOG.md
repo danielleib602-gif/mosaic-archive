@@ -4,6 +4,23 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.34.0] - 2026-07-03
+
+### Added
+
+- Deterministic, self-verifying source bundles built directly from committed
+  Git objects for independent security review.
+- A dedicated review-bundle workflow and a written independent-review scope,
+  reproduction procedure, and report contract.
+- Review source bundles in tagged-release checksums and signed provenance.
+
+### Changed
+
+- External 1.0 gates now require structured HTTPS, reviewer/verifier, date, and
+  exact-commit evidence. A bare boolean no longer marks a gate complete.
+- The first attested release must use the exact commit covered by the
+  independent security review.
+
 ## [0.33.0] - 2026-07-03
 
 ### Added

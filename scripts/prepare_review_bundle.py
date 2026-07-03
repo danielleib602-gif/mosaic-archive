@@ -17,6 +17,10 @@ BUNDLE_FORMAT = "mosaic-review-bundle-v1"
 MANIFEST_NAME = "REVIEW-MANIFEST.json"
 _ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _SUPPORTED_MODES = {"100644", "100755"}
+_MAX_BUNDLE_MEMBERS = 100_000
+_MAX_MANIFEST_SIZE = 16 * 1024 * 1024
+_MAX_MEMBER_SIZE = 1024 * 1024 * 1024
+_MAX_TOTAL_SIZE = 4 * 1024 * 1024 * 1024
 
 
 def _git(root: Path, *arguments: str) -> bytes:
@@ -150,6 +154,22 @@ def verify_review_bundle(bundle: Path) -> dict[str, Any]:
         raise ValueError(f"invalid review bundle: {error}") from error
     with archive:
         infos = archive.infolist()
+        if len(infos) > _MAX_BUNDLE_MEMBERS:
+            raise ValueError("review bundle contains too many members")
+        total_size = 0
+        for info in infos:
+            _safe_path(info.filename)
+            if info.is_dir():
+                raise ValueError("review bundle must not contain directory members")
+            if info.compress_type != zipfile.ZIP_STORED:
+                raise ValueError("review bundle members must be stored without compression")
+            if info.date_time != _ZIP_TIMESTAMP:
+                raise ValueError("review bundle member has a non-deterministic timestamp")
+            if info.file_size < 0 or info.file_size > _MAX_MEMBER_SIZE:
+                raise ValueError("review bundle member exceeds the size limit")
+            total_size += info.file_size
+            if total_size > _MAX_TOTAL_SIZE:
+                raise ValueError("review bundle exceeds the total size limit")
         names = [info.filename for info in infos]
         if len(names) != len(set(names)):
             raise ValueError("review bundle contains duplicate member names")
@@ -157,6 +177,8 @@ def verify_review_bundle(bundle: Path) -> dict[str, Any]:
         if len(manifest_names) != 1:
             raise ValueError("review bundle must contain exactly one review manifest")
         manifest_name = manifest_names[0]
+        if archive.getinfo(manifest_name).file_size > _MAX_MANIFEST_SIZE:
+            raise ValueError("review bundle manifest exceeds the size limit")
         prefix = manifest_name.removesuffix(MANIFEST_NAME)
         if prefix.count("/") != 1 or not prefix.startswith("mosaic-archive-"):
             raise ValueError("review bundle has an invalid root directory")
@@ -169,6 +191,19 @@ def verify_review_bundle(bundle: Path) -> dict[str, Any]:
         manifest = cast(dict[str, Any], raw_manifest)
         if manifest.get("bundle_format") != BUNDLE_FORMAT:
             raise ValueError("unsupported review bundle format")
+        source_commit = manifest.get("source_commit")
+        source_tree = manifest.get("source_tree")
+        if (
+            not isinstance(source_commit, str)
+            or len(source_commit) != 40
+            or any(character not in "0123456789abcdef" for character in source_commit)
+            or not isinstance(source_tree, str)
+            or len(source_tree) != 40
+            or any(character not in "0123456789abcdef" for character in source_tree)
+        ):
+            raise ValueError("review bundle has an invalid source identity")
+        if prefix != f"mosaic-archive-{source_commit[:12]}/":
+            raise ValueError("review bundle root does not match its source commit")
         files = manifest.get("files")
         if not isinstance(files, list):
             raise ValueError("review bundle manifest files must be a list")
@@ -194,11 +229,12 @@ def verify_review_bundle(bundle: Path) -> dict[str, Any]:
             member_name = prefix + path
             expected_names.add(member_name)
             try:
-                payload = archive.read(member_name)
+                member_info = archive.getinfo(member_name)
             except KeyError as error:
                 raise ValueError(f"missing bundle payload: {path}") from error
-            if len(payload) != size:
+            if size < 0 or size > _MAX_MEMBER_SIZE or member_info.file_size != size:
                 raise ValueError(f"size mismatch for bundle payload: {path}")
+            payload = archive.read(member_name)
             if hashlib.sha256(payload).hexdigest() != expected_digest:
                 raise ValueError(f"digest mismatch for bundle payload: {path}")
         if set(names) != expected_names:

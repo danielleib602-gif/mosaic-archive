@@ -1,0 +1,43 @@
+name: Independent review bundle
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/prepare_review_bundle.py"
+      - "tests/test_review_bundle.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/review-bundle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: deterministic source evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - name: Build bundle from the checked-out Git commit
+        shell: bash
+        run: >
+          python scripts/prepare_review_bundle.py build
+          "review/mosaic-review-${GITHUB_SHA}.zip"
+          --revision "$GITHUB_SHA"
+      - name: Verify every bundled payload
+        shell: bash
+        run: >
+          python scripts/prepare_review_bundle.py verify
+          "review/mosaic-review-${GITHUB_SHA}.zip"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: mosaic-review-${{ github.sha }}
+          path: review/mosaic-review-*.zip
+          if-no-files-found: error

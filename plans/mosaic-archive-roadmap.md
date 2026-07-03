@@ -231,6 +231,11 @@ to every decoder, caps whole-buffer MSC1 input before allocation, removes the
 unbounded final MSR2 metadata decompressor flush, and adds a machine-readable
 nine-gate 1.0 readiness report. The internal review leaves the independent
 review and first verified attested release as the two formal open gates.
+Package v0.34 makes the external handoff reproducible: a deterministic source
+bundle is built from exact Git objects, every tracked payload is hashed in an
+embedded manifest, tagged releases bind that bundle into checksums and signed
+provenance, and structured gate validation requires the released commit to
+match the independently reviewed commit.
 
 Parallel research tracks:
 
