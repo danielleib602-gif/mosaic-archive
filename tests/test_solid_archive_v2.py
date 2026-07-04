@@ -13,6 +13,7 @@ from mosaic_archive import dedup_archive
 from mosaic_archive.corpus import generate_corpus
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.solid_archive_v2 import (
+    _compact_metadata,
     _decode_compact_uint,
     _decode_metadata_envelope,
     _encode_metadata_envelope,
@@ -20,6 +21,7 @@ from mosaic_archive.solid_archive_v2 import (
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
+from mosaic_archive.solid_frames import SOLID_LANE_HIGH_ENTROPY, compress_solid_lane
 
 
 def _tree_digest(root: Path) -> bytes:
@@ -61,6 +63,34 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertEqual(chunker.call_count, 1)
             self.assertEqual(encoded.chunking_passes, 1)
 
+    def test_high_entropy_lane_bypasses_futile_lzma_compression(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "random.bin", root / "random.msr", root / "out"
+            data = random.Random(92).randbytes(256 * 1024)
+            source.write_bytes(data)
+
+            with patch(
+                "mosaic_archive.solid_archive_v2.compress_solid_lane",
+                wraps=compress_solid_lane,
+            ) as compressor:
+                encoded = encode_solid_archive_v2(
+                    source,
+                    archive,
+                    "secret",
+                    padding_size=256,
+                    kdf_log_n=14,
+                )
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            compressed_lanes = {call.kwargs["lane"] for call in compressor.call_args_list}
+            self.assertNotIn(SOLID_LANE_HIGH_ENTROPY, compressed_lanes)
+            self.assertEqual(encoded.routing_trial_compressions, 0)
+            self.assertEqual(encoded.routing_reuse_probes, 1)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), data)
+            self.assertLessEqual(encoded.maximum_frame_payload, len(data))
+
     def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
         self,
     ) -> None:
@@ -93,7 +123,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             source, archive, restored = root / "source", root / "legacy.msr", root / "out"
             source.write_bytes(b"legacy metadata remains readable\n" * 4096)
 
-            def legacy_metadata(manifest, assignments, frame_counts):
+            def legacy_metadata(manifest, assignments, frame_counts, _lane_codecs):
                 raw_sizes = [0, 0, 0]
                 unique_records = [
                     chunk
@@ -112,6 +142,25 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             with patch(
                 "mosaic_archive.solid_archive_v2._compact_metadata",
                 side_effect=legacy_metadata,
+            ):
+                encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), source.read_bytes())
+
+    def test_decoder_retains_legacy_mc21_compact_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "source", root / "legacy.msr", root / "out"
+            source.write_bytes(b"legacy compact metadata remains readable\n" * 4096)
+
+            def legacy_compact(manifest, assignments, frame_counts, _lane_codecs):
+                return _compact_metadata(manifest, assignments, frame_counts)
+
+            with patch(
+                "mosaic_archive.solid_archive_v2._compact_metadata",
+                side_effect=legacy_compact,
             ):
                 encode_solid_archive_v2(source, archive, "secret", kdf_log_n=14)
             decoded = decode_solid_archive_v2(archive, restored, "secret")
@@ -202,6 +251,27 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self.assertEqual(scorecard["archive"]["margin_vs_7zip_bytes"], 13132)
         self.assertFalse(scorecard["archive"]["stable_writer"])
 
+    def test_v0_36_scorecard_preserves_bytes_and_improves_incompressible_speed(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.36-raw-entropy-lane.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for category in ("random", "precompressed"):
+            result = scorecard[category]
+            self.assertEqual(
+                result["after"]["archive_bytes"],
+                result["before"]["archive_bytes"],
+            )
+            self.assertLess(
+                result["after"]["encode_seconds_median"],
+                result["before"]["encode_seconds_median"],
+            )
+            self.assertGreater(result["encode_improvement_percent"], 20)
+
     def test_v0_19_category_scorecard_reports_losses_as_plainly_as_wins(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.19-category-suite.json").read_text(
@@ -262,6 +332,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertEqual(encoded.archive_size, 275859)
             self.assertEqual(encoded.compression_passes, 1)
             self.assertEqual(encoded.routing_trial_compressions, 0)
+            self.assertEqual(encoded.routing_reuse_probes, 1)
             self.assertLess(encoded.archive_size, seven_zip_size)
             self.assertLessEqual(encoded.maximum_frame_payload, 1024 * 1024)
             self.assertTrue(decoded.hash_verified)

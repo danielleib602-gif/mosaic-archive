@@ -241,6 +241,11 @@ schema v2, expands the deterministic public corpus to 78 files across 13
 categories, rejects nondeterministic repeated evidence, and publishes
 per-category byte deltas so aggregate deduplication wins cannot hide losses on
 random, precompressed, or empty inputs.
+Package v0.36 adds backward-readable MC22 lane codec metadata and a bounded
+distant-reuse probe. Truly incompressible high-entropy lanes use authenticated
+raw passthrough, improving 11-run random and precompressed medians by 26.5% and
+24.3% with unchanged archive bytes; lanes with distant reuse retain LZMA and
+the historical 275,859-byte result.
 
 Parallel research tracks:
 

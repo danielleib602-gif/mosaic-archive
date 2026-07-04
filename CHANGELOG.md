@@ -4,6 +4,22 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.36.0] - 2026-07-04
+
+### Added
+
+- Backward-readable MC22 solid metadata with an authenticated raw lane codec.
+- A bounded distant-reuse probe that distinguishes truly incompressible lanes
+  from high-entropy lanes with relationships outside short codec windows.
+- An 11-run contemporaneous scorecard for random and precompressed workloads.
+
+### Changed
+
+- High-entropy lanes without sampled distant reuse bypass futile LZMA
+  compression while retaining the same authenticated framing and padding.
+- Median random encode time improves by 26.514452% and precompressed time by
+  24.328667%, with identical 131,679-byte archives.
+
 ## [0.35.0] - 2026-07-03
 
 ### Added

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import mmap
 import os
 import shutil
 import struct
@@ -57,8 +58,14 @@ _MAX_METADATA_CIPHERTEXT: Final = 64 * 1024 * 1024
 _METADATA_MAGIC: Final = b"MDZ1"
 _METADATA_ENVELOPE: Final = struct.Struct(">4sBQ")
 _RAW_LZMA2_CODEC: Final = 1
-_COMPACT_METADATA_MAGIC: Final = b"MC21"
+_COMPACT_METADATA_MAGIC_V1: Final = b"MC21"
+_COMPACT_METADATA_MAGIC: Final = b"MC22"
 _MAX_COMPACT_UINT: Final = (1 << 64) - 1
+_LANE_CODEC_LZMA2: Final = 0
+_LANE_CODEC_RAW: Final = 1
+_REUSE_PROBE_COUNT: Final = 32
+_REUSE_PROBE_SIZE: Final = 64
+_MAX_REUSE_PROBE_LANE_SIZE: Final = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +79,7 @@ class SolidArchiveV2EncodeStats:
     chunking_passes: int
     compression_passes: int
     routing_trial_compressions: int
+    routing_reuse_probes: int
     elapsed_seconds: float
 
 
@@ -188,8 +196,11 @@ def _compact_metadata(
     manifest: DedupManifest,
     assignments: bytes,
     frame_counts: tuple[int, int, int],
+    lane_codecs: tuple[int, int, int] | None = None,
 ) -> bytes:
-    output = bytearray(_COMPACT_METADATA_MAGIC)
+    output = bytearray(
+        _COMPACT_METADATA_MAGIC if lane_codecs is not None else _COMPACT_METADATA_MAGIC_V1
+    )
     root = manifest.root_name.encode("utf-8")
     if manifest.kind not in {KIND_FILE, KIND_FOLDER}:
         raise RuntimeError("internal MSR2 archive kind is invalid")
@@ -200,6 +211,11 @@ def _compact_metadata(
     output.extend(_encode_compact_uint(len(manifest.chunks)))
     for frame_count in frame_counts:
         output.extend(_encode_compact_uint(frame_count))
+    if lane_codecs is not None:
+        for codec in lane_codecs:
+            if codec not in {_LANE_CODEC_LZMA2, _LANE_CODEC_RAW}:
+                raise RuntimeError("internal MSR2 lane codec is invalid")
+            output.extend(_encode_compact_uint(codec))
     previous_mtime_ns = 0
     for entry in manifest.entries:
         path = entry.relative_path.encode("utf-8")
@@ -271,6 +287,31 @@ def _decode_metadata_envelope(payload: bytes) -> tuple[bytes, bool]:
     return decoded, True
 
 
+def _high_entropy_lane_has_distant_reuse(path: Path, raw_size: int) -> bool:
+    """Find exact distant reuse without trial-compressing the assembled lane."""
+    if raw_size <= 0:
+        return False
+    if raw_size > _MAX_REUSE_PROBE_LANE_SIZE:
+        return True
+    if raw_size < _REUSE_PROBE_SIZE * 2:
+        return False
+    with (
+        path.open("rb") as source,
+        mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ) as data,
+    ):
+        last_start = raw_size - _REUSE_PROBE_SIZE
+        for sample_index in range(_REUSE_PROBE_COUNT):
+            position = (
+                (sample_index + 1) * last_start // (_REUSE_PROBE_COUNT + 1)
+            )
+            sample = data[position : position + _REUSE_PROBE_SIZE]
+            if data.find(sample, 0, max(0, position - _REUSE_PROBE_SIZE + 1)) >= 0:
+                return True
+            if data.find(sample, position + _REUSE_PROBE_SIZE) >= 0:
+                return True
+    return False
+
+
 def encode_solid_archive_v2(
     input_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
@@ -330,7 +371,22 @@ def encode_solid_archive_v2(
         compressed_paths = tuple(
             Path(lane_dir) / f"lane-{lane}.lzma2" for lane in range(_LANE_COUNT)
         )
+        high_entropy_codec = (
+            _LANE_CODEC_LZMA2
+            if _high_entropy_lane_has_distant_reuse(
+                lane_paths[2],
+                raw_sizes[2],
+            )
+            else _LANE_CODEC_RAW
+        )
+        lane_codecs = (
+            _LANE_CODEC_LZMA2,
+            _LANE_CODEC_LZMA2,
+            high_entropy_codec,
+        )
+        routing_probe_count = int(raw_sizes[2] > 0)
         compressed_sizes: list[int] = []
+        payload_paths: list[Path] = []
         frame_count_values: list[int] = []
         for lane, (raw_path, compressed_path) in enumerate(
             zip(lane_paths, compressed_paths, strict=True)
@@ -338,24 +394,30 @@ def encode_solid_archive_v2(
             if raw_sizes[lane] == 0:
                 compressed_path.touch()
                 compressed_sizes.append(0)
+                payload_paths.append(compressed_path)
                 frame_count_values.append(0)
                 continue
-            with raw_path.open("rb") as lane_source, compressed_path.open(
-                "wb"
-            ) as compressed_output:
-                compressed_size = compress_solid_lane(
-                    lane_source,
-                    compressed_output,
-                    lane=lane,
-                    raw_lzma2=True,
-                )
+            if lane_codecs[lane] == _LANE_CODEC_RAW:
+                compressed_size = raw_sizes[lane]
+                payload_paths.append(raw_path)
+            else:
+                with raw_path.open("rb") as lane_source, compressed_path.open(
+                    "wb"
+                ) as compressed_output:
+                    compressed_size = compress_solid_lane(
+                        lane_source,
+                        compressed_output,
+                        lane=lane,
+                        raw_lzma2=True,
+                    )
+                payload_paths.append(compressed_path)
             compressed_sizes.append(compressed_size)
             frame_count_values.append(
                 (compressed_size + frame_payload_size - 1) // frame_payload_size
             )
         frame_counts = cast(tuple[int, int, int], tuple(frame_count_values))
         metadata = _encode_metadata_envelope(
-            _compact_metadata(manifest, assignments, frame_counts)
+            _compact_metadata(manifest, assignments, frame_counts, lane_codecs)
         )
         if len(metadata) > MAX_MANIFEST_CIPHERTEXT:
             raise ValueError("MSR2 encrypted metadata exceeds its resource limit")
@@ -395,7 +457,7 @@ def encode_solid_archive_v2(
                 output.write(header)
                 output.write(metadata_ciphertext)
                 index = 1
-                for lane, path in enumerate(compressed_paths):
+                for lane, path in enumerate(payload_paths):
                     if raw_sizes[lane] == 0:
                         continue
                     with path.open("rb") as lane_source:
@@ -434,6 +496,7 @@ def encode_solid_archive_v2(
         1,
         1,
         0,
+        routing_probe_count,
         time.perf_counter() - started,
     )
 
@@ -532,7 +595,14 @@ def _parse_compact_metadata(
     padding_size: int,
     salt: bytes,
     nonce_prefix: bytes,
-) -> tuple[DedupManifest, bytes, tuple[int, int, int], tuple[int, int, int]]:
+) -> tuple[
+    DedupManifest,
+    bytes,
+    tuple[int, int, int],
+    tuple[int, int, int],
+    tuple[int, int, int],
+]:
+    modern = payload.startswith(_COMPACT_METADATA_MAGIC)
     position = len(_COMPACT_METADATA_MAGIC)
     root_descriptor, position = _decode_compact_uint(
         payload, position, (65_535 << 1) | 1, "root descriptor"
@@ -561,6 +631,18 @@ def _parse_compact_metadata(
             f"lane {lane} frame count",
         )
         frame_count_values.append(frame_count)
+    lane_codec_values: list[int] = []
+    if modern:
+        for lane in range(_LANE_COUNT):
+            codec, position = _decode_compact_uint(
+                payload,
+                position,
+                _LANE_CODEC_RAW,
+                f"lane {lane} codec",
+            )
+            lane_codec_values.append(codec)
+    else:
+        lane_codec_values.extend([_LANE_CODEC_LZMA2] * _LANE_COUNT)
 
     entry_specs: list[tuple[int, str, int, int, int, bytes]] = []
     previous_mtime_ns = 0
@@ -724,6 +806,7 @@ def _parse_compact_metadata(
         assignments,
         cast(tuple[int, int, int], tuple(raw_sizes)),
         cast(tuple[int, int, int], tuple(frame_count_values)),
+        cast(tuple[int, int, int], tuple(lane_codec_values)),
     )
 
 
@@ -735,8 +818,14 @@ def _parse_metadata(
     padding_size: int,
     salt: bytes,
     nonce_prefix: bytes,
-) -> tuple[DedupManifest, bytes, tuple[int, int, int], tuple[int, int, int]]:
-    if payload.startswith(_COMPACT_METADATA_MAGIC):
+) -> tuple[
+    DedupManifest,
+    bytes,
+    tuple[int, int, int],
+    tuple[int, int, int],
+    tuple[int, int, int],
+]:
+    if payload.startswith((_COMPACT_METADATA_MAGIC_V1, _COMPACT_METADATA_MAGIC)):
         return _parse_compact_metadata(
             payload,
             unique_count=unique_count,
@@ -792,6 +881,7 @@ def _parse_metadata(
         assignments,
         cast(tuple[int, int, int], tuple(raw_sizes)),
         cast(tuple[int, int, int], tuple(frame_counts)),
+        (_LANE_CODEC_LZMA2, _LANE_CODEC_LZMA2, _LANE_CODEC_LZMA2),
     )
 
 
@@ -895,7 +985,7 @@ def decode_solid_archive_v2(
             )
         )
         raw_metadata, raw_lzma2 = _decode_metadata_envelope(metadata)
-        manifest, assignments, raw_sizes, frame_counts = _parse_metadata(
+        manifest, assignments, raw_sizes, frame_counts, lane_codecs = _parse_metadata(
             raw_metadata,
             unique_count=header.unique_chunk_count,
             config=config,
@@ -932,6 +1022,7 @@ def decode_solid_archive_v2(
                         frame_payload_size=header.frame_payload_size,
                         padding_size=header.padding_size,
                         raw_lzma2=raw_lzma2,
+                        passthrough=lane_codecs[lane] == _LANE_CODEC_RAW,
                     )
                 index = stats.next_index
             if stream.read(1):

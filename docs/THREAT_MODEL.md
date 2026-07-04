@@ -1,6 +1,6 @@
 # Threat model
 
-Mosaic Archive v0.35 aims to provide a defensible experimental container around
+Mosaic Archive v0.36 aims to provide a defensible experimental container around
 an intentionally simple compression engine. It does not claim cryptographic
 novelty.
 
@@ -92,5 +92,5 @@ temporary disk-backed cache capped indirectly by authenticated unique content.
 
 The Python `cryptography` package supplies the cryptographic primitives.
 Mosaic's format composition and implementation have not received an independent
-security audit. Treat v0.35 as a research and learning tool, not as the sole
+security audit. Treat v0.36 as a research and learning tool, not as the sole
 protection for irreplaceable or high-risk secrets.

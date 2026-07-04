@@ -264,12 +264,13 @@ def read_solid_lane_frames(
     frame_payload_size: int = 1024 * 1024,
     padding_size: int = 1024,
     raw_lzma2: bool = False,
+    passthrough: bool = False,
 ) -> SolidFrameReadStats:
     """Authenticate and incrementally decompress one continuous lane."""
     _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
     if frame_count <= 0 or expected_size < 0:
         raise ArchiveFormatError("solid frame count or decoded size is invalid")
-    decoder = _decompressor(lane, raw_lzma2)
+    decoder = None if passthrough else _decompressor(lane, raw_lzma2)
     decoded_size = 0
     maximum_padded = (
         (8 + frame_payload_size + padding_size - 1) // padding_size
@@ -306,8 +307,16 @@ def read_solid_lane_frames(
             not final and len(compressed) != frame_payload_size
         ):
             raise ArchiveFormatError("solid frame payload exceeds its bound")
+        if passthrough:
+            remaining = expected_size - decoded_size
+            if len(compressed) > remaining:
+                raise ArchiveFormatError("solid frame stream exceeds its declared size")
+            destination.write(compressed)
+            decoded_size += len(compressed)
+            continue
 
         input_data = compressed
+        assert decoder is not None
         while True:
             remaining = expected_size - decoded_size
             output = decoder.decompress(
@@ -324,6 +333,6 @@ def read_solid_lane_frames(
         if decoder.eof != final or decoder.unused_data:
             raise ArchiveFormatError("solid frame stream terminates inconsistently")
 
-    if decoded_size != expected_size or not decoder.eof:
+    if decoded_size != expected_size or (decoder is not None and not decoder.eof):
         raise ArchiveFormatError("solid frame decoded size is inconsistent")
     return SolidFrameReadStats(frame_count, start_index + frame_count, decoded_size)

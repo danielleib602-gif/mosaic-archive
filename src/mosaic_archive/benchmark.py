@@ -65,6 +65,8 @@ class SolidBenchmarkReport:
     unique_chunk_count: int
     frame_count: int
     maximum_frame_payload: int
+    routing_trial_compressions: int
+    routing_reuse_probes: int
     round_trip_verified: bool
     comparisons: dict[str, ComparisonResult]
 
@@ -390,6 +392,8 @@ def _benchmark_solid_path(
             unique_chunk_count=encode_stats.unique_chunk_count,
             frame_count=encode_stats.frame_count,
             maximum_frame_payload=encode_stats.maximum_frame_payload,
+            routing_trial_compressions=encode_stats.routing_trial_compressions,
+            routing_reuse_probes=encode_stats.routing_reuse_probes,
             round_trip_verified=verified,
             comparisons=comparisons,
         )
