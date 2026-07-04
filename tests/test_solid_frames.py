@@ -6,6 +6,7 @@ import random
 import struct
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mosaic_archive.exceptions import (
     ArchiveFormatError,
@@ -14,6 +15,7 @@ from mosaic_archive.exceptions import (
 from mosaic_archive.solid_frames import (
     SOLID_LANE_DELTA4,
     SOLID_LANE_HIGH_ENTROPY,
+    SOLID_LANE_STANDARD,
     compress_solid_lane,
     read_solid_lane_frames,
     write_precompressed_solid_lane_frames,
@@ -22,6 +24,30 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_encoder_uses_lane_specific_bounded_match_search(self) -> None:
+        with patch("mosaic_archive.solid_frames.lzma.LZMACompressor") as factory:
+            factory.return_value.compress.return_value = b""
+            factory.return_value.flush.return_value = b""
+            compress_solid_lane(
+                io.BytesIO(b"standard"),
+                io.BytesIO(),
+                lane=SOLID_LANE_STANDARD,
+                raw_lzma2=True,
+            )
+            compress_solid_lane(
+                io.BytesIO(b"delta"),
+                io.BytesIO(),
+                lane=SOLID_LANE_DELTA4,
+                raw_lzma2=True,
+            )
+
+        standard = factory.call_args_list[0].kwargs["filters"][-1]
+        delta = factory.call_args_list[1].kwargs["filters"][-1]
+        self.assertEqual(standard["preset"], 6)
+        self.assertEqual(standard["nice_len"], 48)
+        self.assertEqual(standard["depth"], 12)
+        self.assertEqual(delta["preset"], 5)
+
     def test_committed_public_corpus_scorecard_preserves_the_7zip_margin(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.17-authenticated-solid-frames.json").read_text(
