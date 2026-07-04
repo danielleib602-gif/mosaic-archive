@@ -1,10 +1,10 @@
 # Project status
 
-- Package version: 0.36.0
+- Package version: 0.37.0
 - Publication status: READY for source publication; tagged binary release
   BLOCKED by the GitHub Actions account gate described below
 - Stable-format status: MSC6 is frozen for the planned 1.0 line
-- Repository status at this snapshot: private; no `v0.36.0` tag has been created
+- Repository status at this snapshot: private; no `v0.37.0` tag has been created
 
 ## What is ready now
 
@@ -14,7 +14,7 @@
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
 - Linux, Windows, and macOS binary builds are smoke-tested in CI. A matching
-  `v0.36.0` tag triggers checksum generation, keyless GitHub/Sigstore build
+  `v0.37.0` tag triggers checksum generation, keyless GitHub/Sigstore build
   provenance, an exact-source review bundle, and immutable GitHub release
   assets.
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
@@ -47,6 +47,14 @@ encode time from 0.080268 to 0.058986 seconds (26.514452%) and precompressed
 time from 0.079420 to 0.060098 seconds (24.328667%). Both archives remain
 131,679 bytes. The bounded distant-reuse probe keeps LZMA enabled for the
 historical corpus, preserving its 275,859-byte archive.
+
+The v0.37 scorecard in
+`.ecc/benchmarks/msc-v0.37-segmented-gear.json` compares 11 contemporaneous
+Windows runs per revision. Skipping Gear positions where a boundary cannot yet
+occur improves median encode time from 0.275920 to 0.266104 seconds on corpus
+v1 (3.557517%) and from 0.567044 to 0.522114 seconds on corpus v2 (7.923612%).
+Chunk boundaries, maximum frame payloads, and the 275,859-byte and 293,523-byte
+archives remain unchanged.
 
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
@@ -95,7 +103,7 @@ reviewed commit.
   valid paths: make the repository public or resolve billing while it remains
   private. GitHub documents that standard GitHub-hosted runners are free for
   public repositories. Then rerun the required workflows on `main` before
-  creating `v0.36.0`; otherwise the tag cannot produce the promised binary
+  creating `v0.37.0`; otherwise the tag cannot produce the promised binary
   assets.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
@@ -109,8 +117,8 @@ reviewed commit.
 
 ## Verification snapshot
 
-The publication checkout passes 169 unit/integration tests on Python 3.13.
-Exact source coverage is 3,393 of 3,843 executable lines (88.290398%); the
+The publication checkout passes 171 unit/integration tests on Python 3.13.
+Exact source coverage is 3,404 of 3,854 executable lines (88.323819%); the
 branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
 bytecode compilation, source/wheel builds, and package-metadata validation
 pass. The deterministic review bundle rejects payload tampering, compressed
@@ -132,11 +140,11 @@ contains no sensitive information.
 
 The immediate current work is to rerun the required workflows on `main`. That
 requires making the repository public or resolving the private-repository
-GitHub Actions account gate. After the v0.36 alpha is published, the next
+GitHub Actions account gate. After the v0.37 alpha is published, the next
 priorities are:
 
 1. complete an independent security review and resolve or document its findings;
-2. use the hosted v0.36 workflow to fill the encrypted 7-Zip and zstd rows;
+2. use the hosted v0.37 workflow to fill the encrypted 7-Zip and zstd rows;
 3. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
@@ -154,7 +162,7 @@ The detailed milestone history and rollback rules remain in
    keeping it private.
 3. Rerun the required workflows on `main`.
 4. Confirm every `main` and release-binary check is green.
-5. Create and push the annotated tag `v0.36.0`.
+5. Create and push the annotated tag `v0.37.0`.
 6. Let the release workflow build, attest, and publish all three binaries.
 7. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.
 8. Keep the experimental-alpha and no-independent-audit language in the

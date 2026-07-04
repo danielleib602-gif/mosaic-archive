@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.36 does
+## What v0.37 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -391,6 +391,12 @@ on random data; its 325-byte empty archive is 107 bytes larger than ZIP. The
 five-run median encode time is 0.441192 seconds with 0.011131-second median
 absolute deviation. Local 7-Zip and zstd were unavailable, so their v0.35
 comparisons remain pending the hosted workflow.
+
+The v0.37 Gear chunker skips the subminimum prefix where a content boundary
+cannot legally occur. Eleven contemporaneous Windows runs per revision improve
+median encode time by 3.557517% on corpus v1 and 7.923612% on corpus v2. Chunk
+boundaries, the 275,859-byte and 293,523-byte archives, and maximum frame
+payloads are unchanged.
 
 The v0.36 high-entropy router recognizes a pattern hidden by per-chunk entropy:
 some apparently random lanes contain distant exact reuse, while genuinely

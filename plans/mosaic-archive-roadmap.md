@@ -246,6 +246,11 @@ distant-reuse probe. Truly incompressible high-entropy lanes use authenticated
 raw passthrough, improving 11-run random and precompressed medians by 26.5% and
 24.3% with unchanged archive bytes; lanes with distant reuse retain LZMA and
 the historical 275,859-byte result.
+Package v0.37 skips Gear positions before the minimum legal chunk length,
+moving that unobservable prefix out of the Python byte loop. Eleven
+contemporaneous Windows runs per revision improve median encode time by 3.6%
+on corpus v1 and 7.9% on corpus v2, while boundaries, frame payloads, and
+archive bytes remain identical.
 
 Parallel research tracks:
 

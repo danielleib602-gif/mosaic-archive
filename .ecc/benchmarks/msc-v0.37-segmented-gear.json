@@ -1,0 +1,89 @@
+{
+  "baseline_commit": "0b8926c370fa2b194852a2ca99ea73ce4d0136e4",
+  "configuration": {
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "runs_per_case": 11
+  },
+  "corpus_v1": {
+    "after": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.26610410001012497,
+      "encode_seconds_runs": [
+        0.27755790000082925,
+        0.276856599986786,
+        0.2646511000057217,
+        0.2642794999992475,
+        0.2841022999782581,
+        0.26735670000198297,
+        0.27053650000016205,
+        0.26129570000921376,
+        0.26540859998203814,
+        0.26610410001012497,
+        0.26530969998566434
+      ],
+      "maximum_frame_payload": 263510
+    },
+    "before": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.2759200000145938,
+      "encode_seconds_runs": [
+        0.2809910000069067,
+        0.26438590002362616,
+        0.2769481999857817,
+        0.2759200000145938,
+        0.2745545999787282,
+        0.2891737000027206,
+        0.270634800021071,
+        0.2631775000190828,
+        0.2740392999839969,
+        0.27720250000129454,
+        0.2857077000080608
+      ],
+      "maximum_frame_payload": 263510
+    },
+    "encode_improvement_percent": 3.557517
+  },
+  "corpus_v2": {
+    "after": {
+      "archive_bytes": 293523,
+      "encode_seconds_median": 0.5221139999921434,
+      "encode_seconds_runs": [
+        0.5786469000158831,
+        0.5274583999998868,
+        0.5135507000086363,
+        0.4887665999995079,
+        0.4978283999953419,
+        0.48871440000948496,
+        0.5221139999921434,
+        0.5499170999974012,
+        0.5114228000165895,
+        0.5516655000101309,
+        0.5677941000030842
+      ],
+      "maximum_frame_payload": 263510
+    },
+    "before": {
+      "archive_bytes": 293523,
+      "encode_seconds_median": 0.5670443999988493,
+      "encode_seconds_runs": [
+        0.5670443999988493,
+        0.6265966999926604,
+        0.5383566999807954,
+        0.5751385999901686,
+        0.5096516000048723,
+        0.5175413000106346,
+        0.5517753000021912,
+        0.537562200013781,
+        0.6355435000150464,
+        0.5838254000118468,
+        0.6014814999944065
+      ],
+      "maximum_frame_payload": 263510
+    },
+    "encode_improvement_percent": 7.923612
+  },
+  "measurement": "contemporaneous independent Windows runs per revision; median elapsed encoder time",
+  "schema_version": 1,
+  "status": "byte-identical Gear boundaries and archives; unobservable subminimum prefixes bypass the Python byte loop"
+}

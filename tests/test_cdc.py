@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import random
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from mosaic_archive.cdc import ChunkingConfig, iter_content_defined_chunks
@@ -17,6 +19,25 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_v0_37_scorecard_preserves_bytes_and_improves_both_corpora(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.37-segmented-gear.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for corpus in ("corpus_v1", "corpus_v2"):
+            result = scorecard[corpus]
+            self.assertEqual(
+                result["after"]["archive_bytes"],
+                result["before"]["archive_bytes"],
+            )
+            self.assertEqual(
+                result["after"]["maximum_frame_payload"],
+                result["before"]["maximum_frame_payload"],
+            )
+            self.assertGreater(result["encode_improvement_percent"], 3)
+
     def test_boundary_signal_uses_one_gear_lookup_per_probe(self) -> None:
         class CountingTable:
             def __init__(self) -> None:
