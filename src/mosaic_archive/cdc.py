@@ -79,21 +79,32 @@ def iter_content_defined_chunks(
             if position >= input_size:
                 break
 
-            boundary_found = False
-            for offset, byte in enumerate(input_block[position:], start=position):
-                chunk_size += 1
+            scan_end = min(
+                input_size,
+                position + maximum_size - chunk_size,
+            )
+            boundary_offset: int | None = None
+            for offset, byte in enumerate(
+                input_block[position:scan_end],
+                start=position,
+            ):
                 fingerprint = ((fingerprint << 1) ^ table[byte]) & _MASK_64
-                if fingerprint & boundary_mask == 0 or chunk_size >= maximum_size:
-                    current_end = emitted_size + chunk_size
-                    yield bytes(memoryview(chunk)[emitted_size:current_end])
-                    emitted_size = current_end
-                    chunk_size = 0
-                    fingerprint = 0
-                    position = offset + 1
-                    boundary_found = True
+                if fingerprint & boundary_mask == 0:
+                    boundary_offset = offset
                     break
-            if not boundary_found:
-                position = input_size
+            if boundary_offset is None:
+                chunk_size += scan_end - position
+                position = scan_end
+                if chunk_size < maximum_size:
+                    continue
+            else:
+                chunk_size += boundary_offset - position + 1
+                position = boundary_offset + 1
+            current_end = emitted_size + chunk_size
+            yield bytes(memoryview(chunk)[emitted_size:current_end])
+            emitted_size = current_end
+            chunk_size = 0
+            fingerprint = 0
         if emitted_size:
             del chunk[:emitted_size]
             emitted_size = 0

@@ -56,7 +56,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             report = publish_benchmark(
                 corpus,
                 output,
-                release="0.37.0",
+                release="0.38.0",
                 source_commit="test-commit",
                 kdf_log_n=14,
                 repeats=3,
@@ -67,8 +67,8 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             markdown = (output / "report.md").read_text(encoding="utf-8")
             self.assertEqual(persisted, report)
             self.assertEqual(report["schema_version"], 2)
-            self.assertEqual(report["release"], "0.37.0")
-            self.assertEqual(report["package_version"], "0.37.0")
+            self.assertEqual(report["release"], "0.38.0")
+            self.assertEqual(report["package_version"], "0.38.0")
             self.assertEqual(report["source_commit"], "test-commit")
             self.assertEqual(report["corpus"]["version"], 2)
             self.assertEqual(report["corpus"]["category_count"], 13)
@@ -320,7 +320,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         self.assertIn('"src/mosaic_archive/solid_research.py"', workflow)
         self.assertIn("apt-get install --yes zstd p7zip-full", workflow)
         self.assertIn("mosaic_archive.benchmark_publication", workflow)
-        self.assertIn("--release 0.37.0", workflow)
+        self.assertIn("--release 0.38.0", workflow)
         self.assertIn("--repeats 5", workflow)
         self.assertIn("--format solid", workflow)
         self.assertIn(
@@ -329,7 +329,7 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
         )
         self.assertIn("published-benchmark/report.json", workflow)
         self.assertIn("published-benchmark/report.md", workflow)
-        self.assertIn("mosaic-benchmark-v0.37.0", workflow)
+        self.assertIn("mosaic-benchmark-v0.38.0", workflow)
 
 
 if __name__ == "__main__":
