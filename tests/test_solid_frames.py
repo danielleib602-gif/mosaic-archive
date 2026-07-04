@@ -125,6 +125,42 @@ class AuthenticatedSolidFrameTests(unittest.TestCase):
         self.assertEqual(written.compressed_size, compressed_size)
         self.assertEqual(restored.getvalue(), data)
 
+    def test_authenticated_raw_lane_round_trips_without_decompression(self) -> None:
+        data = random.Random(85).randbytes(64 * 1024)
+        archive = io.BytesIO()
+        written = write_precompressed_solid_lane_frames(
+            io.BytesIO(data),
+            archive,
+            compressed_size=len(data),
+            key=self.key,
+            nonce_prefix=self.nonce_prefix,
+            associated_data=self.aad,
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            start_index=0,
+            frame_payload_size=4096,
+            padding_size=512,
+        )
+        restored = io.BytesIO()
+        archive.seek(0)
+
+        read = read_solid_lane_frames(
+            archive,
+            restored,
+            key=self.key,
+            nonce_prefix=self.nonce_prefix,
+            associated_data=self.aad,
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            start_index=0,
+            frame_count=written.frame_count,
+            expected_size=len(data),
+            frame_payload_size=4096,
+            padding_size=512,
+            passthrough=True,
+        )
+
+        self.assertEqual(restored.getvalue(), data)
+        self.assertEqual(read.decoded_size, len(data))
+
     def test_delta_lane_round_trips_across_the_same_stream_contract(self) -> None:
         data = b"".join(struct.pack("<i", index * 3) for index in range(32_768))
         archive = io.BytesIO()

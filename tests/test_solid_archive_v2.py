@@ -20,6 +20,7 @@ from mosaic_archive.solid_archive_v2 import (
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
+from mosaic_archive.solid_frames import SOLID_LANE_HIGH_ENTROPY, compress_solid_lane
 
 
 def _tree_digest(root: Path) -> bytes:
@@ -60,6 +61,32 @@ class StreamingSolidArchiveTests(unittest.TestCase):
 
             self.assertEqual(chunker.call_count, 1)
             self.assertEqual(encoded.chunking_passes, 1)
+
+    def test_high_entropy_lane_bypasses_futile_lzma_compression(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "random.bin", root / "random.msr", root / "out"
+            data = random.Random(92).randbytes(256 * 1024)
+            source.write_bytes(data)
+
+            with patch(
+                "mosaic_archive.solid_archive_v2.compress_solid_lane",
+                wraps=compress_solid_lane,
+            ) as compressor:
+                encoded = encode_solid_archive_v2(
+                    source,
+                    archive,
+                    "secret",
+                    padding_size=256,
+                    kdf_log_n=14,
+                )
+            decoded = decode_solid_archive_v2(archive, restored, "secret")
+
+            compressed_lanes = {call.kwargs["lane"] for call in compressor.call_args_list}
+            self.assertNotIn(SOLID_LANE_HIGH_ENTROPY, compressed_lanes)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(restored.read_bytes(), data)
+            self.assertLessEqual(encoded.maximum_frame_payload, len(data))
 
     def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
         self,
