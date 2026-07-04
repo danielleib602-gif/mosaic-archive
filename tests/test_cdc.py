@@ -124,6 +124,40 @@ class ContentDefinedChunkingTests(unittest.TestCase):
 
         self.assertEqual(chunks, [data])
 
+    def test_gear_scan_slices_stop_at_the_mandatory_maximum_boundary(self) -> None:
+        class TrackingBytes(bytes):
+            scan_slices: list[slice] = []
+
+            def __getitem__(self, key):
+                if isinstance(key, slice):
+                    type(self).scan_slices.append(key)
+                return super().__getitem__(key)
+
+        class OneBlockStream:
+            def __init__(self, data: bytes) -> None:
+                self.data = TrackingBytes(data)
+
+            def read(self, _size: int) -> bytes:
+                data, self.data = self.data, TrackingBytes()
+                return data
+
+        data = bytes(1024)
+        config = ChunkingConfig(min_size=64, avg_size=128, max_size=256)
+
+        with patch("mosaic_archive.cdc._GEAR_TABLE", (1,) * 256):
+            chunks = list(iter_content_defined_chunks(OneBlockStream(data), config))
+
+        self.assertEqual(b"".join(chunks), data)
+        self.assertTrue(TrackingBytes.scan_slices)
+        self.assertTrue(
+            all(
+                item.start is not None
+                and item.stop is not None
+                and item.stop - item.start <= config.max_size - config.min_size + 1
+                for item in TrackingBytes.scan_slices
+            )
+        )
+
     def test_hot_loop_does_not_call_a_generic_rotation_helper(self) -> None:
         data = random.Random(28).randbytes(32 * 1024)
         config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
