@@ -4,6 +4,22 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.37.0] - 2026-07-04
+
+### Added
+
+- An 11-run contemporaneous scorecard covering both deterministic public
+  corpora and checking archive size plus maximum frame payload.
+- Regression coverage proving that unobservable subminimum Gear prefixes do
+  not enter the Python byte loop.
+
+### Changed
+
+- Gear chunking jumps directly to the first position where a boundary can be
+  observed, while retaining byte-identical boundaries and archives.
+- Median Windows encode time improves by 3.557517% on corpus v1 and 7.923612%
+  on corpus v2, with unchanged 275,859-byte and 293,523-byte archives.
+
 ## [0.36.0] - 2026-07-04
 
 ### Added

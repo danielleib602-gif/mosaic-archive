@@ -67,21 +67,33 @@ def iter_content_defined_chunks(
 
     while input_block := stream.read(_READ_SIZE):
         chunk.extend(input_block)
-        for byte in input_block:
-            chunk_size += 1
-            if chunk_size < minimum_size:
-                continue
-            fingerprint = ((fingerprint << 1) ^ table[byte]) & _MASK_64
-
-            at_content_boundary = (
-                fingerprint & boundary_mask == 0
+        position = 0
+        input_size = len(input_block)
+        while position < input_size:
+            skip = min(
+                max(0, minimum_size - 1 - chunk_size),
+                input_size - position,
             )
-            if at_content_boundary or chunk_size >= maximum_size:
-                current_end = emitted_size + chunk_size
-                yield bytes(memoryview(chunk)[emitted_size:current_end])
-                emitted_size = current_end
-                chunk_size = 0
-                fingerprint = 0
+            chunk_size += skip
+            position += skip
+            if position >= input_size:
+                break
+
+            boundary_found = False
+            for offset, byte in enumerate(input_block[position:], start=position):
+                chunk_size += 1
+                fingerprint = ((fingerprint << 1) ^ table[byte]) & _MASK_64
+                if fingerprint & boundary_mask == 0 or chunk_size >= maximum_size:
+                    current_end = emitted_size + chunk_size
+                    yield bytes(memoryview(chunk)[emitted_size:current_end])
+                    emitted_size = current_end
+                    chunk_size = 0
+                    fingerprint = 0
+                    position = offset + 1
+                    boundary_found = True
+                    break
+            if not boundary_found:
+                position = input_size
         if emitted_size:
             del chunk[:emitted_size]
             emitted_size = 0
