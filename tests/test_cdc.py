@@ -83,6 +83,26 @@ class ContentDefinedChunkingTests(unittest.TestCase):
         self.assertEqual(chunks, [data])
         self.assertEqual(table.lookups, 0)
 
+    def test_subminimum_prefix_is_not_iterated_byte_by_byte(self) -> None:
+        class NonIterableBytes(bytes):
+            def __iter__(self):
+                raise AssertionError("subminimum prefix entered the byte loop")
+
+        class OneBlockStream:
+            def __init__(self, data: bytes) -> None:
+                self.data = NonIterableBytes(data)
+
+            def read(self, _size: int) -> bytes:
+                data, self.data = self.data, NonIterableBytes()
+                return data
+
+        data = random.Random(33).randbytes(511)
+        config = ChunkingConfig(min_size=512, avg_size=2048, max_size=8192)
+
+        chunks = list(iter_content_defined_chunks(OneBlockStream(data), config))
+
+        self.assertEqual(chunks, [data])
+
     def test_hot_loop_does_not_call_a_generic_rotation_helper(self) -> None:
         data = random.Random(28).randbytes(32 * 1024)
         config = ChunkingConfig(min_size=256, avg_size=1024, max_size=4096)
