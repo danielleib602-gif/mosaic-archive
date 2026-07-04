@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.35 does
+## What v0.36 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -391,6 +391,15 @@ on random data; its 325-byte empty archive is 107 bytes larger than ZIP. The
 five-run median encode time is 0.441192 seconds with 0.011131-second median
 absolute deviation. Local 7-Zip and zstd were unavailable, so their v0.35
 comparisons remain pending the hosted workflow.
+
+The v0.36 high-entropy router recognizes a pattern hidden by per-chunk entropy:
+some apparently random lanes contain distant exact reuse, while genuinely
+random or precompressed lanes do not. A bounded 64-byte reuse probe preserves
+LZMA for the former and writes the latter through authenticated raw frames.
+Eleven contemporaneous runs per revision improve median random encode time by
+26.514452% and precompressed encode time by 24.328667%. Both retain the same
+131,679-byte encrypted and padded archive, and the distant-reuse corpus retains
+its 275,859-byte result. MC21 and fixed-width MSR2 metadata remain readable.
 
 ## Current limits
 

@@ -1,0 +1,86 @@
+{
+  "baseline_commit": "8035a0e1e955ba7f838118dc5597f3fe2c90bb5d",
+  "configuration": {
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "runs_per_case": 11,
+    "source": "deterministic corpus v2 category folders"
+  },
+  "measurement": "contemporaneous independent Windows runs per revision; median elapsed encoder time",
+  "precompressed": {
+    "after": {
+      "archive_bytes": 131679,
+      "encode_seconds_median": 0.06009839999023825,
+      "encode_seconds_runs": [
+        0.0578238999878522,
+        0.06085989999701269,
+        0.07146440001088195,
+        0.05993259997921996,
+        0.05950830000801943,
+        0.0619443999894429,
+        0.05876949999947101,
+        0.0588819999829866,
+        0.06009839999023825,
+        0.06118600000627339,
+        0.0602480000234209
+      ]
+    },
+    "before": {
+      "archive_bytes": 131679,
+      "encode_seconds_median": 0.07942029999685474,
+      "encode_seconds_runs": [
+        0.07936360000167042,
+        0.07790309999836609,
+        0.07942029999685474,
+        0.07811559998663142,
+        0.08407350000925362,
+        0.07976199997938238,
+        0.08449340000515804,
+        0.0840877000009641,
+        0.08451419998891652,
+        0.0780224000045564,
+        0.07572900000377558
+      ]
+    },
+    "encode_improvement_percent": 24.328667
+  },
+  "random": {
+    "after": {
+      "archive_bytes": 131679,
+      "encode_seconds_median": 0.05898559998604469,
+      "encode_seconds_runs": [
+        0.059746300015831366,
+        0.061050399992382154,
+        0.06056370001169853,
+        0.05802130000665784,
+        0.0625061999890022,
+        0.05898559998604469,
+        0.05885499998112209,
+        0.05932679999386892,
+        0.058890199987217784,
+        0.057804200012469664,
+        0.05785080001805909
+      ]
+    },
+    "before": {
+      "archive_bytes": 131679,
+      "encode_seconds_median": 0.08026829999289475,
+      "encode_seconds_runs": [
+        0.08287680000648834,
+        0.08399930002633482,
+        0.08625110000139102,
+        0.08121249999385327,
+        0.08022529998561367,
+        0.0778645999962464,
+        0.07470240001566708,
+        0.07740070001455024,
+        0.07783569997991435,
+        0.08026829999289475,
+        0.08066010000766255
+      ]
+    },
+    "encode_improvement_percent": 26.514452
+  },
+  "schema_version": 1,
+  "status": "raw authenticated passthrough improves incompressible-lane speed without changing padded archive bytes; distant-reuse probe preserves LZMA ratio wins"
+}
