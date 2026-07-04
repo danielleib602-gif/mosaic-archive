@@ -4,6 +4,23 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.38.0] - 2026-07-04
+
+### Added
+
+- An 11-run alternating-process scorecard for bounded Gear scans on both
+  deterministic public corpora.
+- A regression that requires every Gear scan slice to stop at the mandatory
+  maximum chunk boundary.
+
+### Changed
+
+- Gear chunking settles byte counts once per bounded segment instead of
+  updating and checking the maximum size for every eligible byte.
+- Median Windows encode time improves by 3.748490% on expanded corpus v2 and
+  remains effectively flat (+0.206949%) on corpus v1, with unchanged chunk
+  counts, frame payloads, and archive bytes.
+
 ## [0.37.0] - 2026-07-04
 
 ### Added

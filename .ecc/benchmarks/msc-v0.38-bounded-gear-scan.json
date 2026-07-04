@@ -1,0 +1,99 @@
+{
+  "baseline_commit": "9a0d20814ce78f2fa1b8cee30a965a5f82224ffb",
+  "configuration": {
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "runs_per_case": 11
+  },
+  "corpus_v1": {
+    "after": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.2838289000210352,
+      "encode_seconds_runs": [
+        0.27069490001304075,
+        0.2951249000034295,
+        0.3026465000002645,
+        0.28786859998945147,
+        0.25619270000606775,
+        0.2646103000151925,
+        0.26426649998757057,
+        0.2838289000210352,
+        0.3140762999828439,
+        0.2899064999946859,
+        0.27637539998977445
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 13
+    },
+    "before": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.2844174999918323,
+      "encode_seconds_runs": [
+        0.29225939998286776,
+        0.28259109999635257,
+        0.3136083999997936,
+        0.2789565999992192,
+        0.27634219999890774,
+        0.29700940000475384,
+        0.2780348999949638,
+        0.2844174999918323,
+        0.3026086000027135,
+        0.29824860001099296,
+        0.2835262999869883
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 13
+    },
+    "encode_improvement_percent": 0.206949
+  },
+  "corpus_v2": {
+    "after": {
+      "archive_bytes": 293523,
+      "encode_seconds_median": 0.4562311000190675,
+      "encode_seconds_runs": [
+        0.4434025999798905,
+        0.45684610001626424,
+        0.4608647999993991,
+        0.4562311000190675,
+        0.46134489998803474,
+        0.4492827999929432,
+        0.47607309999875724,
+        0.4690419000107795,
+        0.4544144000101369,
+        0.43797930001164787,
+        0.45191160001559183
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 89
+    },
+    "before": {
+      "archive_bytes": 293523,
+      "encode_seconds_median": 0.47399890000815503,
+      "encode_seconds_runs": [
+        0.4724860000133049,
+        0.47399890000815503,
+        0.4604121999873314,
+        0.4757007999869529,
+        0.47776960002374835,
+        0.4723490000178572,
+        0.48921749999863096,
+        0.47837579998304136,
+        0.4693505000032019,
+        0.471237799996743,
+        0.477878999983659
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 89
+    },
+    "encode_improvement_percent": 3.74849
+  },
+  "measurement": "alternating independent Windows processes per revision; median elapsed encoder time",
+  "profile_validation": {
+    "after_cdc_cumulative_seconds": 0.121,
+    "after_total_seconds": 0.451,
+    "before_cdc_cumulative_seconds": 0.146,
+    "before_total_seconds": 0.479
+  },
+  "schema_version": 1,
+  "status": "byte-identical Gear boundaries and archives; each scan is capped at the mandatory maximum chunk boundary"
+}

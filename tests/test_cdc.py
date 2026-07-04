@@ -6,6 +6,7 @@ import json
 import random
 import unittest
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import patch
 
 from mosaic_archive.cdc import ChunkingConfig, iter_content_defined_chunks
@@ -19,6 +20,32 @@ def chunk_digests(data: bytes, config: ChunkingConfig) -> list[bytes]:
 
 
 class ContentDefinedChunkingTests(unittest.TestCase):
+    def test_v0_38_scorecard_preserves_bytes_and_improves_expanded_corpus(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.38-bounded-gear-scan.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for corpus in ("corpus_v1", "corpus_v2"):
+            result = scorecard[corpus]
+            self.assertEqual(
+                result["after"]["archive_bytes"],
+                result["before"]["archive_bytes"],
+            )
+            self.assertEqual(
+                result["after"]["maximum_frame_payload"],
+                result["before"]["maximum_frame_payload"],
+            )
+            self.assertEqual(
+                result["after"]["unique_chunks"],
+                result["before"]["unique_chunks"],
+            )
+        self.assertGreater(scorecard["corpus_v1"]["encode_improvement_percent"], 0)
+        self.assertGreater(scorecard["corpus_v2"]["encode_improvement_percent"], 3)
+
     def test_v0_37_scorecard_preserves_bytes_and_improves_both_corpora(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.37-segmented-gear.json").read_text(
@@ -126,7 +153,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
 
     def test_gear_scan_slices_stop_at_the_mandatory_maximum_boundary(self) -> None:
         class TrackingBytes(bytes):
-            scan_slices: list[slice] = []
+            scan_slices: ClassVar[list[slice]] = []
 
             def __getitem__(self, key):
                 if isinstance(key, slice):

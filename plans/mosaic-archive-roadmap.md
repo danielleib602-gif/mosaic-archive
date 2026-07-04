@@ -251,6 +251,11 @@ moving that unobservable prefix out of the Python byte loop. Eleven
 contemporaneous Windows runs per revision improve median encode time by 3.6%
 on corpus v1 and 7.9% on corpus v2, while boundaries, frame payloads, and
 archive bytes remain identical.
+Package v0.38 caps every Gear scan at the mandatory maximum chunk boundary and
+settles the byte count once per segment. Eleven alternating independent
+Windows processes per revision improve expanded corpus-v2 median encode time
+by 3.7%; corpus v1 remains effectively flat, and chunk counts, frame payloads,
+and archive bytes remain identical.
 
 Parallel research tracks:
 
