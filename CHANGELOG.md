@@ -4,6 +4,24 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [0.39.0] - 2026-07-05
+
+### Added
+
+- An 11-run alternating-process scorecard for lane-specific bounded LZMA match
+  search across both deterministic public corpora.
+- A regression that requires each solid lane to use its own encoder search
+  parameters while preserving the shared decoder filter chain.
+
+### Changed
+
+- The standard solid lane searches with a longer nice length and greater match
+  depth; the delta lane drops to the faster LZMA2 preset. Both retain the
+  preset-6 LZMA2 decoder property byte, so v0.38 decoders restore every archive.
+- Expanded corpus v2 shrinks from 293,523 to 291,731 bytes (1,792 bytes) while
+  median Windows encode time improves by 6.727759% on corpus v1 and 2.986441%
+  on corpus v2, with unchanged chunk counts and maximum frame payloads.
+
 ## [0.38.0] - 2026-07-04
 
 ### Added

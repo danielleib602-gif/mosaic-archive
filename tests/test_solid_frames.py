@@ -24,6 +24,35 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_v0_39_scorecard_is_smaller_and_faster_without_chunk_changes(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.39-lane-match-search.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for corpus in ("corpus_v1", "corpus_v2"):
+            result = scorecard[corpus]
+            self.assertGreater(result["encode_improvement_percent"], 2)
+            self.assertEqual(
+                result["after"]["maximum_frame_payload"],
+                result["before"]["maximum_frame_payload"],
+            )
+            self.assertEqual(
+                result["after"]["unique_chunks"],
+                result["before"]["unique_chunks"],
+            )
+        self.assertEqual(
+            scorecard["corpus_v1"]["after"]["archive_bytes"],
+            scorecard["corpus_v1"]["before"]["archive_bytes"],
+        )
+        self.assertLess(
+            scorecard["corpus_v2"]["after"]["archive_bytes"],
+            scorecard["corpus_v2"]["before"]["archive_bytes"],
+        )
+
     def test_encoder_uses_lane_specific_bounded_match_search(self) -> None:
         with patch("mosaic_archive.solid_frames.lzma.LZMACompressor") as factory:
             factory.return_value.compress.return_value = b""

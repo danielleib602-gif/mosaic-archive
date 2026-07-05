@@ -38,8 +38,8 @@ class ReleaseBinaryTests(unittest.TestCase):
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
-        self.assertEqual(project["project"]["version"], "0.38.0")
-        self.assertIn("--expected-version 0.38.0", workflow)
+        self.assertEqual(project["project"]["version"], "0.39.0")
+        self.assertIn("--expected-version 0.39.0", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:

@@ -25,11 +25,25 @@ _FRAME_HEADER: Final = struct.Struct(">IBBI")
 _FLAG_FINAL: Final = 1
 _IO_BLOCK_SIZE: Final = 64 * 1024
 _OUTPUT_BLOCK_SIZE: Final = 64 * 1024
-_DELTA_FILTERS: Final = (
+_DELTA_ENCODER_FILTERS: Final = (
+    {"id": lzma.FILTER_DELTA, "dist": 4},
+    {"id": lzma.FILTER_LZMA2, "preset": 5},
+)
+_DELTA_DECODER_FILTERS: Final = (
     {"id": lzma.FILTER_DELTA, "dist": 4},
     {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
 )
-_RAW_LZMA2_FILTERS: Final = ({"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},)
+_STANDARD_ENCODER_FILTERS: Final = (
+    {
+        "id": lzma.FILTER_LZMA2,
+        "preset": SOLID_LZMA_PRESET,
+        "nice_len": 48,
+        "depth": 12,
+    },
+)
+_RAW_LZMA2_DECODER_FILTERS: Final = (
+    {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,12 +82,12 @@ def _compressor(lane: int, raw_lzma2: bool) -> lzma.LZMACompressor:
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMACompressor(
             format=lzma.FORMAT_RAW,
-            filters=list(_DELTA_FILTERS),
+            filters=list(_DELTA_ENCODER_FILTERS),
         )
     if raw_lzma2:
         return lzma.LZMACompressor(
             format=lzma.FORMAT_RAW,
-            filters=list(_RAW_LZMA2_FILTERS),
+            filters=list(_STANDARD_ENCODER_FILTERS),
         )
     return lzma.LZMACompressor(format=lzma.FORMAT_XZ, preset=SOLID_LZMA_PRESET)
 
@@ -82,12 +96,12 @@ def _decompressor(lane: int, raw_lzma2: bool) -> lzma.LZMADecompressor:
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMADecompressor(
             format=lzma.FORMAT_RAW,
-            filters=list(_DELTA_FILTERS),
+            filters=list(_DELTA_DECODER_FILTERS),
         )
     if raw_lzma2:
         return lzma.LZMADecompressor(
             format=lzma.FORMAT_RAW,
-            filters=list(_RAW_LZMA2_FILTERS),
+            filters=list(_RAW_LZMA2_DECODER_FILTERS),
         )
     return lzma.LZMADecompressor(format=lzma.FORMAT_XZ)
 

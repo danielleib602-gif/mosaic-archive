@@ -30,7 +30,7 @@ class PublicationReadinessTests(unittest.TestCase):
 
     def test_public_maintainer_documents_are_present(self) -> None:
         required = {
-            "CHANGELOG.md": "## [0.38.0]",
+            "CHANGELOG.md": "## [0.39.0]",
             "CONTRIBUTING.md": "## Verification",
             "SECURITY.md": "## Reporting a vulnerability",
             "PROJECT_STATUS.md": "Publication status: READY",
@@ -55,7 +55,7 @@ class PublicationReadinessTests(unittest.TestCase):
     def test_status_snapshot_names_current_version_and_active_work(self) -> None:
         status = Path("PROJECT_STATUS.md").read_text(encoding="utf-8")
 
-        self.assertIn("Package version: 0.38.0", status)
+        self.assertIn("Package version: 0.39.0", status)
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
         self.assertIn("rerun the required workflows on `main`", status)

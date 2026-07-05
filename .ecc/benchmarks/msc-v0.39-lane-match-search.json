@@ -1,0 +1,99 @@
+{
+  "baseline_commit": "b9d5dd53c46a6fc6436b35feb87d986aae107562",
+  "configuration": {
+    "delta_lzma2_preset": 5,
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "runs_per_case": 11,
+    "standard_lzma2_depth": 12,
+    "standard_lzma2_nice_length": 48,
+    "standard_lzma2_preset": 6
+  },
+  "corpus_v1": {
+    "after": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.24386270000832155,
+      "encode_seconds_runs": [
+        0.32719020001241006,
+        0.30531470000278205,
+        0.2898434999806341,
+        0.24296289999620058,
+        0.242342000012286,
+        0.2556144999980461,
+        0.24172160000307485,
+        0.2568014000135008,
+        0.24351630001910962,
+        0.23863340000389144,
+        0.24386270000832155
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 13
+    },
+    "before": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.2614526000106707,
+      "encode_seconds_runs": [
+        0.32990340000833385,
+        0.30757980002090335,
+        0.33669880000525154,
+        0.2587028999987524,
+        0.2675858000002336,
+        0.2559573999897111,
+        0.2614526000106707,
+        0.2612260000023525,
+        0.25491760001750663,
+        0.25751980001223274,
+        0.2696618000045419
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 13
+    },
+    "encode_improvement_percent": 6.727759
+  },
+  "corpus_v2": {
+    "after": {
+      "archive_bytes": 291731,
+      "encode_seconds_median": 0.4143679999979213,
+      "encode_seconds_runs": [
+        0.40160369998193346,
+        0.40091430000029504,
+        0.4193770999845583,
+        0.39590299999690615,
+        0.41105090000201017,
+        0.41652120000799187,
+        0.41970679999212734,
+        0.4143679999979213,
+        0.41575540002668276,
+        0.4166156999999657,
+        0.4063268000027165
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 89
+    },
+    "before": {
+      "archive_bytes": 293523,
+      "encode_seconds_median": 0.4271238000073936,
+      "encode_seconds_runs": [
+        0.417043499997817,
+        0.4293809999944642,
+        0.42032629999448545,
+        0.42452979998779483,
+        0.4271238000073936,
+        0.42596469999989495,
+        0.4226716999837663,
+        0.4352255999983754,
+        0.43311380001250654,
+        0.44072710000909865,
+        0.436409799993271
+      ],
+      "maximum_frame_payload": 263510,
+      "unique_chunks": 89
+    },
+    "archive_improvement_bytes": 1792,
+    "encode_improvement_percent": 2.986441
+  },
+  "decoder_compatibility": "encoder-only match parameters retain the preset-6 8 MiB LZMA2 decoder property byte 0x16; candidate archives decoded with the unchanged v0.38 decoder",
+  "measurement": "alternating independent Windows processes; median elapsed encoder time",
+  "schema_version": 1,
+  "status": "corpus v2 becomes smaller and both corpora become faster without changing chunking or frame bounds"
+}

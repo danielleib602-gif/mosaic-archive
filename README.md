@@ -17,7 +17,7 @@ compressor finds a cheaper description of repeated or predictable bytes.
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## What v0.38 does
+## What v0.39 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -398,6 +398,16 @@ Eleven alternating independent Windows processes per revision improve expanded
 corpus-v2 median encode time by 3.748490%; corpus v1 remains effectively flat
 at +0.206949%. Chunk counts, maximum frame payloads, and the 275,859-byte and
 293,523-byte archives are unchanged.
+
+The v0.39 solid lanes separate LZMA encoder search parameters from the decoder
+filter chain. The standard lane searches harder with a longer nice length and
+greater match depth, while the delta lane drops to the faster LZMA2 preset. Both
+lanes keep declaring the preset-6 8 MiB LZMA2 dictionary property byte, so the
+unchanged v0.38 decoder still restores every candidate archive. Eleven
+alternating independent Windows processes per revision shrink expanded corpus-v2
+from 293,523 to 291,731 bytes (1,792 bytes) while improving median encode time
+by 6.727759% on corpus v1 and 2.986441% on corpus v2. Chunk counts and maximum
+frame payloads are unchanged.
 
 The v0.37 Gear chunker skips the subminimum prefix where a content boundary
 cannot legally occur. Eleven contemporaneous Windows runs per revision improve
