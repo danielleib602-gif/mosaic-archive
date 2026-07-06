@@ -33,7 +33,7 @@ class PublicationReadinessTests(unittest.TestCase):
             "CHANGELOG.md": "## [0.39.0]",
             "CONTRIBUTING.md": "## Verification",
             "SECURITY.md": "## Reporting a vulnerability",
-            "PROJECT_STATUS.md": "Publication status: READY",
+            "PROJECT_STATUS.md": "Publication status: v0.39.0",
         }
         for relative_path, marker in required.items():
             with self.subTest(path=relative_path):
@@ -58,7 +58,7 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("Package version: 0.39.0", status)
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
-        self.assertIn("create the `v0.39.0` tag", status)
+        self.assertIn("`v0.39.0` is published", status)
         self.assertIn("Repository status at this snapshot: public", status)
         self.assertNotIn("rerun PR #", status)
 

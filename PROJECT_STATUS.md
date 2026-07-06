@@ -1,10 +1,10 @@
 # Project status
 
 - Package version: 0.39.0
-- Publication status: READY for source publication and a tagged v0.39 binary
-  release; no release tag has been created
+- Publication status: v0.39.0 source and native binaries published with
+  checksums, GitHub build attestations, and an exact-source review bundle
 - Stable-format status: MSC6 is frozen for the planned 1.0 line
-- Repository status at this snapshot: public; no `v0.39.0` tag has been created
+- Repository status at this snapshot: public; `v0.39.0` is published
 
 ## What is ready now
 
@@ -13,10 +13,9 @@
 - The opt-in `--format solid` path writes the experimental MSR2 container with
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
-- Linux, Windows, and macOS binary builds are smoke-tested in CI. A matching
-  `v0.39.0` tag triggers checksum generation, keyless GitHub/Sigstore build
-  provenance, an exact-source review bundle, and immutable GitHub release
-  assets.
+- Linux, Windows, and macOS binary builds are smoke-tested in CI. The
+  `v0.39.0` release includes checksum-verified native binaries, keyless
+  GitHub/Sigstore build provenance, and an exact-source review bundle.
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
   harnesses, scheduled 256 MiB soak test, and cross-platform test matrix are
   committed.
@@ -159,10 +158,9 @@ contains no sensitive information.
 
 ## Current development focus
 
-The immediate current work is to review and create the `v0.39.0` tag, let the
-green release pipeline publish checksums, provenance, the exact-source review
-bundle, and all three native binaries, then independently verify one downloaded
-asset. After the v0.39 alpha is published, the next priorities are:
+The v0.39.0 release is published and its checksums, Windows binary, exact-source
+bundle, and GitHub attestation have been verified as documented in
+`docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
 1. complete an independent security review and resolve or document its findings;
 2. preserve the hosted v0.39 encrypted 7-Zip and zstd evidence in a permanent
@@ -177,15 +175,11 @@ asset. After the v0.39 alpha is published, the next priorities are:
 The detailed milestone history and rollback rules remain in
 `plans/mosaic-archive-roadmap.md`.
 
-## Maintainer publication checklist
+## Maintainer publication record
 
-1. Review the commit-email privacy note above.
-2. Confirm the public-repository and commit-email privacy choices remain
-   acceptable.
-3. Confirm the required workflows on `main` remain green.
-4. Review the v0.39 hosted benchmark and exact-source bundle.
-5. Create and push the annotated tag `v0.39.0`.
-6. Let the release workflow build, attest, and publish all three binaries.
-7. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.
-8. Keep the experimental-alpha and no-independent-audit language in the
-   announcement.
+The public-repository and commit-email privacy choices were accepted for this
+release. Required workflows passed, `v0.39.0` was created from
+`f99495cfc5be73617da8f929f89c3c044abbce89`, all three binaries and the review
+bundle were published, and downloaded assets were verified. Announcement and
+documentation must retain the experimental-alpha and no-independent-audit
+language.
