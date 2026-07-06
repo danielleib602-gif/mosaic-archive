@@ -1,10 +1,10 @@
 # Project status
 
 - Package version: 0.39.0
-- Publication status: READY for source publication; tagged binary release
-  BLOCKED by the GitHub Actions account gate described below
+- Publication status: READY for source publication and a tagged v0.39 binary
+  release; no release tag has been created
 - Stable-format status: MSC6 is frozen for the planned 1.0 line
-- Repository status at this snapshot: private; no `v0.39.0` tag has been created
+- Repository status at this snapshot: public; no `v0.39.0` tag has been created
 
 ## What is ready now
 
@@ -73,6 +73,12 @@ corpus v1 and 2.986441% on corpus v2. Both lanes keep the preset-6 LZMA2 decoder
 property byte, so the unchanged v0.38 decoder restores every candidate archive;
 chunk counts and maximum frame payloads are unchanged.
 
+The hosted Ubuntu v0.39 workflow then reproduced the 291,731-byte MSR2 result
+across five independent runs. The same verified corpus produced 336,784 bytes
+with encrypted 7-Zip, 336,723 bytes with compression-only 7-Zip, and 496,246
+bytes with zstd. Mosaic remains slower; these results are corpus-specific and
+do not establish universal superiority.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -114,14 +120,11 @@ reviewed commit.
   compatibility commitment.
 - The GitHub workflow publishes native executables, checksums, and provenance.
   PyPI publication is not configured.
-- On 2026-07-03, GitHub refused to start PR, binary, reliability, and
-  coverage-fuzz jobs because recent account payments failed or the Actions
-  spending limit must be increased. No workflow steps executed. There are two
-  valid paths: make the repository public or resolve billing while it remains
-  private. GitHub documents that standard GitHub-hosted runners are free for
-  public repositories. Then rerun the required workflows on `main` before
-  creating `v0.39.0`; otherwise the tag cannot produce the promised binary
-  assets.
+- On 2026-07-03, GitHub refused to start private-repository jobs because of an
+  account billing/spending-limit gate. The repository is now public. On
+  2026-07-06, PR #43 and merge commit `73f2d9b` completed real Linux, Windows,
+  macOS, quality/security, benchmark, review-bundle, and binary-build steps.
+  The former account gate is resolved.
 - Windows binaries are not Authenticode-signed and macOS binaries are not
   Developer-ID-signed or notarized, so operating systems may warn.
 - Padding hides exact length only within the selected bucket and cannot hide
@@ -134,8 +137,8 @@ reviewed commit.
 
 ## Verification snapshot
 
-The publication checkout passes 176 unit/integration tests on Python 3.13.
-Exact source coverage is 3,410 of 3,860 executable lines (88.341969%); the
+The publication checkout passes 177 unit/integration tests on Python 3.13.
+Exact source coverage is 3,421 of 3,871 executable lines (88.375097%); the
 branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
 bytecode compilation, source/wheel builds, and package-metadata validation
 pass. The deterministic review bundle rejects payload tampering, compressed
@@ -144,9 +147,10 @@ violations before publication.
 
 The deterministic reliability campaign executes 10,000 mutations across 14
 targets, and the local 256 MiB MSC6 soak round trip restores the exact source
-SHA-256. The last v0.32 code CI and cross-platform binary matrix passed before
-the account gate appeared. The final documentation PR jobs did not fail code;
-GitHub created them with zero steps and a billing/spending-limit annotation.
+SHA-256. The v0.39 PR and `main` checks passed across Python 3.11 and 3.13 on
+Linux and Windows, Python 3.13 on macOS, all three native-binary smoke builds,
+the quality/security job, deterministic review-bundle generation, and the
+hosted mature-compressor benchmark.
 
 Tracked files and Git history were checked for common private-key, AWS-key, and
 GitHub-token signatures. No matching secret or dangerous credential file was
@@ -155,13 +159,14 @@ contains no sensitive information.
 
 ## Current development focus
 
-The immediate current work is to rerun the required workflows on `main`. That
-requires making the repository public or resolving the private-repository
-GitHub Actions account gate. After the v0.39 alpha is published, the next
-priorities are:
+The immediate current work is to review and create the `v0.39.0` tag, let the
+green release pipeline publish checksums, provenance, the exact-source review
+bundle, and all three native binaries, then independently verify one downloaded
+asset. After the v0.39 alpha is published, the next priorities are:
 
 1. complete an independent security review and resolve or document its findings;
-2. use the hosted v0.39 workflow to fill the encrypted 7-Zip and zstd rows;
+2. preserve the hosted v0.39 encrypted 7-Zip and zstd evidence in a permanent
+   release surface;
 3. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
@@ -175,10 +180,10 @@ The detailed milestone history and rollback rules remain in
 ## Maintainer publication checklist
 
 1. Review the commit-email privacy note above.
-2. Make the repository public, or resolve the billing/spending-limit gate while
-   keeping it private.
-3. Rerun the required workflows on `main`.
-4. Confirm every `main` and release-binary check is green.
+2. Confirm the public-repository and commit-email privacy choices remain
+   acceptable.
+3. Confirm the required workflows on `main` remain green.
+4. Review the v0.39 hosted benchmark and exact-source bundle.
 5. Create and push the annotated tag `v0.39.0`.
 6. Let the release workflow build, attest, and publish all three binaries.
 7. Download one asset and verify both `SHA256SUMS` and its GitHub attestation.

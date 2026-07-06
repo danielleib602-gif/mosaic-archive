@@ -58,8 +58,8 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("Package version: 0.39.0", status)
         self.assertIn("## Current development focus", status)
         self.assertIn("independent security review", status)
-        self.assertIn("rerun the required workflows on `main`", status)
-        self.assertIn("standard GitHub-hosted runners are free", status)
+        self.assertIn("create the `v0.39.0` tag", status)
+        self.assertIn("Repository status at this snapshot: public", status)
         self.assertNotIn("rerun PR #", status)
 
     def test_relative_markdown_links_resolve(self) -> None:
