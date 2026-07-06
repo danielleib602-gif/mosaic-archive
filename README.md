@@ -400,9 +400,9 @@ at +0.206949%. Chunk counts, maximum frame payloads, and the 275,859-byte and
 293,523-byte archives are unchanged.
 
 The v0.39 solid lanes separate LZMA encoder search parameters from the decoder
-filter chain. The standard lane searches harder with a longer nice length and
-greater match depth, while the delta lane drops to the faster LZMA2 preset. Both
-lanes keep declaring the preset-6 8 MiB LZMA2 dictionary property byte, so the
+filter chain. The standard lane bounds match search at nice length 48 and depth
+12, while the delta lane drops to the faster LZMA2 preset 5. Both lanes keep
+declaring the preset-6 8 MiB LZMA2 dictionary property byte, so the
 unchanged v0.38 decoder still restores every candidate archive. Eleven
 alternating independent Windows processes per revision shrink expanded corpus-v2
 from 293,523 to 291,731 bytes (1,792 bytes) while improving median encode time

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import lzma
 import random
 import struct
 import unittest
@@ -24,6 +25,45 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_v0_38_decoder_filters_restore_v0_39_lane_streams(self) -> None:
+        standard = b"standard lane content " * 4096
+        delta = b"".join(struct.pack("<i", index * 3) for index in range(32_768))
+
+        standard_output = io.BytesIO()
+        compress_solid_lane(
+            io.BytesIO(standard),
+            standard_output,
+            lane=SOLID_LANE_STANDARD,
+            raw_lzma2=True,
+        )
+        delta_output = io.BytesIO()
+        compress_solid_lane(
+            io.BytesIO(delta),
+            delta_output,
+            lane=SOLID_LANE_DELTA4,
+            raw_lzma2=True,
+        )
+
+        self.assertEqual(
+            lzma.decompress(
+                standard_output.getvalue(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 6}],
+            ),
+            standard,
+        )
+        self.assertEqual(
+            lzma.decompress(
+                delta_output.getvalue(),
+                format=lzma.FORMAT_RAW,
+                filters=[
+                    {"id": lzma.FILTER_DELTA, "dist": 4},
+                    {"id": lzma.FILTER_LZMA2, "preset": 6},
+                ],
+            ),
+            delta,
+        )
+
     def test_v0_39_scorecard_is_smaller_and_faster_without_chunk_changes(
         self,
     ) -> None:

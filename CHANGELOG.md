@@ -15,8 +15,8 @@ is preserved.
 
 ### Changed
 
-- The standard solid lane searches with a longer nice length and greater match
-  depth; the delta lane drops to the faster LZMA2 preset. Both retain the
+- The standard solid lane bounds match search at nice length 48 and depth 12;
+  the delta lane drops to the faster LZMA2 preset 5. Both retain the
   preset-6 LZMA2 decoder property byte, so v0.38 decoders restore every archive.
 - Expanded corpus v2 shrinks from 293,523 to 291,731 bytes (1,792 bytes) while
   median Windows encode time improves by 6.727759% on corpus v1 and 2.986441%

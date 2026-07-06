@@ -134,8 +134,8 @@ reviewed commit.
 
 ## Verification snapshot
 
-The publication checkout passes 173 unit/integration tests on Python 3.13.
-Exact source coverage is 3,408 of 3,858 executable lines (88.335925%); the
+The publication checkout passes 176 unit/integration tests on Python 3.13.
+Exact source coverage is 3,410 of 3,860 executable lines (88.341969%); the
 branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
 bytecode compilation, source/wheel builds, and package-metadata validation
 pass. The deterministic review bundle rejects payload tampering, compressed
@@ -157,11 +157,11 @@ contains no sensitive information.
 
 The immediate current work is to rerun the required workflows on `main`. That
 requires making the repository public or resolving the private-repository
-GitHub Actions account gate. After the v0.38 alpha is published, the next
+GitHub Actions account gate. After the v0.39 alpha is published, the next
 priorities are:
 
 1. complete an independent security review and resolve or document its findings;
-2. use the hosted v0.38 workflow to fill the encrypted 7-Zip and zstd rows;
+2. use the hosted v0.39 workflow to fill the encrypted 7-Zip and zstd rows;
 3. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
