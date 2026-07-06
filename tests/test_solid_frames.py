@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import io
 import json
+import lzma
 import random
 import struct
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mosaic_archive.exceptions import (
     ArchiveFormatError,
@@ -14,6 +16,7 @@ from mosaic_archive.exceptions import (
 from mosaic_archive.solid_frames import (
     SOLID_LANE_DELTA4,
     SOLID_LANE_HIGH_ENTROPY,
+    SOLID_LANE_STANDARD,
     compress_solid_lane,
     read_solid_lane_frames,
     write_precompressed_solid_lane_frames,
@@ -22,6 +25,98 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_v0_38_decoder_filters_restore_v0_39_lane_streams(self) -> None:
+        standard = b"standard lane content " * 4096
+        delta = b"".join(struct.pack("<i", index * 3) for index in range(32_768))
+
+        standard_output = io.BytesIO()
+        compress_solid_lane(
+            io.BytesIO(standard),
+            standard_output,
+            lane=SOLID_LANE_STANDARD,
+            raw_lzma2=True,
+        )
+        delta_output = io.BytesIO()
+        compress_solid_lane(
+            io.BytesIO(delta),
+            delta_output,
+            lane=SOLID_LANE_DELTA4,
+            raw_lzma2=True,
+        )
+
+        self.assertEqual(
+            lzma.decompress(
+                standard_output.getvalue(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 6}],
+            ),
+            standard,
+        )
+        self.assertEqual(
+            lzma.decompress(
+                delta_output.getvalue(),
+                format=lzma.FORMAT_RAW,
+                filters=[
+                    {"id": lzma.FILTER_DELTA, "dist": 4},
+                    {"id": lzma.FILTER_LZMA2, "preset": 6},
+                ],
+            ),
+            delta,
+        )
+
+    def test_v0_39_scorecard_is_smaller_and_faster_without_chunk_changes(
+        self,
+    ) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.39-lane-match-search.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for corpus in ("corpus_v1", "corpus_v2"):
+            result = scorecard[corpus]
+            self.assertGreater(result["encode_improvement_percent"], 2)
+            self.assertEqual(
+                result["after"]["maximum_frame_payload"],
+                result["before"]["maximum_frame_payload"],
+            )
+            self.assertEqual(
+                result["after"]["unique_chunks"],
+                result["before"]["unique_chunks"],
+            )
+        self.assertEqual(
+            scorecard["corpus_v1"]["after"]["archive_bytes"],
+            scorecard["corpus_v1"]["before"]["archive_bytes"],
+        )
+        self.assertLess(
+            scorecard["corpus_v2"]["after"]["archive_bytes"],
+            scorecard["corpus_v2"]["before"]["archive_bytes"],
+        )
+
+    def test_encoder_uses_lane_specific_bounded_match_search(self) -> None:
+        with patch("mosaic_archive.solid_frames.lzma.LZMACompressor") as factory:
+            factory.return_value.compress.return_value = b""
+            factory.return_value.flush.return_value = b""
+            compress_solid_lane(
+                io.BytesIO(b"standard"),
+                io.BytesIO(),
+                lane=SOLID_LANE_STANDARD,
+                raw_lzma2=True,
+            )
+            compress_solid_lane(
+                io.BytesIO(b"delta"),
+                io.BytesIO(),
+                lane=SOLID_LANE_DELTA4,
+                raw_lzma2=True,
+            )
+
+        standard = factory.call_args_list[0].kwargs["filters"][-1]
+        delta = factory.call_args_list[1].kwargs["filters"][-1]
+        self.assertEqual(standard["preset"], 6)
+        self.assertEqual(standard["nice_len"], 48)
+        self.assertEqual(standard["depth"], 12)
+        self.assertEqual(delta["preset"], 5)
+
     def test_committed_public_corpus_scorecard_preserves_the_7zip_margin(self) -> None:
         scorecard = json.loads(
             Path(".ecc/benchmarks/msc-v0.17-authenticated-solid-frames.json").read_text(

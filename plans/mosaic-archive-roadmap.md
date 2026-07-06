@@ -256,6 +256,11 @@ settles the byte count once per segment. Eleven alternating independent
 Windows processes per revision improve expanded corpus-v2 median encode time
 by 3.7%; corpus v1 remains effectively flat, and chunk counts, frame payloads,
 and archive bytes remain identical.
+Package v0.39 separates encoder-only LZMA2 match search from decoder filter
+properties. Bounded standard-lane search and a faster delta-lane preset shrink
+expanded corpus v2 by 1,792 bytes while improving 11-run Windows median encode
+time by 6.7% on corpus v1 and 3.0% on corpus v2. The unchanged v0.38 decoder
+restores the new streams.
 
 Parallel research tracks:
 

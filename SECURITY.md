@@ -7,7 +7,7 @@ the current development release:
 
 | Version | Supported |
 |---|---|
-| 0.38.x | Yes |
+| 0.39.x | Yes |
 | Earlier versions | No |
 
 Decoder compatibility for MSC1 through MSC6 is separate from package support:
