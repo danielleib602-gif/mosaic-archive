@@ -5,11 +5,50 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mosaic_archive.benchmark_publication import _aggregate_runs, publish_benchmark
+from mosaic_archive.benchmark_publication import (
+    _aggregate_comparisons,
+    _aggregate_runs,
+    publish_benchmark,
+)
 from mosaic_archive.corpus import generate_corpus
 
 
 class VersionedBenchmarkPublicationTests(unittest.TestCase):
+    def test_encrypted_7zip_size_is_aggregated_as_a_randomized_distribution(
+        self,
+    ) -> None:
+        def result(size: int) -> dict[str, object]:
+            return {
+                "available": True,
+                "supported": True,
+                "archive_size": size,
+                "ratio": size / 1000,
+                "encode_seconds": 0.1,
+                "decode_seconds": 0.1,
+                "verified": True,
+                "note": "randomized encrypted archive",
+            }
+
+        comparisons = _aggregate_comparisons(
+            [
+                {"7z-encrypted": result(112)},
+                {"7z-encrypted": result(96)},
+                {"7z-encrypted": result(104)},
+            ]
+        )
+
+        encrypted = comparisons["7z-encrypted"]
+        self.assertEqual(encrypted["archive_size"], 104)
+        self.assertEqual(
+            encrypted["archive_size_distribution"],
+            {
+                "samples": [112, 96, 104],
+                "minimum": 96,
+                "median": 104,
+                "maximum": 112,
+            },
+        )
+
     def test_committed_v0_12_report_is_complete_and_verified(self) -> None:
         report = json.loads(
             Path("benchmarks/v0.12.0/report.json").read_text(encoding="utf-8")

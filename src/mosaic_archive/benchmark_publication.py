@@ -50,7 +50,11 @@ def _comparison_size(comparisons: dict[str, dict[str, Any]], name: str) -> str:
     return str(value) if isinstance(value, int) else "n/a"
 
 
-def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
+def _aggregate_runs(
+    runs: list[dict[str, Any]],
+    *,
+    randomized_archive_size: bool = False,
+) -> dict[str, Any]:
     if not runs:
         raise ValueError("at least one benchmark run is required")
     result = dict(runs[0])
@@ -61,6 +65,8 @@ def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "encode_seconds",
         "peak_memory_bytes",
     }
+    if randomized_archive_size:
+        volatile_fields.update(("archive_size", "ratio"))
     for field, expected in result.items():
         if field in volatile_fields:
             continue
@@ -94,6 +100,20 @@ def _aggregate_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     peaks = [run.get("peak_memory_bytes") for run in runs]
     if all(isinstance(value, int) for value in peaks):
         result["peak_memory_bytes"] = max(cast(list[int], peaks))
+    if randomized_archive_size:
+        archive_sizes = [run.get("archive_size") for run in runs]
+        if all(isinstance(value, int) for value in archive_sizes):
+            size_samples = cast(list[int], archive_sizes)
+            result["archive_size"] = int(statistics.median(size_samples))
+            result["archive_size_distribution"] = {
+                "samples": size_samples,
+                "minimum": min(size_samples),
+                "median": statistics.median(size_samples),
+                "maximum": max(size_samples),
+            }
+        ratios = [run.get("ratio") for run in runs]
+        if all(isinstance(value, int | float) for value in ratios):
+            result["ratio"] = statistics.median(cast(list[int | float], ratios))
     original_size = result.get("original_size")
     if isinstance(original_size, int):
         for seconds_field, speed_field in (
@@ -131,7 +151,10 @@ def _aggregate_comparisons(
     if any(set(run) != names for run in runs[1:]):
         raise ValueError("comparison methods changed across repeated runs")
     return {
-        name: _aggregate_runs([run[name] for run in runs])
+        name: _aggregate_runs(
+            [run[name] for run in runs],
+            randomized_archive_size=name == "7z-encrypted",
+        )
         for name in sorted(names)
     }
 
