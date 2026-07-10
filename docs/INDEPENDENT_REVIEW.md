@@ -6,6 +6,9 @@ The reviewer must be able to identify the exact source commit, reproduce the
 submitted source bundle, publish a report, and remain free to report unresolved
 findings.
 
+Public reviewer coordination and scope declarations belong in
+[issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50).
+
 ## Candidate identity
 
 The current review candidate is the released `v0.39.0` source:
@@ -17,7 +20,7 @@ The current review candidate is the released `v0.39.0` source:
 - release: https://github.com/danielleib602-gif/mosaic-archive/releases/tag/v0.39.0;
 - release verification:
   [RELEASE_VERIFICATION_v0.39.md](RELEASE_VERIFICATION_v0.39.md);
-- hosted benchmark: [v0.39.0 results](../benchmarks/v0.39.0/report.md).
+- hosted benchmark: [v0.39.0 results](../benchmarks/v0.39.0/report.md);
 - benchmark provenance:
   [workflow, source-tree binding, and hashes](../benchmarks/v0.39.0/PROVENANCE.md).
 

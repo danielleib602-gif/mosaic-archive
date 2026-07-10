@@ -73,6 +73,7 @@ class PublicationReadinessTests(unittest.TestCase):
         )
         self.assertIn("releases/tag/v0.39.0", brief)
         self.assertIn("../benchmarks/v0.39.0/report.md", brief)
+        self.assertIn("mosaic-archive/issues/50", brief)
 
     def test_relative_markdown_links_resolve(self) -> None:
         markdown_files = (

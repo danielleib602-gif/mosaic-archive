@@ -164,8 +164,10 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. recruit an independent reviewer using the exact v0.39 source bundle,
-   published review brief, and durable machine-readable benchmark evidence;
+1. recruit an independent reviewer through
+   [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
+   using the exact v0.39 source bundle, published review brief, and durable
+   machine-readable benchmark evidence;
 2. complete the independent security review and resolve or document its
    findings;
 3. decide whether a separate compression-only profile is worth the security
