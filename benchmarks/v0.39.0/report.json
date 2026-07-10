@@ -1,0 +1,3018 @@
+{
+  "categories": {
+    "dedup": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 131902,
+          "available": true,
+          "decode_seconds": 0.005223698999998305,
+          "encode_seconds": 0.012530796999996596,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.33543048378565327,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.005223698999998305,
+              "median": 0.005223698999998305,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.005223698999998305,
+              "samples": [
+                0.005223698999998305
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.012530796999996596,
+              "median": 0.012530796999996596,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.012530796999996596,
+              "samples": [
+                0.012530796999996596
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 131968,
+          "archive_size_distribution": {
+            "maximum": 131968,
+            "median": 131968,
+            "minimum": 131968,
+            "samples": [
+              131968
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.025168331999992688,
+          "encode_seconds": 0.027956738000000314,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.33559832363591974,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.025168331999992688,
+              "median": 0.025168331999992688,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.025168331999992688,
+              "samples": [
+                0.025168331999992688
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.027956738000000314,
+              "median": 0.027956738000000314,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.027956738000000314,
+              "samples": [
+                0.027956738000000314
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 394193,
+          "available": true,
+          "decode_seconds": 0.0012305300000008401,
+          "encode_seconds": 0.008063613000004466,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 1.0024438499410018,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0012305300000008401,
+              "median": 0.0012305300000008401,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0012305300000008401,
+              "samples": [
+                0.0012305300000008401
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.008063613000004466,
+              "median": 0.008063613000004466,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.008063613000004466,
+              "samples": [
+                0.008063613000004466
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 393780,
+          "available": true,
+          "decode_seconds": 0.0006769870000056244,
+          "encode_seconds": 0.007362430000000586,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 1.0013935793628188,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006769870000056244,
+              "median": 0.0006769870000056244,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006769870000056244,
+              "samples": [
+                0.0006769870000056244
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.007362430000000586,
+              "median": 0.007362430000000586,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.007362430000000586,
+              "samples": [
+                0.007362430000000586
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 131453,
+          "available": true,
+          "decode_seconds": 0.002323805999992601,
+          "encode_seconds": 0.003170875999998657,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.3342886641982341,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.002323805999992601,
+              "median": 0.002323805999992601,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002323805999992601,
+              "samples": [
+                0.002323805999992601
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.003170875999998657,
+              "median": 0.003170875999998657,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.003170875999998657,
+              "samples": [
+                0.003170875999998657
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 3,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.3355144037107865,
+        "archive_size": 131935,
+        "decode_mib_per_second": 14.608108018831278,
+        "decode_seconds": 0.025671719999991183,
+        "encode_mib_per_second": 5.027812779392542,
+        "encode_seconds": 0.07458815100000038,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 131292,
+        "original_size": 393232,
+        "peak_memory_bytes": 97825769,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 1,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.025671719999991183,
+            "median": 0.025671719999991183,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.025671719999991183,
+            "samples": [
+              0.025671719999991183
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.07458815100000038,
+            "median": 0.07458815100000038,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.07458815100000038,
+            "samples": [
+              0.07458815100000038
+            ]
+          }
+        },
+        "unique_chunk_count": 3
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 33,
+        "7z-encrypted": -33,
+        "gzip": -262258,
+        "zip": -261845,
+        "zstd": 482
+      },
+      "original_size": 393232
+    },
+    "empty": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 151,
+          "available": true,
+          "decode_seconds": 0.002410795000002963,
+          "encode_seconds": 0.003033150999996792,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.0,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.002410795000002963,
+              "median": 0.002410795000002963,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002410795000002963,
+              "samples": [
+                0.002410795000002963
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.003033150999996792,
+              "median": 0.003033150999996792,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.003033150999996792,
+              "samples": [
+                0.003033150999996792
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 188,
+          "archive_size_distribution": {
+            "maximum": 188,
+            "median": 188,
+            "minimum": 188,
+            "samples": [
+              188
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.022011726999991765,
+          "encode_seconds": 0.022290171999998165,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.0,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.022011726999991765,
+              "median": 0.022011726999991765,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022011726999991765,
+              "samples": [
+                0.022011726999991765
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.022290171999998165,
+              "median": 0.022290171999998165,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022290171999998165,
+              "samples": [
+                0.022290171999998165
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 260,
+          "available": true,
+          "decode_seconds": 0.0004786120000090932,
+          "encode_seconds": 0.00048278799999934563,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.0,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0004786120000090932,
+              "median": 0.0004786120000090932,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0004786120000090932,
+              "samples": [
+                0.0004786120000090932
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.00048278799999934563,
+              "median": 0.00048278799999934563,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00048278799999934563,
+              "samples": [
+                0.00048278799999934563
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 218,
+          "available": true,
+          "decode_seconds": 0.00022872099999915463,
+          "encode_seconds": 0.000324993000006657,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.0,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00022872099999915463,
+              "median": 0.00022872099999915463,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00022872099999915463,
+              "samples": [
+                0.00022872099999915463
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.000324993000006657,
+              "median": 0.000324993000006657,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.000324993000006657,
+              "samples": [
+                0.000324993000006657
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 215,
+          "available": true,
+          "decode_seconds": 0.0014756549999930257,
+          "encode_seconds": 0.0019908910000054902,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.0,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0014756549999930257,
+              "median": 0.0014756549999930257,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0014756549999930257,
+              "samples": [
+                0.0014756549999930257
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0019908910000054902,
+              "median": 0.0019908910000054902,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0019908910000054902,
+              "samples": [
+                0.0019908910000054902
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.0,
+        "archive_size": 325,
+        "decode_mib_per_second": 0.0,
+        "decode_seconds": 0.024020845000009672,
+        "encode_mib_per_second": 0.0,
+        "encode_seconds": 0.025963583999995876,
+        "format_name": "MSR2",
+        "frame_count": 0,
+        "maximum_frame_payload": 0,
+        "original_size": 0,
+        "peak_memory_bytes": 1072354,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.024020845000009672,
+            "median": 0.024020845000009672,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.024020845000009672,
+            "samples": [
+              0.024020845000009672
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.025963583999995876,
+            "median": 0.025963583999995876,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.025963583999995876,
+            "samples": [
+              0.025963583999995876
+            ]
+          }
+        },
+        "unique_chunk_count": 0
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 174,
+        "7z-encrypted": 137,
+        "gzip": 65,
+        "zip": 107,
+        "zstd": 110
+      },
+      "original_size": 0
+    },
+    "image-like": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 20605,
+          "available": true,
+          "decode_seconds": 0.005231199999997216,
+          "encode_seconds": 0.009954123999989406,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.15720367431640625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.005231199999997216,
+              "median": 0.005231199999997216,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.005231199999997216,
+              "samples": [
+                0.005231199999997216
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.009954123999989406,
+              "median": 0.009954123999989406,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.009954123999989406,
+              "samples": [
+                0.009954123999989406
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 20688,
+          "archive_size_distribution": {
+            "maximum": 20688,
+            "median": 20688,
+            "minimum": 20688,
+            "samples": [
+              20688
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.024682928999993692,
+          "encode_seconds": 0.023201356000001283,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.1578369140625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.024682928999993692,
+              "median": 0.024682928999993692,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.024682928999993692,
+              "samples": [
+                0.024682928999993692
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.023201356000001283,
+              "median": 0.023201356000001283,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.023201356000001283,
+              "samples": [
+                0.023201356000001283
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 81051,
+          "available": true,
+          "decode_seconds": 0.0009623110000092083,
+          "encode_seconds": 0.0026005470000001196,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.6183700561523438,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0009623110000092083,
+              "median": 0.0009623110000092083,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0009623110000092083,
+              "samples": [
+                0.0009623110000092083
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0026005470000001196,
+              "median": 0.0026005470000001196,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0026005470000001196,
+              "samples": [
+                0.0026005470000001196
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 80986,
+          "available": true,
+          "decode_seconds": 0.0006298570000069503,
+          "encode_seconds": 0.002407731000005242,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.6178741455078125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006298570000069503,
+              "median": 0.0006298570000069503,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006298570000069503,
+              "samples": [
+                0.0006298570000069503
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.002407731000005242,
+              "median": 0.002407731000005242,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002407731000005242,
+              "samples": [
+                0.002407731000005242
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 109122,
+          "available": true,
+          "decode_seconds": 0.0019393440000072815,
+          "encode_seconds": 0.002610622999995371,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.8325347900390625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0019393440000072815,
+              "median": 0.0019393440000072815,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0019393440000072815,
+              "samples": [
+                0.0019393440000072815
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.002610622999995371,
+              "median": 0.002610622999995371,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002610622999995371,
+              "samples": [
+                0.002610622999995371
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.00463104248046875,
+        "archive_size": 607,
+        "decode_mib_per_second": 5.016627511556072,
+        "decode_seconds": 0.02491713799999218,
+        "encode_mib_per_second": 2.5076611555967063,
+        "encode_seconds": 0.049847244999995155,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 122,
+        "original_size": 131072,
+        "peak_memory_bytes": 97735188,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02491713799999218,
+            "median": 0.02491713799999218,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02491713799999218,
+            "samples": [
+              0.02491713799999218
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.049847244999995155,
+            "median": 0.049847244999995155,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.049847244999995155,
+            "samples": [
+              0.049847244999995155
+            ]
+          }
+        },
+        "unique_chunk_count": 3
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": -19998,
+        "7z-encrypted": -20081,
+        "gzip": -80444,
+        "zip": -80379,
+        "zstd": -108515
+      },
+      "original_size": 131072
+    },
+    "numeric": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 17194,
+          "available": true,
+          "decode_seconds": 0.004285253999995575,
+          "encode_seconds": 0.010648857999996153,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.1311798095703125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.004285253999995575,
+              "median": 0.004285253999995575,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.004285253999995575,
+              "samples": [
+                0.004285253999995575
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.010648857999996153,
+              "median": 0.010648857999996153,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.010648857999996153,
+              "samples": [
+                0.010648857999996153
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 17280,
+          "archive_size_distribution": {
+            "maximum": 17280,
+            "median": 17280,
+            "minimum": 17280,
+            "samples": [
+              17280
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.024472857999995767,
+          "encode_seconds": 0.023611365999997247,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.1318359375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.024472857999995767,
+              "median": 0.024472857999995767,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.024472857999995767,
+              "samples": [
+                0.024472857999995767
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.023611365999997247,
+              "median": 0.023611365999997247,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.023611365999997247,
+              "samples": [
+                0.023611365999997247
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 45991,
+          "available": true,
+          "decode_seconds": 0.0008616020000005165,
+          "encode_seconds": 0.008966576000005944,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.35088348388671875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0008616020000005165,
+              "median": 0.0008616020000005165,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0008616020000005165,
+              "samples": [
+                0.0008616020000005165
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.008966576000005944,
+              "median": 0.008966576000005944,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.008966576000005944,
+              "samples": [
+                0.008966576000005944
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 45817,
+          "available": true,
+          "decode_seconds": 0.0005558869999902072,
+          "encode_seconds": 0.008891164000004892,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.34955596923828125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0005558869999902072,
+              "median": 0.0005558869999902072,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0005558869999902072,
+              "samples": [
+                0.0005558869999902072
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.008891164000004892,
+              "median": 0.008891164000004892,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.008891164000004892,
+              "samples": [
+                0.008891164000004892
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 87552,
+          "available": true,
+          "decode_seconds": 0.0018729760000013584,
+          "encode_seconds": 0.0026038820000025,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.66796875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0018729760000013584,
+              "median": 0.0018729760000013584,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0018729760000013584,
+              "samples": [
+                0.0018729760000013584
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0026038820000025,
+              "median": 0.0026038820000025,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0026038820000025,
+              "samples": [
+                0.0026038820000025
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.00463104248046875,
+        "archive_size": 607,
+        "decode_mib_per_second": 4.841358368965578,
+        "decode_seconds": 0.02581920000000082,
+        "encode_mib_per_second": 2.343931478895038,
+        "encode_seconds": 0.053329203999993524,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 180,
+        "original_size": 131072,
+        "peak_memory_bytes": 97735275,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02581920000000082,
+            "median": 0.02581920000000082,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02581920000000082,
+            "samples": [
+              0.02581920000000082
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.053329203999993524,
+            "median": 0.053329203999993524,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.053329203999993524,
+            "samples": [
+              0.053329203999993524
+            ]
+          }
+        },
+        "unique_chunk_count": 3
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": -16587,
+        "7z-encrypted": -16673,
+        "gzip": -45384,
+        "zip": -45210,
+        "zstd": -86945
+      },
+      "original_size": 131072
+    },
+    "precompressed": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 131326,
+          "available": true,
+          "decode_seconds": 0.002788127000002305,
+          "encode_seconds": 0.009767667000005531,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 1.0015863573269879,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.002788127000002305,
+              "median": 0.002788127000002305,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002788127000002305,
+              "samples": [
+                0.002788127000002305
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.009767667000005531,
+              "median": 0.009767667000005531,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.009767667000005531,
+              "samples": [
+                0.009767667000005531
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 131408,
+          "archive_size_distribution": {
+            "maximum": 131408,
+            "median": 131408,
+            "minimum": 131408,
+            "samples": [
+              131408
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.022284601999999154,
+          "encode_seconds": 0.026138123999999152,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 1.0022117481962811,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.022284601999999154,
+              "median": 0.022284601999999154,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022284601999999154,
+              "samples": [
+                0.022284601999999154
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.026138123999999152,
+              "median": 0.026138123999999152,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.026138123999999152,
+              "samples": [
+                0.026138123999999152
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 131582,
+          "available": true,
+          "decode_seconds": 0.0006792299999887064,
+          "encode_seconds": 0.002893012999990674,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 1.00353879711405,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006792299999887064,
+              "median": 0.0006792299999887064,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006792299999887064,
+              "samples": [
+                0.0006792299999887064
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.002893012999990674,
+              "median": 0.002893012999990674,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002893012999990674,
+              "samples": [
+                0.002893012999990674
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 131410,
+          "available": true,
+          "decode_seconds": 0.00035338600000045517,
+          "encode_seconds": 0.0026273779999996805,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 1.0022270016321175,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00035338600000045517,
+              "median": 0.00035338600000045517,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00035338600000045517,
+              "samples": [
+                0.00035338600000045517
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0026273779999996805,
+              "median": 0.0026273779999996805,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0026273779999996805,
+              "samples": [
+                0.0026273779999996805
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 131403,
+          "available": true,
+          "decode_seconds": 0.001773748000005071,
+          "encode_seconds": 0.0025153010000025233,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 1.0021736146066902,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.001773748000005071,
+              "median": 0.001773748000005071,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.001773748000005071,
+              "samples": [
+                0.001773748000005071
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0025153010000025233,
+              "median": 0.0025153010000025233,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0025153010000025233,
+              "samples": [
+                0.0025153010000025233
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 1.0042785887521164,
+        "archive_size": 131679,
+        "decode_mib_per_second": 4.7573013992184325,
+        "decode_seconds": 0.026284622000005697,
+        "encode_mib_per_second": 3.1107743729824113,
+        "encode_seconds": 0.040197022999990395,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 131118,
+        "original_size": 131118,
+        "peak_memory_bytes": 1203785,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 1,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.026284622000005697,
+            "median": 0.026284622000005697,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.026284622000005697,
+            "samples": [
+              0.026284622000005697
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.040197022999990395,
+            "median": 0.040197022999990395,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.040197022999990395,
+            "samples": [
+              0.040197022999990395
+            ]
+          }
+        },
+        "unique_chunk_count": 2
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 353,
+        "7z-encrypted": 271,
+        "gzip": 97,
+        "zip": 269,
+        "zstd": 276
+      },
+      "original_size": 131118
+    },
+    "random": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 131261,
+          "available": true,
+          "decode_seconds": 0.002831161000003135,
+          "encode_seconds": 0.009715599000003294,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 1.0014419555664062,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.002831161000003135,
+              "median": 0.002831161000003135,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002831161000003135,
+              "samples": [
+                0.002831161000003135
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.009715599000003294,
+              "median": 0.009715599000003294,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.009715599000003294,
+              "samples": [
+                0.009715599000003294
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 131328,
+          "archive_size_distribution": {
+            "maximum": 131328,
+            "median": 131328,
+            "minimum": 131328,
+            "samples": [
+              131328
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.02326008999999374,
+          "encode_seconds": 0.02656987299999969,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 1.001953125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.02326008999999374,
+              "median": 0.02326008999999374,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02326008999999374,
+              "samples": [
+                0.02326008999999374
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.02656987299999969,
+              "median": 0.02656987299999969,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02656987299999969,
+              "samples": [
+                0.02656987299999969
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 131515,
+          "available": true,
+          "decode_seconds": 0.0006500770000030798,
+          "encode_seconds": 0.002788017000000309,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 1.0033798217773438,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006500770000030798,
+              "median": 0.0006500770000030798,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006500770000030798,
+              "samples": [
+                0.0006500770000030798
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.002788017000000309,
+              "median": 0.002788017000000309,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002788017000000309,
+              "samples": [
+                0.002788017000000309
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 131334,
+          "available": true,
+          "decode_seconds": 0.00032775699999376684,
+          "encode_seconds": 0.0026379229999946574,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 1.0019989013671875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00032775699999376684,
+              "median": 0.00032775699999376684,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00032775699999376684,
+              "samples": [
+                0.00032775699999376684
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0026379229999946574,
+              "median": 0.0026379229999946574,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0026379229999946574,
+              "samples": [
+                0.0026379229999946574
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 131353,
+          "available": true,
+          "decode_seconds": 0.001721881000008807,
+          "encode_seconds": 0.0025012199999991935,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 1.0021438598632812,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.001721881000008807,
+              "median": 0.001721881000008807,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.001721881000008807,
+              "samples": [
+                0.001721881000008807
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0025012199999991935,
+              "median": 0.0025012199999991935,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0025012199999991935,
+              "samples": [
+                0.0025012199999991935
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 1.0046310424804688,
+        "archive_size": 131679,
+        "decode_mib_per_second": 5.1196538884618805,
+        "decode_seconds": 0.02441571299999623,
+        "encode_mib_per_second": 3.0983487015978777,
+        "encode_seconds": 0.04034407099999271,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 131072,
+        "original_size": 131072,
+        "peak_memory_bytes": 1203594,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 1,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02441571299999623,
+            "median": 0.02441571299999623,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02441571299999623,
+            "samples": [
+              0.02441571299999623
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.04034407099999271,
+            "median": 0.04034407099999271,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.04034407099999271,
+            "samples": [
+              0.04034407099999271
+            ]
+          }
+        },
+        "unique_chunk_count": 2
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 418,
+        "7z-encrypted": 351,
+        "gzip": 164,
+        "zip": 345,
+        "zstd": 326
+      },
+      "original_size": 131072
+    },
+    "source": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 386,
+          "available": true,
+          "decode_seconds": 0.002769893000007073,
+          "encode_seconds": 0.00514814299999955,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.0029449462890625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.002769893000007073,
+              "median": 0.002769893000007073,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002769893000007073,
+              "samples": [
+                0.002769893000007073
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.00514814299999955,
+              "median": 0.00514814299999955,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00514814299999955,
+              "samples": [
+                0.00514814299999955
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 463,
+          "archive_size_distribution": {
+            "maximum": 463,
+            "median": 463,
+            "minimum": 463,
+            "samples": [
+              463
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.022344908999997415,
+          "encode_seconds": 0.022872554000002765,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.00353240966796875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.022344908999997415,
+              "median": 0.022344908999997415,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022344908999997415,
+              "samples": [
+                0.022344908999997415
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.022872554000002765,
+              "median": 0.022872554000002765,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022872554000002765,
+              "samples": [
+                0.022872554000002765
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 902,
+          "available": true,
+          "decode_seconds": 0.0006042600000029097,
+          "encode_seconds": 0.0009873099999992974,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.0068817138671875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006042600000029097,
+              "median": 0.0006042600000029097,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006042600000029097,
+              "samples": [
+                0.0006042600000029097
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0009873099999992974,
+              "median": 0.0009873099999992974,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0009873099999992974,
+              "samples": [
+                0.0009873099999992974
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 851,
+          "available": true,
+          "decode_seconds": 0.00032961100001216437,
+          "encode_seconds": 0.0008673209999869869,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.00649261474609375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00032961100001216437,
+              "median": 0.00032961100001216437,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00032961100001216437,
+              "samples": [
+                0.00032961100001216437
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0008673209999869869,
+              "median": 0.0008673209999869869,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0008673209999869869,
+              "samples": [
+                0.0008673209999869869
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 334,
+          "available": true,
+          "decode_seconds": 0.0016919189999953232,
+          "encode_seconds": 0.002411509000012302,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.0025482177734375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0016919189999953232,
+              "median": 0.0016919189999953232,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0016919189999953232,
+              "samples": [
+                0.0016919189999953232
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.002411509000012302,
+              "median": 0.002411509000012302,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.002411509000012302,
+              "samples": [
+                0.002411509000012302
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.00463104248046875,
+        "archive_size": 607,
+        "decode_mib_per_second": 4.820943970141683,
+        "decode_seconds": 0.025928531999994675,
+        "encode_mib_per_second": 2.2624125226884817,
+        "encode_seconds": 0.05525075500000298,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 200,
+        "original_size": 131072,
+        "peak_memory_bytes": 97734323,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.025928531999994675,
+            "median": 0.025928531999994675,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.025928531999994675,
+            "samples": [
+              0.025928531999994675
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.05525075500000298,
+            "median": 0.05525075500000298,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.05525075500000298,
+            "samples": [
+              0.05525075500000298
+            ]
+          }
+        },
+        "unique_chunk_count": 1
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 221,
+        "7z-encrypted": 144,
+        "gzip": -295,
+        "zip": -244,
+        "zstd": 273
+      },
+      "original_size": 131072
+    },
+    "sparse": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 1442,
+          "available": true,
+          "decode_seconds": 0.0029429900000081943,
+          "encode_seconds": 0.004926492999999255,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.0110015869140625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0029429900000081943,
+              "median": 0.0029429900000081943,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0029429900000081943,
+              "samples": [
+                0.0029429900000081943
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.004926492999999255,
+              "median": 0.004926492999999255,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.004926492999999255,
+              "samples": [
+                0.004926492999999255
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 1519,
+          "archive_size_distribution": {
+            "maximum": 1519,
+            "median": 1519,
+            "minimum": 1519,
+            "samples": [
+              1519
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.02261545099999296,
+          "encode_seconds": 0.022930549999998107,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.01158905029296875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.02261545099999296,
+              "median": 0.02261545099999296,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02261545099999296,
+              "samples": [
+                0.02261545099999296
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.022930549999998107,
+              "median": 0.022930549999998107,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022930549999998107,
+              "samples": [
+                0.022930549999998107
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 1756,
+          "available": true,
+          "decode_seconds": 0.0008537100000012288,
+          "encode_seconds": 0.00108983199999102,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.013397216796875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0008537100000012288,
+              "median": 0.0008537100000012288,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0008537100000012288,
+              "samples": [
+                0.0008537100000012288
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.00108983199999102,
+              "median": 0.00108983199999102,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00108983199999102,
+              "samples": [
+                0.00108983199999102
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 1673,
+          "available": true,
+          "decode_seconds": 0.0005173200000001543,
+          "encode_seconds": 0.0009385169999944765,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.01276397705078125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0005173200000001543,
+              "median": 0.0005173200000001543,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0005173200000001543,
+              "samples": [
+                0.0005173200000001543
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0009385169999944765,
+              "median": 0.0009385169999944765,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0009385169999944765,
+              "samples": [
+                0.0009385169999944765
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 1481,
+          "available": true,
+          "decode_seconds": 0.0016716680000001816,
+          "encode_seconds": 0.0023979190000034123,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.01129913330078125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0016716680000001816,
+              "median": 0.0016716680000001816,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0016716680000001816,
+              "samples": [
+                0.0016716680000001816
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0023979190000034123,
+              "median": 0.0023979190000034123,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0023979190000034123,
+              "samples": [
+                0.0023979190000034123
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.01244354248046875,
+        "archive_size": 1631,
+        "decode_mib_per_second": 5.081173783664136,
+        "decode_seconds": 0.024600614999997106,
+        "encode_mib_per_second": 1.0868271137071521,
+        "encode_seconds": 0.11501369300000874,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 1240,
+        "original_size": 131072,
+        "peak_memory_bytes": 97734330,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.024600614999997106,
+            "median": 0.024600614999997106,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.024600614999997106,
+            "samples": [
+              0.024600614999997106
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.11501369300000874,
+            "median": 0.11501369300000874,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.11501369300000874,
+            "samples": [
+              0.11501369300000874
+            ]
+          }
+        },
+        "unique_chunk_count": 1
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 189,
+        "7z-encrypted": 112,
+        "gzip": -125,
+        "zip": -42,
+        "zstd": 150
+      },
+      "original_size": 131072
+    },
+    "structured": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 10505,
+          "available": true,
+          "decode_seconds": 0.003362515000006283,
+          "encode_seconds": 0.01156617499999868,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.08014678955078125,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.003362515000006283,
+              "median": 0.003362515000006283,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.003362515000006283,
+              "samples": [
+                0.003362515000006283
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.01156617499999868,
+              "median": 0.01156617499999868,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.01156617499999868,
+              "samples": [
+                0.01156617499999868
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 10591,
+          "archive_size_distribution": {
+            "maximum": 10591,
+            "median": 10591,
+            "minimum": 10591,
+            "samples": [
+              10591
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.022707507999996324,
+          "encode_seconds": 0.02296286699998973,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.08080291748046875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.022707507999996324,
+              "median": 0.022707507999996324,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022707507999996324,
+              "samples": [
+                0.022707507999996324
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.02296286699998973,
+              "median": 0.02296286699998973,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02296286699998973,
+              "samples": [
+                0.02296286699998973
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 14323,
+          "available": true,
+          "decode_seconds": 0.0007540319999890244,
+          "encode_seconds": 0.0016615830000006326,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.10927581787109375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0007540319999890244,
+              "median": 0.0007540319999890244,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0007540319999890244,
+              "samples": [
+                0.0007540319999890244
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0016615830000006326,
+              "median": 0.0016615830000006326,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0016615830000006326,
+              "samples": [
+                0.0016615830000006326
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 14176,
+          "available": true,
+          "decode_seconds": 0.00042083599998932186,
+          "encode_seconds": 0.0015723799999989296,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.108154296875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00042083599998932186,
+              "median": 0.00042083599998932186,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00042083599998932186,
+              "samples": [
+                0.00042083599998932186
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0015723799999989296,
+              "median": 0.0015723799999989296,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0015723799999989296,
+              "samples": [
+                0.0015723799999989296
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 14751,
+          "available": true,
+          "decode_seconds": 0.001728212000003282,
+          "encode_seconds": 0.0024861509999993814,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.11254119873046875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.001728212000003282,
+              "median": 0.001728212000003282,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.001728212000003282,
+              "samples": [
+                0.001728212000003282
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0024861509999993814,
+              "median": 0.0024861509999993814,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0024861509999993814,
+              "samples": [
+                0.0024861509999993814
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.07884979248046875,
+        "archive_size": 10335,
+        "decode_mib_per_second": 4.99073739103089,
+        "decode_seconds": 0.02504639900000427,
+        "encode_mib_per_second": 0.09537440826636492,
+        "encode_seconds": 1.3106241210000036,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 9749,
+        "original_size": 131072,
+        "peak_memory_bytes": 97734334,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02504639900000427,
+            "median": 0.02504639900000427,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02504639900000427,
+            "samples": [
+              0.02504639900000427
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 1.3106241210000036,
+            "median": 1.3106241210000036,
+            "median_absolute_deviation": 0.0,
+            "minimum": 1.3106241210000036,
+            "samples": [
+              1.3106241210000036
+            ]
+          }
+        },
+        "unique_chunk_count": 1
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": -170,
+        "7z-encrypted": -256,
+        "gzip": -3988,
+        "zip": -3841,
+        "zstd": -4416
+      },
+      "original_size": 131072
+    },
+    "tabular": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 10526,
+          "available": true,
+          "decode_seconds": 0.0035097640000003594,
+          "encode_seconds": 0.014784114999997655,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.0803070068359375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0035097640000003594,
+              "median": 0.0035097640000003594,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0035097640000003594,
+              "samples": [
+                0.0035097640000003594
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.014784114999997655,
+              "median": 0.014784114999997655,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.014784114999997655,
+              "samples": [
+                0.014784114999997655
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 10607,
+          "archive_size_distribution": {
+            "maximum": 10607,
+            "median": 10607,
+            "minimum": 10607,
+            "samples": [
+              10607
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.02278790799999797,
+          "encode_seconds": 0.02323478200000295,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.08092498779296875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.02278790799999797,
+              "median": 0.02278790799999797,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02278790799999797,
+              "samples": [
+                0.02278790799999797
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.02323478200000295,
+              "median": 0.02323478200000295,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02323478200000295,
+              "samples": [
+                0.02323478200000295
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 18780,
+          "available": true,
+          "decode_seconds": 0.0007085350000011204,
+          "encode_seconds": 0.0032085060000071053,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.143280029296875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0007085350000011204,
+              "median": 0.0007085350000011204,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0007085350000011204,
+              "samples": [
+                0.0007085350000011204
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0032085060000071053,
+              "median": 0.0032085060000071053,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0032085060000071053,
+              "samples": [
+                0.0032085060000071053
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 18611,
+          "available": true,
+          "decode_seconds": 0.00043253399999798603,
+          "encode_seconds": 0.003106352999992623,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.14199066162109375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00043253399999798603,
+              "median": 0.00043253399999798603,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00043253399999798603,
+              "samples": [
+                0.00043253399999798603
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.003106352999992623,
+              "median": 0.003106352999992623,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.003106352999992623,
+              "samples": [
+                0.003106352999992623
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 20208,
+          "available": true,
+          "decode_seconds": 0.0017442959999982577,
+          "encode_seconds": 0.0025443370000033383,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.1541748046875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0017442959999982577,
+              "median": 0.0017442959999982577,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0017442959999982577,
+              "samples": [
+                0.0017442959999982577
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0025443370000033383,
+              "median": 0.0025443370000033383,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0025443370000033383,
+              "samples": [
+                0.0025443370000033383
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.07884979248046875,
+        "archive_size": 10335,
+        "decode_mib_per_second": 4.9780341257376115,
+        "decode_seconds": 0.02511031400000263,
+        "encode_mib_per_second": 1.9086093995593498,
+        "encode_seconds": 0.06549270899999726,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 9580,
+        "original_size": 131072,
+        "peak_memory_bytes": 97735115,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02511031400000263,
+            "median": 0.02511031400000263,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02511031400000263,
+            "samples": [
+              0.02511031400000263
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.06549270899999726,
+            "median": 0.06549270899999726,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.06549270899999726,
+            "samples": [
+              0.06549270899999726
+            ]
+          }
+        },
+        "unique_chunk_count": 6
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": -191,
+        "7z-encrypted": -272,
+        "gzip": -8445,
+        "zip": -8276,
+        "zstd": -9873
+      },
+      "original_size": 131072
+    },
+    "text": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 386,
+          "available": true,
+          "decode_seconds": 0.00276818100000753,
+          "encode_seconds": 0.004776128999992579,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.0029449462890625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00276818100000753,
+              "median": 0.00276818100000753,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00276818100000753,
+              "samples": [
+                0.00276818100000753
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.004776128999992579,
+              "median": 0.004776128999992579,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.004776128999992579,
+              "samples": [
+                0.004776128999992579
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 447,
+          "archive_size_distribution": {
+            "maximum": 447,
+            "median": 447,
+            "minimum": 447,
+            "samples": [
+              447
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.022254603999996903,
+          "encode_seconds": 0.022753234999996153,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.00341033935546875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.022254603999996903,
+              "median": 0.022254603999996903,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022254603999996903,
+              "samples": [
+                0.022254603999996903
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.022753234999996153,
+              "median": 0.022753234999996153,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.022753234999996153,
+              "samples": [
+                0.022753234999996153
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 837,
+          "available": true,
+          "decode_seconds": 0.0006021359999976994,
+          "encode_seconds": 0.0009947810000028312,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.00638580322265625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006021359999976994,
+              "median": 0.0006021359999976994,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006021359999976994,
+              "samples": [
+                0.0006021359999976994
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0009947810000028312,
+              "median": 0.0009947810000028312,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0009947810000028312,
+              "samples": [
+                0.0009947810000028312
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 776,
+          "available": true,
+          "decode_seconds": 0.0003380029999959788,
+          "encode_seconds": 0.0008876010000022916,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.00592041015625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0003380029999959788,
+              "median": 0.0003380029999959788,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0003380029999959788,
+              "samples": [
+                0.0003380029999959788
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0008876010000022916,
+              "median": 0.0008876010000022916,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0008876010000022916,
+              "samples": [
+                0.0008876010000022916
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 334,
+          "available": true,
+          "decode_seconds": 0.001655063000001178,
+          "encode_seconds": 0.00236188499999912,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.0025482177734375,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.001655063000001178,
+              "median": 0.001655063000001178,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.001655063000001178,
+              "samples": [
+                0.001655063000001178
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.00236188499999912,
+              "median": 0.00236188499999912,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00236188499999912,
+              "samples": [
+                0.00236188499999912
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.00463104248046875,
+        "archive_size": 607,
+        "decode_mib_per_second": 5.133328347844692,
+        "decode_seconds": 0.02435067300000071,
+        "encode_mib_per_second": 2.404230599565862,
+        "encode_seconds": 0.051991685000004395,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 205,
+        "original_size": 131072,
+        "peak_memory_bytes": 97734319,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.02435067300000071,
+            "median": 0.02435067300000071,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.02435067300000071,
+            "samples": [
+              0.02435067300000071
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.051991685000004395,
+            "median": 0.051991685000004395,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.051991685000004395,
+            "samples": [
+              0.051991685000004395
+            ]
+          }
+        },
+        "unique_chunk_count": 1
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 221,
+        "7z-encrypted": 160,
+        "gzip": -230,
+        "zip": -169,
+        "zstd": 273
+      },
+      "original_size": 131072
+    },
+    "tiny-files": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 753,
+          "available": true,
+          "decode_seconds": 0.00468863800000463,
+          "encode_seconds": 0.005513166000000069,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.6480206540447504,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.00468863800000463,
+              "median": 0.00468863800000463,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00468863800000463,
+              "samples": [
+                0.00468863800000463
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.005513166000000069,
+              "median": 0.005513166000000069,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.005513166000000069,
+              "samples": [
+                0.005513166000000069
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 831,
+          "archive_size_distribution": {
+            "maximum": 831,
+            "median": 831,
+            "minimum": 831,
+            "samples": [
+              831
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.024118017000006375,
+          "encode_seconds": 0.024383963000005338,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.7151462994836488,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.024118017000006375,
+              "median": 0.024118017000006375,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.024118017000006375,
+              "samples": [
+                0.024118017000006375
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.024383963000005338,
+              "median": 0.024383963000005338,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.024383963000005338,
+              "samples": [
+                0.024383963000005338
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 1662,
+          "available": true,
+          "decode_seconds": 0.007995421000003944,
+          "encode_seconds": 0.006194519999993986,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 1.4302925989672977,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.007995421000003944,
+              "median": 0.007995421000003944,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.007995421000003944,
+              "samples": [
+                0.007995421000003944
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.006194519999993986,
+              "median": 0.006194519999993986,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.006194519999993986,
+              "samples": [
+                0.006194519999993986
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 9474,
+          "available": true,
+          "decode_seconds": 0.004969996999989235,
+          "encode_seconds": 0.0034231949999963263,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 8.153184165232357,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.004969996999989235,
+              "median": 0.004969996999989235,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.004969996999989235,
+              "samples": [
+                0.004969996999989235
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0034231949999963263,
+              "median": 0.0034231949999963263,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0034231949999963263,
+              "samples": [
+                0.0034231949999963263
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 731,
+          "available": true,
+          "decode_seconds": 0.008379040999997756,
+          "encode_seconds": 0.007483398999994506,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.6290877796901894,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.008379040999997756,
+              "median": 0.008379040999997756,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.008379040999997756,
+              "samples": [
+                0.008379040999997756
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.007483398999994506,
+              "median": 0.007483398999994506,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.007483398999994506,
+              "samples": [
+                0.007483398999994506
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 64,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 2.725473321858864,
+        "archive_size": 3167,
+        "decode_mib_per_second": 0.039570201800513405,
+        "decode_seconds": 0.028005152999995175,
+        "encode_mib_per_second": 0.036459458240867194,
+        "encode_seconds": 0.030394569999998566,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 169,
+        "original_size": 1162,
+        "peak_memory_bytes": 97702089,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.028005152999995175,
+            "median": 0.028005152999995175,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.028005152999995175,
+            "samples": [
+              0.028005152999995175
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.030394569999998566,
+            "median": 0.030394569999998566,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.030394569999998566,
+            "samples": [
+              0.030394569999998566
+            ]
+          }
+        },
+        "unique_chunk_count": 64
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 2414,
+        "7z-encrypted": 2336,
+        "gzip": 1505,
+        "zip": -6307,
+        "zstd": 2436
+      },
+      "original_size": 1162
+    },
+    "unicode": {
+      "comparisons": {
+        "7z": {
+          "archive_size": 381,
+          "available": true,
+          "decode_seconds": 0.003012040000001548,
+          "encode_seconds": 0.005144442000002414,
+          "note": "7z defaults; compression only, no encryption",
+          "ratio": 0.00290679931640625,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.003012040000001548,
+              "median": 0.003012040000001548,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.003012040000001548,
+              "samples": [
+                0.003012040000001548
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.005144442000002414,
+              "median": 0.005144442000002414,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.005144442000002414,
+              "samples": [
+                0.005144442000002414
+              ]
+            }
+          },
+          "verified": true
+        },
+        "7z-encrypted": {
+          "archive_size": 447,
+          "archive_size_distribution": {
+            "maximum": 447,
+            "median": 447,
+            "minimum": 447,
+            "samples": [
+              447
+            ]
+          },
+          "available": true,
+          "decode_seconds": 0.02252087599998731,
+          "encode_seconds": 0.0228974869999945,
+          "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+          "ratio": 0.00341033935546875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.02252087599998731,
+              "median": 0.02252087599998731,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.02252087599998731,
+              "samples": [
+                0.02252087599998731
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0228974869999945,
+              "median": 0.0228974869999945,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0228974869999945,
+              "samples": [
+                0.0228974869999945
+              ]
+            }
+          },
+          "verified": true
+        },
+        "gzip": {
+          "archive_size": 863,
+          "available": true,
+          "decode_seconds": 0.0006108689999990702,
+          "encode_seconds": 0.0010100229999920884,
+          "note": "tar + gzip level 6; compression only, no encryption",
+          "ratio": 0.00658416748046875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.0006108689999990702,
+              "median": 0.0006108689999990702,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0006108689999990702,
+              "samples": [
+                0.0006108689999990702
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0010100229999920884,
+              "median": 0.0010100229999920884,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0010100229999920884,
+              "samples": [
+                0.0010100229999920884
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zip": {
+          "archive_size": 807,
+          "available": true,
+          "decode_seconds": 0.000339574999998149,
+          "encode_seconds": 0.0008714959999878147,
+          "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+          "ratio": 0.00615692138671875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.000339574999998149,
+              "median": 0.000339574999998149,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.000339574999998149,
+              "samples": [
+                0.000339574999998149
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.0008714959999878147,
+              "median": 0.0008714959999878147,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.0008714959999878147,
+              "samples": [
+                0.0008714959999878147
+              ]
+            }
+          },
+          "verified": true
+        },
+        "zstd": {
+          "archive_size": 342,
+          "available": true,
+          "decode_seconds": 0.001701941000007423,
+          "encode_seconds": 0.00241664499999672,
+          "note": "tar + zstd default level; compression only, no encryption",
+          "ratio": 0.0026092529296875,
+          "supported": true,
+          "timing": {
+            "decode_seconds": {
+              "maximum": 0.001701941000007423,
+              "median": 0.001701941000007423,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.001701941000007423,
+              "samples": [
+                0.001701941000007423
+              ]
+            },
+            "encode_seconds": {
+              "maximum": 0.00241664499999672,
+              "median": 0.00241664499999672,
+              "median_absolute_deviation": 0.0,
+              "minimum": 0.00241664499999672,
+              "samples": [
+                0.00241664499999672
+              ]
+            }
+          },
+          "verified": true
+        }
+      },
+      "file_count": 1,
+      "mosaic": {
+        "archive_kind": "folder",
+        "archive_ratio": 0.00463104248046875,
+        "archive_size": 607,
+        "decode_mib_per_second": 4.866295040042482,
+        "decode_seconds": 0.0256868929999996,
+        "encode_mib_per_second": 0.9081001355191316,
+        "encode_seconds": 0.137650017999988,
+        "format_name": "MSR2",
+        "frame_count": 1,
+        "maximum_frame_payload": 185,
+        "original_size": 131072,
+        "peak_memory_bytes": 97734236,
+        "round_trip_verified": true,
+        "routing_reuse_probes": 0,
+        "routing_trial_compressions": 0,
+        "timing": {
+          "decode_seconds": {
+            "maximum": 0.0256868929999996,
+            "median": 0.0256868929999996,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.0256868929999996,
+            "samples": [
+              0.0256868929999996
+            ]
+          },
+          "encode_seconds": {
+            "maximum": 0.137650017999988,
+            "median": 0.137650017999988,
+            "median_absolute_deviation": 0.0,
+            "minimum": 0.137650017999988,
+            "samples": [
+              0.137650017999988
+            ]
+          }
+        },
+        "unique_chunk_count": 1
+      },
+      "mosaic_size_delta_bytes": {
+        "7z": 226,
+        "7z-encrypted": 160,
+        "gzip": -256,
+        "zip": -200,
+        "zstd": 265
+      },
+      "original_size": 131072
+    }
+  },
+  "comparisons": {
+    "7z": {
+      "archive_size": 336723,
+      "available": true,
+      "decode_seconds": 0.015110453000005464,
+      "encode_seconds": 0.05131202999999829,
+      "note": "7z defaults; compression only, no encryption",
+      "ratio": 0.1957736250996389,
+      "supported": true,
+      "timing": {
+        "decode_seconds": {
+          "maximum": 0.015507652000003702,
+          "median": 0.015110453000005464,
+          "median_absolute_deviation": 5.635999998787611e-05,
+          "minimum": 0.015007009000001403,
+          "samples": [
+            0.015507652000003702,
+            0.01516681299999334,
+            0.015087788999998963,
+            0.015110453000005464,
+            0.015007009000001403
+          ]
+        },
+        "encode_seconds": {
+          "maximum": 0.12272269599999674,
+          "median": 0.05131202999999829,
+          "median_absolute_deviation": 0.0021150540000007823,
+          "minimum": 0.0491467540000059,
+          "samples": [
+            0.12272269599999674,
+            0.05131202999999829,
+            0.05342708399999907,
+            0.050529221999994434,
+            0.0491467540000059
+          ]
+        }
+      },
+      "verified": true
+    },
+    "7z-encrypted": {
+      "archive_size": 336784,
+      "archive_size_distribution": {
+        "maximum": 336784,
+        "median": 336784,
+        "minimum": 336784,
+        "samples": [
+          336784,
+          336784,
+          336784,
+          336784,
+          336784
+        ]
+      },
+      "available": true,
+      "decode_seconds": 0.03463800699999808,
+      "encode_seconds": 0.06517736499999671,
+      "note": "7z defaults with AES-256 data and header encryption; fixed public benchmark password",
+      "ratio": 0.1958090910200871,
+      "supported": true,
+      "timing": {
+        "decode_seconds": {
+          "maximum": 0.035138912999997274,
+          "median": 0.03463800699999808,
+          "median_absolute_deviation": 0.00030651699999850734,
+          "minimum": 0.034331489999999576,
+          "samples": [
+            0.034466812999994545,
+            0.03501483499999836,
+            0.035138912999997274,
+            0.03463800699999808,
+            0.034331489999999576
+          ]
+        },
+        "encode_seconds": {
+          "maximum": 0.066141585000004,
+          "median": 0.06517736499999671,
+          "median_absolute_deviation": 0.00018855899999437042,
+          "minimum": 0.06445143599999881,
+          "samples": [
+            0.066141585000004,
+            0.06529699300000402,
+            0.06498880600000234,
+            0.06445143599999881,
+            0.06517736499999671
+          ]
+        }
+      },
+      "verified": true
+    },
+    "gzip": {
+      "archive_size": 831900,
+      "available": true,
+      "decode_seconds": 0.01394430900000998,
+      "encode_seconds": 0.039930929000000503,
+      "note": "tar + gzip level 6; compression only, no encryption",
+      "ratio": 0.483673757718925,
+      "supported": true,
+      "timing": {
+        "decode_seconds": {
+          "maximum": 0.01416882800000252,
+          "median": 0.01394430900000998,
+          "median_absolute_deviation": 0.00012773100000629256,
+          "minimum": 0.013816578000003688,
+          "samples": [
+            0.014150648999994075,
+            0.01416882800000252,
+            0.013912140000002182,
+            0.013816578000003688,
+            0.01394430900000998
+          ]
+        },
+        "encode_seconds": {
+          "maximum": 0.040304962999996974,
+          "median": 0.039930929000000503,
+          "median_absolute_deviation": 0.000269955999996796,
+          "minimum": 0.03953941000000327,
+          "samples": [
+            0.039930929000000503,
+            0.03966097300000371,
+            0.04012646399999653,
+            0.03953941000000327,
+            0.040304962999996974
+          ]
+        }
+      },
+      "verified": true
+    },
+    "zip": {
+      "archive_size": 833736,
+      "available": true,
+      "decode_seconds": 0.008816852999999014,
+      "encode_seconds": 0.03352219599999273,
+      "note": "ZIP_DEFLATED level 6; compression only, no encryption",
+      "ratio": 0.48474122378356255,
+      "supported": true,
+      "timing": {
+        "decode_seconds": {
+          "maximum": 0.008963797999996359,
+          "median": 0.008816852999999014,
+          "median_absolute_deviation": 1.7390000003558725e-05,
+          "minimum": 0.008799462999995455,
+          "samples": [
+            0.008963797999996359,
+            0.008809052000003703,
+            0.008799462999995455,
+            0.008840624000001185,
+            0.008816852999999014
+          ]
+        },
+        "encode_seconds": {
+          "maximum": 0.03846303000000262,
+          "median": 0.03352219599999273,
+          "median_absolute_deviation": 0.0007543709999850989,
+          "minimum": 0.0327485569999979,
+          "samples": [
+            0.03846303000000262,
+            0.034098093000004326,
+            0.0327485569999979,
+            0.03276782500000763,
+            0.03352219599999273
+          ]
+        }
+      },
+      "verified": true
+    },
+    "zstd": {
+      "archive_size": 496246,
+      "available": true,
+      "decode_seconds": 0.014327797999996505,
+      "encode_seconds": 0.01329597400000182,
+      "note": "tar + zstd default level; compression only, no encryption",
+      "ratio": 0.2885216583399275,
+      "supported": true,
+      "timing": {
+        "decode_seconds": {
+          "maximum": 0.014371173000000681,
+          "median": 0.014327797999996505,
+          "median_absolute_deviation": 4.337500000417549e-05,
+          "minimum": 0.014149424000009958,
+          "samples": [
+            0.014328385000005994,
+            0.014278371999999706,
+            0.014327797999996505,
+            0.014371173000000681,
+            0.014149424000009958
+          ]
+        },
+        "encode_seconds": {
+          "maximum": 0.014011631999998997,
+          "median": 0.01329597400000182,
+          "median_absolute_deviation": 0.00021422599999709746,
+          "minimum": 0.013019021000005182,
+          "samples": [
+            0.013510199999998918,
+            0.014011631999998997,
+            0.013254590999999039,
+            0.013019021000005182,
+            0.01329597400000182
+          ]
+        }
+      },
+      "verified": true
+    }
+  },
+  "configuration": {
+    "chunk_size": 65536,
+    "format": "solid",
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "profile": "balanced"
+  },
+  "corpus": {
+    "benchmark_input_bytes": 1719961,
+    "category_count": 13,
+    "declared_data_bytes": 1705160,
+    "file_count": 78,
+    "manifest_sha256": "57bd4b92efbdeb8be023b2e1c92c586bebe56f90f5cd219f2df97c8f74f20d13",
+    "seed": 20260629,
+    "total_bytes": 1719961,
+    "unit_size": 65536,
+    "version": 2
+  },
+  "environment": {
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-1018-azure-x86_64-with-glibc2.39",
+    "python": "3.13.14"
+  },
+  "generated_at_utc": "2026-07-06T13:38:26.337956+00:00",
+  "measurement": {
+    "category_runs": 1,
+    "independent_runs": 5,
+    "raw_samples_included": true,
+    "timing_statistic": "median"
+  },
+  "mosaic": {
+    "archive_kind": "folder",
+    "archive_ratio": 0.16961489243070046,
+    "archive_size": 291731,
+    "decode_mib_per_second": 41.60253006629567,
+    "decode_seconds": 0.03942747299999638,
+    "encode_mib_per_second": 4.438042918530274,
+    "encode_seconds": 0.3695959369999997,
+    "format_name": "MSR2",
+    "frame_count": 3,
+    "maximum_frame_payload": 263510,
+    "original_size": 1719961,
+    "peak_memory_bytes": 97901324,
+    "round_trip_verified": true,
+    "routing_reuse_probes": 1,
+    "routing_trial_compressions": 0,
+    "timing": {
+      "decode_seconds": {
+        "maximum": 0.04143953599999861,
+        "median": 0.03942747299999638,
+        "median_absolute_deviation": 0.00021244599999903357,
+        "minimum": 0.03921502699999735,
+        "samples": [
+          0.04143953599999861,
+          0.040787262000002045,
+          0.03942747299999638,
+          0.039423908000003394,
+          0.03921502699999735
+        ]
+      },
+      "encode_seconds": {
+        "maximum": 0.3807061249999961,
+        "median": 0.3695959369999997,
+        "median_absolute_deviation": 0.0036452780000004736,
+        "minimum": 0.3499522200000058,
+        "samples": [
+          0.3807061249999961,
+          0.367430173999999,
+          0.3732412150000002,
+          0.3695959369999997,
+          0.3499522200000058
+        ]
+      }
+    },
+    "unique_chunk_count": 89
+  },
+  "mosaic_size_delta_bytes": {
+    "7z": -44992,
+    "7z-encrypted": -45053,
+    "gzip": -540169,
+    "zip": -542005,
+    "zstd": -204515
+  },
+  "package_version": "0.39.0",
+  "release": "0.39.0",
+  "schema_version": 2,
+  "source_commit": "2f610516cc5d1f368647993844b8a7c7b9efb0c7",
+  "tool_versions": {
+    "7z": "7-Zip 23.01 (x64) : Copyright (c) 1999-2023 Igor Pavlov : 2023-06-20",
+    "gzip": "Python gzip / zlib 1.3",
+    "zip": "Python zipfile / zlib 1.3",
+    "zstd": "*** Zstandard CLI (64-bit) v1.5.7, by Yann Collet ***"
+  }
+}

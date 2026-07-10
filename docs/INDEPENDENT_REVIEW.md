@@ -8,6 +8,24 @@ findings.
 
 ## Candidate identity
 
+The current review candidate is the released `v0.39.0` source:
+
+- source commit: `f99495cfc5be73617da8f929f89c3c044abbce89`;
+- source tree: `e8c56dbecc0398deafcbcdf6c2193f503a084b8d`;
+- review bundle SHA-256:
+  `2307cb50355e1b942718364780c8cb1af2dd9228d9550d864213f9d79ac7c130`;
+- release: https://github.com/danielleib602-gif/mosaic-archive/releases/tag/v0.39.0;
+- release verification:
+  [RELEASE_VERIFICATION_v0.39.md](RELEASE_VERIFICATION_v0.39.md);
+- hosted benchmark: [v0.39.0 results](../benchmarks/v0.39.0/report.md).
+- benchmark provenance:
+  [workflow, source-tree binding, and hashes](../benchmarks/v0.39.0/PROVENANCE.md).
+
+Reviewers should download the release bundle named
+`mosaic-review-f99495cfc5be73617da8f929f89c3c044abbce89.zip`, verify it against
+both `SHA256SUMS` and the digest above, then use its embedded
+`REVIEW-MANIFEST.json` as the authoritative file list.
+
 Build a bundle from committed Git objects:
 
 ```console
