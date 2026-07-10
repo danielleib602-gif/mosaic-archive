@@ -61,6 +61,12 @@ even after the provenance verifies.
 5. Download one released binary and run both checksum and attestation
    verification before announcing the release.
 
-Before tagging, run `msc readiness --json`. A 1.0 tag additionally requires
-both external gates in `docs/1.0-external-gates.json` to reference reviewable
-evidence.
+Before tagging a pre-1.0 build, run
+`msc readiness --require-automatic --json`. For `v1.*` and every later stable
+tag, run `msc readiness --require-ready --json`; both external gates in
+`docs/1.0-external-gates.json` must contain complete structured evidence.
+
+The release workflow enforces the same split before building any native
+binary. Branch, pull-request, and `v0.*` builds require all seven automatic
+gates. Any other `v*` tag fails closed unless all nine gates are complete, so a
+manual dispatch or direct tag cannot publish a stable release at 7/9.

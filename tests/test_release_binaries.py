@@ -42,6 +42,15 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("--expected-version 0.39.0", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
+    def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        self.assertIn("Require repository gates for pre-1.0 builds", workflow)
+        self.assertIn("Require all gates for stable releases", workflow)
+        self.assertIn("msc readiness --require-ready --json", workflow)
+        self.assertIn("refs/tags/v0.", workflow)
+        self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
+
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 

@@ -248,10 +248,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="evaluate the nine committed MSC 1.0 release gates",
     )
     readiness_parser.add_argument("--root", type=Path, default=Path("."))
-    readiness_parser.add_argument(
+    readiness_requirements = readiness_parser.add_mutually_exclusive_group()
+    readiness_requirements.add_argument(
         "--require-automatic",
         action="store_true",
         help="fail when any repository-verifiable 1.0 gate is incomplete",
+    )
+    readiness_requirements.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="fail unless every automatic and external 1.0 gate is complete",
     )
     readiness_parser.add_argument("--json", action="store_true")
     return parser
@@ -265,6 +271,8 @@ def _run(arguments: argparse.Namespace) -> None:
         readiness = evaluate_release_readiness(arguments.root)
         if arguments.require_automatic and not readiness.automatic_ready:
             raise ValueError("one or more automatic MSC 1.0 gates are incomplete")
+        if arguments.require_ready and not readiness.ready_for_1_0:
+            raise ValueError("one or more MSC 1.0 release gates are incomplete")
         _print_result(
             arguments.command,
             readiness,

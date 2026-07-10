@@ -37,7 +37,16 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --frozen
-      - run: uv run --frozen msc readiness --require-automatic --json
+      - name: Require repository gates for pre-1.0 builds
+        if: >-
+          ${{ !startsWith(github.ref, 'refs/tags/') ||
+              startsWith(github.ref, 'refs/tags/v0.') }}
+        run: uv run --frozen msc readiness --require-automatic --json
+      - name: Require all gates for stable releases
+        if: >-
+          ${{ startsWith(github.ref, 'refs/tags/') &&
+              !startsWith(github.ref, 'refs/tags/v0.') }}
+        run: uv run --frozen msc readiness --require-ready --json
       - name: Build native one-file executable
         run: >
           uv run --frozen --with pyinstaller==6.21.0 pyinstaller
