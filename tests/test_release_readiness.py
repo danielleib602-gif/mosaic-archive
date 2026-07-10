@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
+from mosaic_archive.cli import main
 from mosaic_archive.release_readiness import evaluate_release_readiness
 
 
@@ -103,6 +106,19 @@ class ReleaseReadinessTests(unittest.TestCase):
 
             self.assertEqual(report.completed_gates, 9)
             self.assertTrue(report.ready_for_1_0)
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                return_code = main(
+                    [
+                        "readiness",
+                        "--root",
+                        str(root),
+                        "--require-ready",
+                        "--json",
+                    ]
+                )
+            self.assertEqual(return_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["ready_for_1_0"])
 
 
 if __name__ == "__main__":

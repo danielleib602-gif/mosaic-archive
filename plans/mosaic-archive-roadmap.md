@@ -288,7 +288,7 @@ permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
 fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
 the frozen compatibility policy, versioned mature-compressor results, and the
 cross-platform attested-binary release pipeline are in place; independent
-review and the first tagged binary publication remain.
+review and independent verification of an attested release candidate remain.
 
 Tasks:
 

@@ -4,6 +4,20 @@ All notable project changes are recorded here. Mosaic Archive is pre-1.0, so
 experimental encoder behavior may change while documented decoder compatibility
 is preserved.
 
+## [Unreleased]
+
+### Security
+
+- Stable `v1.*` and later release tags now fail before binary construction
+  unless all nine automatic and external 1.0 readiness gates are complete.
+- The readiness CLI exposes a fail-closed `--require-ready` policy for release
+  automation while preserving the seven-gate pre-1.0 policy.
+
+### Documentation
+
+- Exact hosted v0.39 benchmark JSON and Markdown, workflow provenance, source
+  tree binding, and artifact hashes are committed for independent review.
+
 ## [0.39.0] - 2026-07-05
 
 ### Added

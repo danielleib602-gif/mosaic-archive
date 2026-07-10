@@ -38,6 +38,13 @@ class CliTests(unittest.TestCase):
         self.assertTrue(report["automatic_ready"])
         self.assertFalse(report["ready_for_1_0"])
 
+    def test_require_ready_fails_while_external_gates_are_incomplete(self) -> None:
+        completed = self.run_cli("readiness", "--require-ready", "--json")
+
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
+        self.assertIn("MSC 1.0 release gates are incomplete", completed.stderr)
+
     def test_encode_inspect_decode_and_benchmark_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
