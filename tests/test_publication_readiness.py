@@ -62,6 +62,18 @@ class PublicationReadinessTests(unittest.TestCase):
         self.assertIn("Repository status at this snapshot: public", status)
         self.assertNotIn("rerun PR #", status)
 
+    def test_independent_review_brief_is_bound_to_released_candidate(self) -> None:
+        brief = Path("docs/INDEPENDENT_REVIEW.md").read_text(encoding="utf-8")
+
+        self.assertIn("f99495cfc5be73617da8f929f89c3c044abbce89", brief)
+        self.assertIn("e8c56dbecc0398deafcbcdf6c2193f503a084b8d", brief)
+        self.assertIn(
+            "2307cb50355e1b942718364780c8cb1af2dd9228d9550d864213f9d79ac7c130",
+            brief,
+        )
+        self.assertIn("releases/tag/v0.39.0", brief)
+        self.assertIn("../benchmarks/v0.39.0/report.md", brief)
+
     def test_relative_markdown_links_resolve(self) -> None:
         markdown_files = (
             list(Path(".").glob("*.md"))

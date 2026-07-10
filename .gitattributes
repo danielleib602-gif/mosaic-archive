@@ -1,0 +1,4 @@
+# Generated benchmark reports are byte-for-byte CI artifacts. Keep their
+# canonical LF endings on every checkout so their published hashes are stable.
+benchmarks/*/report.json text eol=lf
+benchmarks/*/report.md text eol=lf

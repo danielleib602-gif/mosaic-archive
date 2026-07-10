@@ -136,7 +136,7 @@ reviewed commit.
 
 ## Verification snapshot
 
-The publication checkout passes 177 unit/integration tests on Python 3.13.
+The publication checkout passes 179 unit/integration tests on Python 3.13.
 Exact source coverage is 3,421 of 3,871 executable lines (88.375097%); the
 branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
 bytecode compilation, source/wheel builds, and package-metadata validation
@@ -162,9 +162,10 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. complete an independent security review and resolve or document its findings;
-2. preserve the hosted v0.39 encrypted 7-Zip and zstd evidence in a permanent
-   release surface;
+1. recruit an independent reviewer using the exact v0.39 source bundle,
+   published review brief, and durable machine-readable benchmark evidence;
+2. complete the independent security review and resolve or document its
+   findings;
 3. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;

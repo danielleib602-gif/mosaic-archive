@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -84,6 +85,53 @@ class VersionedBenchmarkPublicationTests(unittest.TestCase):
             )
         )
         self.assertLess(report["mosaic_size_delta_bytes"]["zip"], 0)
+
+    def test_committed_v0_39_hosted_report_preserves_mature_tool_results(
+        self,
+    ) -> None:
+        markdown_path = Path("benchmarks/v0.39.0/report.md")
+        json_path = Path("benchmarks/v0.39.0/report.json")
+        provenance = Path("benchmarks/v0.39.0/PROVENANCE.md").read_text(
+            encoding="utf-8"
+        )
+        report = json.loads(json_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            hashlib.sha256(markdown_path.read_bytes()).hexdigest(),
+            "719141db6e4a1b71cf094e1cbfde578ee40c041f8458e5d6ddbe3f731663cd8a",
+        )
+        self.assertEqual(
+            hashlib.sha256(json_path.read_bytes()).hexdigest(),
+            "8227ea51674562052de10a5e8b1abb4faf6c60a169363024ae6e919f2d4e1f3c",
+        )
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["release"], "0.39.0")
+        self.assertEqual(
+            report["source_commit"],
+            "2f610516cc5d1f368647993844b8a7c7b9efb0c7",
+        )
+        self.assertEqual(report["measurement"]["independent_runs"], 5)
+        self.assertTrue(report["measurement"]["raw_samples_included"])
+        self.assertEqual(
+            len(report["mosaic"]["timing"]["encode_seconds"]["samples"]),
+            5,
+        )
+        self.assertTrue(report["mosaic"]["round_trip_verified"])
+        self.assertEqual(report["mosaic"]["archive_size"], 291731)
+        self.assertEqual(
+            report["comparisons"]["7z-encrypted"]["archive_size"],
+            336784,
+        )
+        self.assertEqual(report["comparisons"]["zstd"]["archive_size"], 496246)
+        self.assertTrue(
+            all(result["verified"] for result in report["comparisons"].values())
+        )
+        self.assertIn(
+            "fixed public benchmark password",
+            report["comparisons"]["7z-encrypted"]["note"],
+        )
+        self.assertIn("actions/runs/28795713756", provenance)
+        self.assertIn("e8c56dbecc0398deafcbcdf6c2193f503a084b8d", provenance)
 
     def test_publication_is_versioned_verified_and_machine_readable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
