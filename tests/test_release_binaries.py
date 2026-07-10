@@ -73,7 +73,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("id-token: write", workflow)
         self.assertIn("attestations: write", workflow)
         self.assertIn("SHA256SUMS", workflow)
-        self.assertIn("actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26", workflow)
+        self.assertIn("actions/attest@a1948c3f048ba23858d222213b7c278aabede763", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
