@@ -89,6 +89,15 @@ frame headers, and caller resource limits. MSC2 and MSC6 progress-callback
 exceptions are propagated only after the atomic-output cleanup path removes any
 temporary file or folder tree.
 
+Structured MSR2 tests have the production encoder authenticate deliberately
+malformed traversal and file/chunk-digest metadata, then require destination
+preservation and temporary-tree cleanup on failure. MSR2 also binds output-alias
+checks to the opened archive identity and repeats the check immediately before
+atomic publication. This prevents accidental, stable, and late pre-publication
+aliases; portable `stat` and `replace` calls are not an indivisible defense
+against a hostile process concurrently mutating destination directory entries.
+Such a process is outside the uncompromised-local-machine assumption above.
+
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. Nested decoded stream lengths
 are rejected before rANS decoding when they exceed the authenticated block

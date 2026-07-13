@@ -47,6 +47,14 @@ is preserved.
 - Structured MSC6 regressions now re-authenticate traversal, file/chunk digest,
   truncation, and occurrence/size metadata mutations. Separate MSC6 cases cover
   trailing bytes, frame order, padding alignment, and caller resource limits.
+- MSR2 decoding now rejects direct, symlinked, hard-linked, and late-rebound
+  output aliases by binding checks to the opened archive identity and checking
+  again immediately before atomic publication.
+- MSR2 encoding now rejects non-integer or out-of-range frame/padding options
+  before scanning input, deriving a key, or creating temporary output.
+- Authenticated MSR2 metadata regressions cover traversal, file/chunk digest
+  failures, and late folder cleanup. A separate trailing-byte case verifies
+  existing-file preservation before restoration begins.
 
 ### Documentation
 
