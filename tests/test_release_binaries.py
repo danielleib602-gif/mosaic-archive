@@ -37,6 +37,7 @@ class ReleaseBinaryTests(unittest.TestCase):
     def test_release_recipe_matches_package_version(self) -> None:
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+        ci_workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
         self.assertEqual(project["project"]["version"], "0.39.0")
         self.assertEqual(
@@ -46,6 +47,10 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("uv sync --frozen --extra release", workflow)
         self.assertIn("uv run --frozen --extra release pyinstaller", workflow)
         self.assertNotIn("--with pyinstaller", workflow)
+        self.assertIn(
+            "uv sync --frozen --extra dev --extra release",
+            ci_workflow,
+        )
         self.assertIn(
             "EXPECTED_VERSION: ${{ needs.preflight.outputs.package_version }}",
             workflow,
