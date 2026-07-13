@@ -44,8 +44,15 @@ class ReleaseBinaryTests(unittest.TestCase):
             project["project"]["optional-dependencies"]["release"],
             ["pyinstaller==6.21.0"],
         )
-        self.assertIn("uv sync --frozen --extra release", workflow)
-        self.assertIn("uv run --frozen --extra release pyinstaller", workflow)
+        self.assertIn(
+            "uv sync --frozen --extra release --no-install-project",
+            workflow,
+        )
+        self.assertIn("uv run --frozen --no-sync pyinstaller", workflow)
+        self.assertIn(
+            "uv run --frozen --no-sync python scripts/prepare_release_binary.py",
+            workflow,
+        )
         self.assertNotIn("--with pyinstaller", workflow)
         self.assertIn(
             "uv sync --frozen --extra dev --extra release",
@@ -102,7 +109,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('tags: ["v*"]', workflow)
         for runner in ("ubuntu-latest", "windows-latest", "macos-latest"):
             self.assertIn(runner, workflow)
-        self.assertIn("--extra release pyinstaller", workflow)
+        self.assertIn("--no-sync pyinstaller", workflow)
         self.assertIn("--onefile", workflow)
         self.assertIn("--noupx", workflow)
         self.assertIn("actions/upload-artifact@", workflow)
