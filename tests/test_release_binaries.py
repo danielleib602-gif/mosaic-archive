@@ -55,6 +55,10 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('--release-commit "$GITHUB_SHA"', workflow)
         self.assertIn("--require-ready --json", workflow)
         self.assertGreaterEqual(workflow.count('--release-tag "$GITHUB_REF_NAME"'), 2)
+        self.assertIn("--review-bundle", workflow)
+        self.assertIn("gh attestation verify", workflow)
+        self.assertIn('release["immutable"] is True', workflow)
+        self.assertIn("Re-verify stable candidate seal before publication", workflow)
         self.assertIn("refs/tags/v0.", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
 

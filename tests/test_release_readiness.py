@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import shutil
@@ -334,6 +335,40 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(report.completed_gates, 8)
             self.assertTrue(report.release_binding_verified)
             self.assertFalse(report.ready_for_1_0)
+
+    def test_review_bundle_bytes_must_match_reviewed_digest(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            _candidate_tag(root, commit)
+            reviewed_bytes = b"deterministic reviewed bundle"
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(reviewed_bytes)
+            evidence = _complete_tag_evidence(commit)
+            review_gate = evidence["gates"]["independent_security_review"]
+            review_gate["review_bundle_sha256"] = hashlib.sha256(
+                reviewed_bytes
+            ).hexdigest()
+            _annotated_tag(root, "v1.0.0", commit, evidence)
+
+            matching = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+            bundle.write_bytes(b"different bundle")
+            mismatching = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+
+            self.assertTrue(matching.review_bundle_verified)
+            self.assertTrue(matching.ready_for_1_0)
+            self.assertFalse(mismatching.review_bundle_verified)
+            self.assertEqual(mismatching.completed_gates, 8)
+            self.assertFalse(mismatching.ready_for_1_0)
 
     def test_release_tag_must_match_project_version(self) -> None:
         with _release_repository() as root:
