@@ -45,11 +45,24 @@ class ReleaseBinaryTests(unittest.TestCase):
     def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
-        self.assertIn("Require repository gates for pre-1.0 builds", workflow)
-        self.assertIn("Require all gates for stable releases", workflow)
-        self.assertIn("msc readiness --require-ready --json", workflow)
+        self.assertIn("preflight:", workflow)
+        self.assertIn("needs: preflight", workflow)
+        self.assertIn("fetch-depth: 0", workflow)
+        self.assertIn("Require repository gates for non-stable builds", workflow)
+        self.assertIn("Require candidate-bound evidence for stable releases", workflow)
+        self.assertIn('--release-tag "$GITHUB_REF_NAME"', workflow)
+        self.assertIn('--release-commit "$GITHUB_SHA"', workflow)
+        self.assertIn("--require-ready --json", workflow)
         self.assertIn("refs/tags/v0.", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
+
+    def test_manual_workflow_can_publish_attested_candidate_release(self) -> None:
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        self.assertIn("publish_candidate:", workflow)
+        self.assertIn("candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}", workflow)
+        self.assertIn("--prerelease", workflow)
+        self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
 
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
