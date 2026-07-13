@@ -99,6 +99,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('test "$GITHUB_REF" = "refs/heads/main"', workflow)
         self.assertIn('test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"', workflow)
         self.assertIn("Re-verify candidate source before publication", workflow)
+        self.assertIn("Reject pre-existing mismatched candidate tag", workflow)
         self.assertIn("--prerelease", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
 
@@ -144,6 +145,8 @@ class ReleaseBinaryTests(unittest.TestCase):
             workflow,
         )
         self.assertIn("Verify published release is immutable and complete", workflow)
+        self.assertIn("published release asset digests do not match local manifest", workflow)
+        self.assertIn('refs/tags/${RELEASE_TAG}^{commit}', workflow)
         self.assertLess(
             workflow.index("Promote exact verified candidate assets"),
             workflow.index("Generate checksums"),
