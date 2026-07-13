@@ -153,13 +153,14 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The publication checkout passes 181 unit/integration tests on Python 3.13.
-Exact source coverage is 3,421 of 3,871 executable lines (88.375097%); the
-branch-aware report is 84%. Ruff, strict mypy, Bandit, dependency audit,
-bytecode compilation, source/wheel builds, and package-metadata validation
-pass. The deterministic review bundle rejects payload tampering, compressed
-members, unsafe paths, invalid source identities, and resource-limit
-violations before publication.
+The current checkout passes 216 unit/integration tests on Python 3.13.
+Full-package coverage is 3,976 of 4,488 statements and 1,078 of 1,454 branches
+(5,054 of 5,942 combined opportunities, 85.06%); no package module is omitted
+from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
+compilation, source/wheel builds, and package-metadata validation pass. The
+deterministic review bundle rejects payload tampering, compressed members,
+unsafe paths, invalid source identities, and resource-limit violations before
+publication.
 
 The deterministic reliability campaign executes 10,000 mutations across 14
 targets, and the local 256 MiB MSC6 soak round trip restores the exact source

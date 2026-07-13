@@ -45,6 +45,10 @@ is preserved.
 
 ### Changed
 
+- Coverage CI now measures branches across every package module instead of
+  omitting the CLI, module entrypoint, benchmark runner, and comparison tools.
+  Reports retain two decimal places, and focused in-process tests exercise
+  those user-facing orchestration paths.
 - Pinned `astral-sh/setup-uv` 8.3.0 and `actions/attest` 4.1.1 across the CI,
   benchmark, fuzzing, reliability, and release workflows, with policy tests
   bound to the reviewed upstream tag SHAs.

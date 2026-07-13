@@ -41,6 +41,7 @@ class CiConfigurationTests(unittest.TestCase):
         self.assertTrue(run.getboolean("branch"))
         self.assertEqual(run.get("source"), "src/mosaic_archive")
         self.assertNotIn("omit", run)
+        self.assertEqual(configuration["report"].getint("precision"), 2)
 
 
 if __name__ == "__main__":

@@ -199,6 +199,10 @@ uv run --with pip-audit pip-audit --local
 uv build
 ```
 
+Coverage is branch-aware across the entire `mosaic_archive` package; no source
+modules are excluded from the 80% gate, and reports retain two decimal places
+so incremental improvements remain visible.
+
 The generated benchmark corpus is deterministic for a given seed and unit
 size. Its manifest records every file's category, byte count, and SHA-256
 digest; `verify_corpus` also rejects undeclared files. CI regenerates a small
