@@ -40,10 +40,12 @@ class ReleaseBinaryTests(unittest.TestCase):
 
         self.assertEqual(project["project"]["version"], "0.39.0")
         self.assertIn(
-            "--expected-version ${{ needs.preflight.outputs.package_version }}",
+            "EXPECTED_VERSION: ${{ needs.preflight.outputs.package_version }}",
             workflow,
         )
+        self.assertIn('--expected-version "$EXPECTED_VERSION"', workflow)
         self.assertNotIn("--expected-version 0.39.0", workflow)
+        self.assertNotIn("enable-cache: true", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
     def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
@@ -52,6 +54,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("preflight:", workflow)
         self.assertIn("needs: preflight", workflow)
         self.assertIn("fetch-depth: 0", workflow)
+        self.assertEqual(workflow.count("persist-credentials: false"), 3)
         self.assertIn("Require repository gates for non-stable builds", workflow)
         self.assertIn("Require candidate-bound evidence for stable releases", workflow)
         self.assertIn("Require release tag to target current protected main", workflow)
