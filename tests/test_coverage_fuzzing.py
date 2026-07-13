@@ -44,7 +44,10 @@ class CoverageGuidedFuzzingTests(unittest.TestCase):
         self.assertIn("atheris==3.1.0", workflow)
         self.assertIn("-max_total_time=300", workflow)
         self.assertIn("-rss_limit_mb=2048", workflow)
-        self.assertIn("actions/upload-artifact@", workflow)
+        self.assertIn(
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            workflow,
+        )
         self.assertIn("if: always()", workflow)
 
 
