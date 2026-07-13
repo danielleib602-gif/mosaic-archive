@@ -14,10 +14,19 @@ class CiConfigurationTests(unittest.TestCase):
             "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
             workflow,
         )
-        self.assertIn(
-            "astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3",
-            workflow,
-        )
+        setup_uv_pin = "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"
+        for workflow_name in (
+            "benchmark.yml",
+            "ci.yml",
+            "coverage-fuzz.yml",
+            "release.yml",
+            "reliability.yml",
+        ):
+            with self.subTest(workflow=workflow_name):
+                configured = Path(".github/workflows", workflow_name).read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn(setup_uv_pin, configured)
 
     def test_ci_covers_supported_platforms_and_security_gates(self) -> None:
         workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
