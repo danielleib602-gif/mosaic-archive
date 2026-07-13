@@ -75,6 +75,13 @@ output bound and rejects trailing compressed data. These tests and
 coverage-guided campaigns improve failure coverage but are not a substitute for
 an independent audit.
 
+Structured MSC2 corruption tests re-encrypt altered manifests and data frames
+to exercise traversal, digest-mismatch, truncation, and entry-index/size
+metadata defenses after authentication succeeds. Separate structural cases
+cover trailing bytes, malformed frame headers, and resource limits. Every
+failure is required to preserve an existing destination and remove temporary
+output.
+
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. Nested decoded stream lengths
 are rejected before rANS decoding when they exceed the authenticated block
