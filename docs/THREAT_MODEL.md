@@ -82,6 +82,13 @@ cover trailing bytes, malformed frame headers, and resource limits. Every
 failure is required to preserve an existing destination and remove temporary
 output.
 
+Structured MSC6 corruption tests likewise re-encrypt altered frames to reach
+traversal, file/chunk digest, truncation, and occurrence/size metadata defenses
+after authentication succeeds. Separate cases cover trailing bytes, malformed
+frame headers, and caller resource limits. MSC2 and MSC6 progress-callback
+exceptions are propagated only after the atomic-output cleanup path removes any
+temporary file or folder tree.
+
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. Nested decoded stream lengths
 are rejected before rANS decoding when they exceed the authenticated block
