@@ -61,6 +61,8 @@ class ReleaseBinaryTests(unittest.TestCase):
 
         self.assertIn("publish_candidate:", workflow)
         self.assertIn("candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}", workflow)
+        self.assertIn("git fetch --no-tags origin main", workflow)
+        self.assertIn('test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"', workflow)
         self.assertIn("--prerelease", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
 
