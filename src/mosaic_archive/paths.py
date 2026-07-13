@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import unicodedata
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 _INVALID_WINDOWS_CHARS = frozenset('<>:"\\|?*')
 _RESERVED_WINDOWS_NAMES = {
@@ -14,6 +15,21 @@ _RESERVED_WINDOWS_NAMES = {
     *(f"COM{number}" for number in range(1, 10)),
     *(f"LPT{number}" for number in range(1, 10)),
 }
+
+
+def path_matches_file_identity(path: Path, identity: os.stat_result) -> bool:
+    """Return whether ``path`` currently names an already-opened file.
+
+    ``resolve()`` catches ordinary spelling and symbolic-link aliases, but only
+    an identity comparison also catches hard links. Callers that publish with
+    ``os.replace`` must check again immediately before publication because this
+    portable stat/replace pair is not atomic against a hostile local process.
+    """
+    try:
+        current = path.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    return os.path.samestat(current, identity)
 
 
 def validate_relative_path(value: str) -> str:
@@ -40,4 +56,3 @@ def validate_relative_path(value: str) -> str:
         if stem in _RESERVED_WINDOWS_NAMES:
             raise ValueError("archive path uses a reserved platform name")
     return normalized
-

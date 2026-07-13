@@ -10,6 +10,10 @@
 
 - The default `msc encode` path writes authenticated MSC6 archives and the
   decoder retains permanent fixtures for MSC1 through MSC6.
+- Every MSC1-through-MSC6 decoder plus experimental MSR1 and MSR2 rejects
+  direct, symbolic-link, hard-link, and late-rebound output aliases using the
+  identity and size of the archive file actually opened. Initial aliases fail
+  before password derivation and publication repeats the identity check.
 - The opt-in `--format solid` path writes the experimental MSR2 container with
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
@@ -153,9 +157,9 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout passes 247 unit/integration tests on Python 3.13.
-Full-package coverage is 4,051 of 4,505 statements and 1,136 of 1,464 branches
-(5,187 of 5,969 combined opportunities, 86.90%); no package module is omitted
+The current checkout passes 260 unit/integration tests on Python 3.13.
+Full-package coverage is 4,094 of 4,533 statements and 1,163 of 1,480 branches
+(5,257 of 6,013 combined opportunities, 87.43%); no package module is omitted
 from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
@@ -180,10 +184,10 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. recruit an independent reviewer through
+1. freeze and publish a new exact-commit attested candidate after the current
+   unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
-   using the exact v0.39 source bundle, published review brief, and durable
-   machine-readable benchmark evidence;
+   and the review handoff to that candidate rather than the older v0.39 commit;
 2. complete the independent security review and resolve or document its
    findings;
 3. decide whether a separate compression-only profile is worth the security

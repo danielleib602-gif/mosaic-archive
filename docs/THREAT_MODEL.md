@@ -91,12 +91,15 @@ temporary file or folder tree.
 
 Structured MSR2 tests have the production encoder authenticate deliberately
 malformed traversal and file/chunk-digest metadata, then require destination
-preservation and temporary-tree cleanup on failure. MSR2 also binds output-alias
-checks to the opened archive identity and repeats the check immediately before
-atomic publication. This prevents accidental, stable, and late pre-publication
-aliases; portable `stat` and `replace` calls are not an indivisible defense
-against a hostile process concurrently mutating destination directory entries.
-Such a process is outside the uncompromised-local-machine assumption above.
+preservation and temporary-tree cleanup on failure. Every MSC1-through-MSC6
+decoder plus experimental MSR1 and MSR2 binds output-alias checks to the
+identity of the archive file actually opened. Direct, symbolic-link, and
+hard-link aliases fail before password derivation, and a second check runs
+immediately before atomic publication to reject late rebinding. Archive sizes
+also come from the opened handle rather than a separately resolved pathname.
+Portable `stat` and `replace` calls are not an indivisible defense against a
+hostile process concurrently mutating destination directory entries. Such a
+process is outside the uncompromised-local-machine assumption above.
 
 LZ_RANS validates every nested stream length, frequency table, varint, match
 distance, token kind, and final output length. Nested decoded stream lengths

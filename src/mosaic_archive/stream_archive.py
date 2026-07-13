@@ -29,7 +29,7 @@ from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_best_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
-from mosaic_archive.paths import validate_relative_path
+from mosaic_archive.paths import path_matches_file_identity, validate_relative_path
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
     DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
@@ -744,10 +744,15 @@ def _decode_or_inspect(
     )
     started = time.perf_counter()
     normalize_password(password)
-    archive_size = archive_path.stat().st_size
     temporary_root: Path | None = None
     manifest: Manifest | None = None
     with archive_path.open("rb") as raw_stream:
+        opened_archive = os.fstat(raw_stream.fileno())
+        archive_size = opened_archive.st_size
+        if destination is not None and path_matches_file_identity(
+            destination, opened_archive
+        ):
+            raise ValueError("archive and output paths must be different")
         stream = cast(BinaryIO, raw_stream)
         global_header = _read_exact(stream, MSC2_HEADER.size, "public header")
         header = parse_msc2_header(global_header)
@@ -879,6 +884,8 @@ def _decode_or_inspect(
                     if target is not None:
                         _apply_file_metadata(target, entry)
             if destination is not None and temporary_root is not None:
+                if path_matches_file_identity(destination, opened_archive):
+                    raise ValueError("archive and output paths must be different")
                 os.replace(temporary_root, destination)
                 temporary_root = None
         finally:

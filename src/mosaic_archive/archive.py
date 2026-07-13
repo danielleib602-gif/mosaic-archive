@@ -40,6 +40,7 @@ from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_best_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
+from mosaic_archive.paths import path_matches_file_identity
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
     DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
@@ -104,6 +105,7 @@ class _DecodedArchive:
     padded_plaintext_size: int
     header: PublicHeader
     archive_size: int
+    archive_identity: os.stat_result
 
 
 def _validate_encode_options(
@@ -298,6 +300,7 @@ def _parse_inner(
     padded_plaintext_size: int,
     max_output_size: int,
     max_frame_count: int,
+    archive_identity: os.stat_result,
 ) -> _DecodedArchive:
     stream = io.BytesIO(inner)
     prefix = _read_exact(stream, INNER_PREFIX.size, "manifest prefix")
@@ -349,6 +352,7 @@ def _parse_inner(
         padded_plaintext_size=padded_plaintext_size,
         header=header,
         archive_size=archive_size,
+        archive_identity=archive_identity,
     )
 
 
@@ -359,13 +363,19 @@ def _open_archive(
     max_output_size: int,
     max_frame_count: int,
     max_archive_size: int,
+    destination: Path | None = None,
 ) -> _DecodedArchive:
     validate_decode_limits(max_output_size, max_frame_count, max_archive_size)
     normalize_password(password)
-    archive_size = archive_path.stat().st_size
-    if archive_size > max_archive_size:
-        raise ArchiveFormatError("MSC1 archive exceeds the legacy decode limit")
     with archive_path.open("rb") as archive:
+        archive_identity = os.fstat(archive.fileno())
+        archive_size = archive_identity.st_size
+        if destination is not None and path_matches_file_identity(
+            destination, archive_identity
+        ):
+            raise ValueError("archive and output paths must be different")
+        if archive_size > max_archive_size:
+            raise ArchiveFormatError("MSC1 archive exceeds the legacy decode limit")
         associated_data = archive.read(PUBLIC_HEADER.size)
         header = parse_public_header(associated_data)
         if archive_size != PUBLIC_HEADER.size + header.ciphertext_length:
@@ -389,6 +399,7 @@ def _open_archive(
         len(padded),
         max_output_size,
         max_frame_count,
+        archive_identity,
     )
 
 
@@ -430,6 +441,7 @@ def decode_file(
         max_output_size=max_output_size,
         max_frame_count=max_frame_count,
         max_archive_size=max_archive_size,
+        destination=destination,
     )
 
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -450,6 +462,8 @@ def decode_file(
             os.fsync(temporary.fileno())
         if actual_hash != decoded.expected_hash:
             raise IntegrityError("restored file failed SHA-256 verification")
+        if path_matches_file_identity(destination, decoded.archive_identity):
+            raise ValueError("archive and output paths must be different")
         os.replace(temporary_name, destination)
         temporary_name = None
     finally:

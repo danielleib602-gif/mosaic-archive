@@ -33,6 +33,7 @@ from mosaic_archive.dedup_archive import (
 from mosaic_archive.dedup_format import MSC3_FLAGS, MSC6_VERSION, Msc3Header
 from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.padding import pad_payload, unpad_payload
+from mosaic_archive.paths import path_matches_file_identity
 from mosaic_archive.solid_research import decode_solid_chunks, encode_solid_chunks
 from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT
@@ -180,8 +181,14 @@ def encode_solid_archive(
 def _read_archive(
     archive: Path,
     password: str | bytes,
-) -> tuple[DedupManifest, tuple[bytes, ...]]:
+    destination: Path | None = None,
+) -> tuple[DedupManifest, tuple[bytes, ...], os.stat_result]:
     with archive.open("rb") as raw:
+        opened_archive = os.fstat(raw.fileno())
+        if destination is not None and path_matches_file_identity(
+            destination, opened_archive
+        ):
+            raise ValueError("archive and output paths must be different")
         stream = cast(BinaryIO, raw)
         header = stream.read(_HEADER.size)
         if len(header) != _HEADER.size:
@@ -249,7 +256,7 @@ def _read_archive(
     for record, chunk in zip(unique_records, chunks, strict=True):
         if hashlib.sha256(chunk).digest() != record.digest:
             raise IntegrityError("solid archive unique chunk digest failed")
-    return manifest, chunks
+    return manifest, chunks, opened_archive
 
 
 def decode_solid_archive(
@@ -260,7 +267,11 @@ def decode_solid_archive(
     """Authenticate and atomically restore an experimental solid archive."""
     started = time.perf_counter()
     archive, destination = Path(archive_path), Path(output_path)
-    manifest, chunks = _read_archive(archive, password)
+    manifest, chunks, opened_archive = _read_archive(
+        archive,
+        password,
+        destination,
+    )
     canonical: dict[int, bytes] = {}
     iterator = iter(chunks)
     for index, record in enumerate(manifest.chunks):
@@ -313,6 +324,8 @@ def decode_solid_archive(
                     temporary_root.joinpath(*entry.relative_path.split("/")),
                     entry,
                 )
+        if path_matches_file_identity(destination, opened_archive):
+            raise ValueError("archive and output paths must be different")
         os.replace(temporary_root, destination)
     except Exception:
         if temporary_root.exists():
@@ -325,7 +338,7 @@ def decode_solid_archive(
     return SolidArchiveDecodeStats(
         format_name="MSR1",
         original_size=sum(entry.size for entry in manifest.entries),
-        archive_size=archive.stat().st_size,
+        archive_size=opened_archive.st_size,
         unique_chunk_count=len(chunks),
         hash_verified=True,
         elapsed_seconds=time.perf_counter() - started,
