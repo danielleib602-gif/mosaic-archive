@@ -329,7 +329,23 @@ def encode_solid_archive_v2(
         raise ValueError("input and output paths must be different")
     if source.is_dir() and destination.resolve().is_relative_to(source.resolve()):
         raise ValueError("folder archives must be written outside the input tree")
-    if not 14 <= kdf_log_n <= 18:
+    if (
+        not isinstance(frame_payload_size, int)
+        or isinstance(frame_payload_size, bool)
+        or not 1024 <= frame_payload_size <= 16 * 1024 * 1024
+    ):
+        raise ValueError("solid frame payload size must be between 1 KiB and 16 MiB")
+    if (
+        not isinstance(padding_size, int)
+        or isinstance(padding_size, bool)
+        or not 256 <= padding_size <= frame_payload_size
+    ):
+        raise ValueError("solid frame padding size is invalid")
+    if (
+        not isinstance(kdf_log_n, int)
+        or isinstance(kdf_log_n, bool)
+        or not 14 <= kdf_log_n <= 18
+    ):
         raise ValueError("scrypt cost is outside supported limits")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -885,11 +901,20 @@ def _parse_metadata(
     )
 
 
+def _same_as_open_archive(path: Path, opened_archive: os.stat_result) -> bool:
+    try:
+        current = path.stat()
+    except FileNotFoundError:
+        return False
+    return os.path.samestat(current, opened_archive)
+
+
 def _restore(
     manifest: DedupManifest,
     canonical: BinaryIO,
     locations: dict[int, tuple[int, int]],
     destination: Path,
+    opened_archive: os.stat_result,
 ) -> None:
     if manifest.kind == KIND_FOLDER:
         if destination.exists():
@@ -941,6 +966,8 @@ def _restore(
                     temporary_root.joinpath(*entry.relative_path.split("/")),
                     entry,
                 )
+        if _same_as_open_archive(destination, opened_archive):
+            raise ValueError("archive and output paths must be different")
         os.replace(temporary_root, destination)
     except Exception:
         if temporary_root.exists():
@@ -964,7 +991,12 @@ def decode_solid_archive_v2(
         raise ValueError("MSR2 decode limits must be positive")
     started = time.perf_counter()
     archive, destination = Path(archive_path), Path(output_path)
+    if archive.resolve() == destination.resolve():
+        raise ValueError("archive and output paths must be different")
     with archive.open("rb") as raw:
+        opened_archive = os.fstat(raw.fileno())
+        if _same_as_open_archive(destination, opened_archive):
+            raise ValueError("archive and output paths must be different")
         stream = cast(BinaryIO, raw)
         serialized_header, header = _read_header(stream)
         config = ChunkingConfig(
@@ -1052,7 +1084,13 @@ def decode_solid_archive_v2(
                     if any(lane.read(1) for lane in lane_inputs):
                         raise ArchiveFormatError("MSR2 lane contains unreferenced bytes")
                     canonical.flush()
-                    _restore(manifest, canonical, locations, destination)
+                    _restore(
+                        manifest,
+                        canonical,
+                        locations,
+                        destination,
+                        opened_archive,
+                    )
             finally:
                 for lane_input in lane_inputs:
                     lane_input.close()
@@ -1060,7 +1098,7 @@ def decode_solid_archive_v2(
     return SolidArchiveV2DecodeStats(
         "MSR2",
         sum(entry.size for entry in manifest.entries),
-        archive.stat().st_size,
+        opened_archive.st_size,
         header.unique_chunk_count,
         True,
         time.perf_counter() - started,
