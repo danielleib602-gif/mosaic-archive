@@ -105,6 +105,12 @@ def _annotated_tag(
     _git(root, "tag", "--annotate", tag, "--file", str(message), commit)
 
 
+def _candidate_tag(root: Path, commit: str, version: str = "1.0.0") -> str:
+    tag = f"candidate-v{version}-{commit[:12]}"
+    _git(root, "tag", tag, commit)
+    return tag
+
+
 class ReleaseReadinessTests(unittest.TestCase):
     def test_current_repository_is_seven_of_nine_gates_complete(self) -> None:
         report = evaluate_release_readiness(Path("."))
@@ -217,6 +223,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         with _release_repository() as root:
             commit = _git(root, "rev-parse", "HEAD")
             tag = "v1.0.0"
+            _candidate_tag(root, commit)
             _annotated_tag(root, tag, commit, _complete_tag_evidence(commit, tag))
 
             report = evaluate_release_readiness(
@@ -294,6 +301,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         for mutate in mutations:
             with self.subTest(mutation=mutate), _release_repository() as root:
                 commit = _git(root, "rev-parse", "HEAD")
+                _candidate_tag(root, commit)
                 evidence = _complete_tag_evidence(commit)
                 mutate(evidence)
                 _annotated_tag(root, "v1.0.0", commit, evidence)
@@ -304,8 +312,28 @@ class ReleaseReadinessTests(unittest.TestCase):
                     release_commit=commit,
                 )
 
-                self.assertEqual(report.completed_gates, 7)
+                self.assertEqual(report.completed_gates, 8)
                 self.assertFalse(report.ready_for_1_0)
+
+    def test_attested_candidate_tag_must_exist_at_release_commit(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            _annotated_tag(
+                root,
+                "v1.0.0",
+                commit,
+                _complete_tag_evidence(commit),
+            )
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+            )
+
+            self.assertEqual(report.completed_gates, 8)
+            self.assertTrue(report.release_binding_verified)
+            self.assertFalse(report.ready_for_1_0)
 
     def test_release_tag_must_match_project_version(self) -> None:
         with _release_repository() as root:

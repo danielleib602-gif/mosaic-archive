@@ -50,9 +50,11 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("fetch-depth: 0", workflow)
         self.assertIn("Require repository gates for non-stable builds", workflow)
         self.assertIn("Require candidate-bound evidence for stable releases", workflow)
+        self.assertIn("Require stable tag to target current protected main", workflow)
         self.assertIn('--release-tag "$GITHUB_REF_NAME"', workflow)
         self.assertIn('--release-commit "$GITHUB_SHA"', workflow)
         self.assertIn("--require-ready --json", workflow)
+        self.assertGreaterEqual(workflow.count('--release-tag "$GITHUB_REF_NAME"'), 2)
         self.assertIn("refs/tags/v0.", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
 
