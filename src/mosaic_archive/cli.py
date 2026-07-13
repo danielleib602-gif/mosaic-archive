@@ -248,6 +248,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="evaluate the nine committed MSC 1.0 release gates",
     )
     readiness_parser.add_argument("--root", type=Path, default=Path("."))
+    readiness_parser.add_argument(
+        "--release-tag",
+        help="annotated stable tag containing schema-v3 external evidence",
+    )
+    readiness_parser.add_argument(
+        "--release-commit",
+        help="exact checked-out commit expected to be targeted by --release-tag",
+    )
+    readiness_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        help="deterministic source bundle whose SHA-256 must match tag evidence",
+    )
     readiness_requirements = readiness_parser.add_mutually_exclusive_group()
     readiness_requirements.add_argument(
         "--require-automatic",
@@ -268,11 +281,19 @@ def _run(arguments: argparse.Namespace) -> None:
         _print_result(arguments.command, current_policy(), arguments.json)
         return
     if arguments.command == "readiness":
-        readiness = evaluate_release_readiness(arguments.root)
+        readiness = evaluate_release_readiness(
+            arguments.root,
+            release_tag=arguments.release_tag,
+            release_commit=arguments.release_commit,
+            review_bundle=arguments.review_bundle,
+        )
         if arguments.require_automatic and not readiness.automatic_ready:
             raise ValueError("one or more automatic MSC 1.0 gates are incomplete")
         if arguments.require_ready and not readiness.ready_for_1_0:
-            raise ValueError("one or more MSC 1.0 release gates are incomplete")
+            raise ValueError(
+                "one or more MSC 1.0 release gates are incomplete or the stable "
+                "tag is not bound to the reviewed commit"
+            )
         _print_result(
             arguments.command,
             readiness,

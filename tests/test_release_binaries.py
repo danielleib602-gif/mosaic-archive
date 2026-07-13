@@ -37,19 +37,89 @@ class ReleaseBinaryTests(unittest.TestCase):
     def test_release_recipe_matches_package_version(self) -> None:
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+        ci_workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
         self.assertEqual(project["project"]["version"], "0.39.0")
-        self.assertIn("--expected-version 0.39.0", workflow)
-        self.assertIn("msc readiness --require-automatic --json", workflow)
+        self.assertEqual(
+            project["project"]["optional-dependencies"]["release"],
+            ["pyinstaller==6.21.0"],
+        )
+        self.assertIn(
+            "uv sync --frozen --extra release --no-install-project",
+            workflow,
+        )
+        self.assertIn("uv run --frozen --no-sync pyinstaller", workflow)
+        self.assertIn(
+            "uv run --frozen --no-sync python scripts/prepare_release_binary.py",
+            workflow,
+        )
+        self.assertNotIn("--with pyinstaller", workflow)
+        self.assertIn(
+            "uv sync --frozen --extra dev --extra release",
+            ci_workflow,
+        )
+        self.assertIn(
+            "EXPECTED_VERSION: ${{ needs.preflight.outputs.package_version }}",
+            workflow,
+        )
+        self.assertIn('--expected-version "$EXPECTED_VERSION"', workflow)
+        self.assertNotIn("--expected-version 0.39.0", workflow)
+        self.assertNotIn("enable-cache: true", workflow)
+        self.assertIn("readiness --require-automatic --json", workflow)
+
+    def test_release_jobs_never_install_the_project_with_privileged_tokens(self) -> None:
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        sync_commands = [
+            line.strip()
+            for line in workflow.splitlines()
+            if "uv sync --frozen" in line
+        ]
+        self.assertEqual(len(sync_commands), 3)
+        for command in sync_commands:
+            self.assertIn("--no-install-project", command)
+        self.assertIn("PYTHONPATH: src", workflow)
+        self.assertNotIn("uv run --frozen msc", workflow)
+        self.assertGreaterEqual(
+            workflow.count("uv run --frozen --no-sync python -m mosaic_archive"),
+            3,
+        )
 
     def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
-        self.assertIn("Require repository gates for pre-1.0 builds", workflow)
-        self.assertIn("Require all gates for stable releases", workflow)
-        self.assertIn("msc readiness --require-ready --json", workflow)
+        self.assertIn("preflight:", workflow)
+        self.assertIn("needs: preflight", workflow)
+        self.assertIn("fetch-depth: 0", workflow)
+        self.assertEqual(workflow.count("persist-credentials: false"), 3)
+        self.assertIn("Require repository gates for non-stable builds", workflow)
+        self.assertIn("Require candidate-bound evidence for stable releases", workflow)
+        self.assertIn("attestations: read", workflow)
+        self.assertIn("Require release tag to target current protected main", workflow)
+        self.assertIn('--release-tag "$GITHUB_REF_NAME"', workflow)
+        self.assertIn('--release-commit "$GITHUB_SHA"', workflow)
+        self.assertIn("--require-ready --json", workflow)
+        self.assertGreaterEqual(workflow.count('--release-tag "$GITHUB_REF_NAME"'), 2)
+        self.assertIn("--review-bundle", workflow)
+        self.assertIn("gh attestation verify", workflow)
+        self.assertIn('release["immutable"] is True', workflow)
+        self.assertIn("candidate checksum manifest does not match assets", workflow)
+        self.assertIn("Re-verify stable candidate seal before publication", workflow)
         self.assertIn("refs/tags/v0.", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
+
+    def test_manual_workflow_can_publish_attested_candidate_release(self) -> None:
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        self.assertIn("publish_candidate:", workflow)
+        self.assertIn("candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}", workflow)
+        self.assertIn("git fetch --no-tags origin main", workflow)
+        self.assertIn('test "$GITHUB_REF" = "refs/heads/main"', workflow)
+        self.assertIn('test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"', workflow)
+        self.assertIn("Re-verify candidate source before publication", workflow)
+        self.assertIn("Reject pre-existing mismatched candidate tag", workflow)
+        self.assertIn("--prerelease", workflow)
+        self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
 
     def test_release_workflow_builds_and_smoke_tests_every_platform(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
@@ -58,7 +128,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('tags: ["v*"]', workflow)
         for runner in ("ubuntu-latest", "windows-latest", "macos-latest"):
             self.assertIn(runner, workflow)
-        self.assertIn("pyinstaller==6.21.0", workflow)
+        self.assertIn("--no-sync pyinstaller", workflow)
         self.assertIn("--onefile", workflow)
         self.assertIn("--noupx", workflow)
         self.assertIn("actions/upload-artifact@", workflow)
@@ -75,6 +145,34 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("SHA256SUMS", workflow)
         self.assertIn("actions/attest@a1948c3f048ba23858d222213b7c278aabede763", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
+        self.assertIn("subject-path: release/SHA256SUMS", workflow)
+        self.assertIn("Verify candidate checksum manifest provenance", workflow)
+        self.assertNotIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
+        self.assertIn("Promote exact verified candidate assets", workflow)
+        self.assertGreaterEqual(
+            workflow.count("candidate release is incomplete or mutable"), 2
+        )
+        self.assertGreaterEqual(
+            workflow.count("candidate checksum manifest does not match assets"), 2
+        )
+        self.assertIn('cmp -- "release/mosaic-review-${GITHUB_SHA}.zip"', workflow)
+        self.assertIn("CANDIDATE-SHA256SUMS", workflow)
+        self.assertIn("Re-confirm remote release inputs", workflow)
+        self.assertIn(
+            'git ls-remote --refs origin "refs/tags/${GITHUB_REF_NAME}"',
+            workflow,
+        )
+        self.assertIn("Verify published release is immutable and complete", workflow)
+        self.assertIn("published release asset digests do not match local manifest", workflow)
+        self.assertIn('refs/tags/${RELEASE_TAG}^{commit}', workflow)
+        self.assertLess(
+            workflow.index("Promote exact verified candidate assets"),
+            workflow.index("Generate checksums"),
+        )
+        self.assertLess(
+            workflow.index("Re-confirm remote release inputs"),
+            workflow.index("Publish immutable stable release assets"),
+        )
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
         self.assertIn("prepare_review_bundle.py verify", workflow)

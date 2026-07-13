@@ -1,15 +1,119 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 
 from mosaic_archive.cli import main
 from mosaic_archive.release_readiness import evaluate_release_readiness
+
+
+def _git(root: Path, *arguments: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(root), "-c", "core.autocrlf=false", *arguments],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    return completed.stdout.strip()
+
+
+@contextmanager
+def _release_repository() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary) / "repository"
+        shutil.copytree(
+            ".",
+            root,
+            ignore=shutil.ignore_patterns(
+                ".git",
+                ".venv",
+                ".mypy_cache",
+                ".ruff_cache",
+                "__pycache__",
+                "build",
+                "dist",
+                "htmlcov",
+                ".coverage*",
+            ),
+        )
+        project_path = root / "pyproject.toml"
+        project_path.write_text(
+            project_path.read_text(encoding="utf-8").replace(
+                'version = "0.39.0"',
+                'version = "1.0.0"',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        _git(root, "init", "--initial-branch=main")
+        _git(root, "config", "user.name", "Mosaic Test")
+        _git(root, "config", "user.email", "mosaic@example.invalid")
+        _git(root, "add", "--all")
+        _git(root, "commit", "-m", "test release candidate")
+        yield root
+
+
+def _complete_tag_evidence(
+    commit: str,
+    tag: str = "v1.0.0",
+    review_bundle_sha256: str = "b" * 64,
+) -> dict[str, object]:
+    return {
+        "schema_version": 3,
+        "release_tag": tag,
+        "release_commit": commit,
+        "gates": {
+            "independent_security_review": {
+                "complete": True,
+                "evidence": "https://example.invalid/security-report",
+                "reviewer": "Independent Reviewer",
+                "reviewed_commit": commit,
+                "review_bundle_sha256": review_bundle_sha256,
+                "completed_at": "2026-07-13",
+            },
+            "first_attested_binary_release": {
+                "complete": True,
+                "evidence": "https://example.invalid/releases/candidate-v1.0.0",
+                "source_commit": commit,
+                "checksum_manifest_url": (
+                    "https://example.invalid/releases/candidate-v1.0.0/SHA256SUMS"
+                ),
+                "attestation_url": "https://example.invalid/attestation",
+                "candidate_tag": f"candidate-{tag}-{commit[:12]}",
+                "verified_by": "Independent Verifier",
+                "verified_at": "2026-07-13",
+            },
+        },
+    }
+
+
+def _annotated_tag(
+    root: Path,
+    tag: str,
+    commit: str,
+    evidence: dict[str, object] | str,
+) -> None:
+    message = root.parent / "release-tag-message.json"
+    if isinstance(evidence, str):
+        message.write_text(evidence, encoding="utf-8")
+    else:
+        message.write_text(json.dumps(evidence, indent=2), encoding="utf-8")
+    _git(root, "tag", "--annotate", tag, "--file", str(message), commit)
+
+
+def _candidate_tag(root: Path, commit: str, version: str = "1.0.0") -> str:
+    tag = f"candidate-v{version}-{commit[:12]}"
+    _git(root, "tag", tag, commit)
+    return tag
 
 
 class ReleaseReadinessTests(unittest.TestCase):
@@ -59,7 +163,7 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(report.completed_gates, 7)
             self.assertFalse(report.ready_for_1_0)
 
-    def test_matching_structured_external_evidence_completes_one_zero(self) -> None:
+    def test_structured_external_evidence_without_tag_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
             shutil.copytree(
@@ -104,8 +208,8 @@ class ReleaseReadinessTests(unittest.TestCase):
 
             report = evaluate_release_readiness(root)
 
-            self.assertEqual(report.completed_gates, 9)
-            self.assertTrue(report.ready_for_1_0)
+            self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(report.ready_for_1_0)
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 return_code = main(
@@ -117,8 +221,239 @@ class ReleaseReadinessTests(unittest.TestCase):
                         "--json",
                     ]
                 )
+            self.assertEqual(return_code, 2)
+            self.assertEqual(stdout.getvalue(), "")
+
+    def test_annotated_stable_tag_binds_evidence_to_checkout(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            tag = "v1.0.0"
+            _candidate_tag(root, commit)
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(b"reviewed source bundle")
+            evidence = _complete_tag_evidence(
+                commit,
+                tag,
+                hashlib.sha256(bundle.read_bytes()).hexdigest(),
+            )
+            _annotated_tag(root, tag, commit, evidence)
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag=tag,
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+
+            self.assertEqual(report.completed_gates, 9)
+            self.assertTrue(report.release_binding_verified)
+            self.assertTrue(report.ready_for_1_0)
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                return_code = main(
+                    [
+                        "readiness",
+                        "--root",
+                        str(root),
+                        "--release-tag",
+                        tag,
+                        "--release-commit",
+                        commit,
+                        "--review-bundle",
+                        str(bundle),
+                        "--require-ready",
+                        "--json",
+                    ]
+                )
             self.assertEqual(return_code, 0)
-            self.assertTrue(json.loads(stdout.getvalue())["ready_for_1_0"])
+            self.assertTrue(json.loads(stdout.getvalue())["release_binding_verified"])
+
+    def test_lightweight_tag_cannot_bind_external_evidence(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            _git(root, "tag", "v1.0.0", commit)
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+            )
+
+            self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(report.release_binding_verified)
+            self.assertFalse(report.ready_for_1_0)
+
+    def test_tag_evidence_commit_must_match_tag_target(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            fake_commit = "a" * 40
+            _annotated_tag(
+                root,
+                "v1.0.0",
+                commit,
+                _complete_tag_evidence(fake_commit),
+            )
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+            )
+
+            self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(report.release_binding_verified)
+            self.assertFalse(report.ready_for_1_0)
+
+    def test_tag_evidence_requires_bundle_digest_and_candidate_identity(self) -> None:
+        mutations = (
+            lambda evidence: evidence["gates"]["independent_security_review"].pop(
+                "review_bundle_sha256"
+            ),
+            lambda evidence: evidence["gates"]["first_attested_binary_release"].update(
+                {"candidate_tag": "candidate-v1.0.0-wrongcommit"}
+            ),
+        )
+        for mutate in mutations:
+            with self.subTest(mutation=mutate), _release_repository() as root:
+                commit = _git(root, "rev-parse", "HEAD")
+                _candidate_tag(root, commit)
+                bundle = root.parent / "review.zip"
+                bundle.write_bytes(b"reviewed source bundle")
+                evidence = _complete_tag_evidence(
+                    commit,
+                    review_bundle_sha256=hashlib.sha256(
+                        bundle.read_bytes()
+                    ).hexdigest(),
+                )
+                mutate(evidence)
+                _annotated_tag(root, "v1.0.0", commit, evidence)
+
+                report = evaluate_release_readiness(
+                    root,
+                    release_tag="v1.0.0",
+                    release_commit=commit,
+                    review_bundle=bundle,
+                )
+
+                self.assertEqual(report.completed_gates, 8)
+                self.assertFalse(report.ready_for_1_0)
+
+    def test_attested_candidate_tag_must_exist_at_release_commit(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(b"reviewed source bundle")
+            _annotated_tag(
+                root,
+                "v1.0.0",
+                commit,
+                _complete_tag_evidence(
+                    commit,
+                    review_bundle_sha256=hashlib.sha256(
+                        bundle.read_bytes()
+                    ).hexdigest(),
+                ),
+            )
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+
+            self.assertEqual(report.completed_gates, 8)
+            self.assertTrue(report.release_binding_verified)
+            self.assertFalse(report.ready_for_1_0)
+
+    def test_review_bundle_bytes_must_match_reviewed_digest(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            _candidate_tag(root, commit)
+            reviewed_bytes = b"deterministic reviewed bundle"
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(reviewed_bytes)
+            evidence = _complete_tag_evidence(commit)
+            review_gate = evidence["gates"]["independent_security_review"]
+            review_gate["review_bundle_sha256"] = hashlib.sha256(
+                reviewed_bytes
+            ).hexdigest()
+            _annotated_tag(root, "v1.0.0", commit, evidence)
+
+            matching = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+            bundle.write_bytes(b"different bundle")
+            mismatching = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=commit,
+                review_bundle=bundle,
+            )
+
+            self.assertTrue(matching.review_bundle_verified)
+            self.assertTrue(matching.ready_for_1_0)
+            self.assertFalse(mismatching.review_bundle_verified)
+            self.assertEqual(mismatching.completed_gates, 8)
+            self.assertFalse(mismatching.ready_for_1_0)
+
+    def test_release_tag_must_match_project_version(self) -> None:
+        with _release_repository() as root:
+            commit = _git(root, "rev-parse", "HEAD")
+            tag = "v1.0.1"
+            _annotated_tag(root, tag, commit, _complete_tag_evidence(commit, tag))
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag=tag,
+                release_commit=commit,
+            )
+
+            self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(report.release_binding_verified)
+
+    def test_release_tag_target_must_be_checked_out(self) -> None:
+        with _release_repository() as root:
+            candidate = _git(root, "rev-parse", "HEAD")
+            _annotated_tag(
+                root,
+                "v1.0.0",
+                candidate,
+                _complete_tag_evidence(candidate),
+            )
+            (root / "post-candidate.txt").write_text("different source\n", encoding="utf-8")
+            _git(root, "add", "post-candidate.txt")
+            _git(root, "commit", "-m", "move checkout past candidate")
+
+            report = evaluate_release_readiness(
+                root,
+                release_tag="v1.0.0",
+                release_commit=candidate,
+            )
+
+            self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(report.release_binding_verified)
+
+    def test_malformed_or_oversized_tag_evidence_is_rejected(self) -> None:
+        for tag, evidence in (
+            ("v1.0.0", "not json"),
+            ("v1.0.0", json.dumps({"padding": "x" * 65536})),
+        ):
+            with self.subTest(evidence_size=len(evidence)), _release_repository() as root:
+                commit = _git(root, "rev-parse", "HEAD")
+                _annotated_tag(root, tag, commit, evidence)
+
+                report = evaluate_release_readiness(
+                    root,
+                    release_tag=tag,
+                    release_commit=commit,
+                )
+
+                self.assertEqual(report.completed_gates, 7)
+                self.assertFalse(report.release_binding_verified)
 
 
 if __name__ == "__main__":
