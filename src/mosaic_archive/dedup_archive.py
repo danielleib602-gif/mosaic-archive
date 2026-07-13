@@ -11,6 +11,7 @@ import tempfile
 import time
 from collections import Counter
 from collections.abc import Callable
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, cast
@@ -29,7 +30,7 @@ from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.features import BlockFeatures, analyze_block
 from mosaic_archive.modes import choose_routed_mode, get_mode
 from mosaic_archive.padding import pad_payload, unpad_payload
-from mosaic_archive.paths import validate_relative_path
+from mosaic_archive.paths import path_matches_file_identity, validate_relative_path
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
     DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
@@ -636,11 +637,18 @@ def _decode(
         DEFAULT_MAX_LEGACY_ARCHIVE_SIZE,
     )
     started = time.perf_counter()
-    archive_size = archive.stat().st_size
     temporary_root: Path | None = None
-    with archive.open("rb") as raw, tempfile.TemporaryDirectory(
-        prefix="msc3-chunk-cache-"
-    ) as cache_name:
+    with ExitStack() as stack:
+        raw = stack.enter_context(archive.open("rb"))
+        opened_archive = os.fstat(raw.fileno())
+        archive_size = opened_archive.st_size
+        if destination is not None and path_matches_file_identity(
+            destination, opened_archive
+        ):
+            raise ValueError("archive and output paths must be different")
+        cache_name = stack.enter_context(
+            tempfile.TemporaryDirectory(prefix="msc3-chunk-cache-")
+        )
         stream = cast(BinaryIO, raw)
         global_header = _read_exact(stream, MSC3_HEADER.size, "public header")
         header = parse_msc3_header(global_header)
@@ -771,6 +779,8 @@ def _decode(
                     if target:
                         _apply_metadata(target, entry)
             if destination and temporary_root:
+                if path_matches_file_identity(destination, opened_archive):
+                    raise ValueError("archive and output paths must be different")
                 os.replace(temporary_root, destination)
                 temporary_root = None
         finally:

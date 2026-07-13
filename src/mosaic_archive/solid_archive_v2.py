@@ -31,6 +31,7 @@ from mosaic_archive.dedup_archive import (
 from mosaic_archive.dedup_format import MSC3_FLAGS, MSC6_VERSION, Msc3Header
 from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.padding import pad_payload, unpad_payload
+from mosaic_archive.paths import path_matches_file_identity
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
     DEFAULT_MAX_OUTPUT_SIZE,
@@ -901,14 +902,6 @@ def _parse_metadata(
     )
 
 
-def _same_as_open_archive(path: Path, opened_archive: os.stat_result) -> bool:
-    try:
-        current = path.stat()
-    except FileNotFoundError:
-        return False
-    return os.path.samestat(current, opened_archive)
-
-
 def _restore(
     manifest: DedupManifest,
     canonical: BinaryIO,
@@ -966,7 +959,7 @@ def _restore(
                     temporary_root.joinpath(*entry.relative_path.split("/")),
                     entry,
                 )
-        if _same_as_open_archive(destination, opened_archive):
+        if path_matches_file_identity(destination, opened_archive):
             raise ValueError("archive and output paths must be different")
         os.replace(temporary_root, destination)
     except Exception:
@@ -995,7 +988,7 @@ def decode_solid_archive_v2(
         raise ValueError("archive and output paths must be different")
     with archive.open("rb") as raw:
         opened_archive = os.fstat(raw.fileno())
-        if _same_as_open_archive(destination, opened_archive):
+        if path_matches_file_identity(destination, opened_archive):
             raise ValueError("archive and output paths must be different")
         stream = cast(BinaryIO, raw)
         serialized_header, header = _read_header(stream)

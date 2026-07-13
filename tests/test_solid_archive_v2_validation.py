@@ -44,10 +44,42 @@ class SolidArchiveV2ValidationTests(unittest.TestCase):
                 self.skipTest(f"hard links are unavailable: {error}")
 
             try:
+                with (
+                    patch(
+                        "mosaic_archive.solid_archive_v2.derive_key",
+                        side_effect=AssertionError(
+                            "archive alias reached password derivation"
+                        ),
+                    ) as derive_key,
+                    patch(
+                        "mosaic_archive.solid_archive_v2.tempfile.TemporaryDirectory",
+                        side_effect=AssertionError("archive alias created a decode spool"),
+                    ) as temporary_directory,
+                    self.assertRaises(ValueError),
+                ):
+                    decode_solid_archive_v2(archive, alias, PASSWORD)
+                derive_key.assert_not_called()
+                temporary_directory.assert_not_called()
+            finally:
+                self.assertEqual(archive.read_bytes(), original_archive)
+                self.assertEqual(alias.read_bytes(), original_archive)
+
+    def test_decoder_rejects_symbolic_link_alias_of_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            archive, original_archive = self._create_archive(root)
+            alias = root / "archive-symbolic-alias.msr"
+            try:
+                alias.symlink_to(archive)
+            except (NotImplementedError, OSError) as error:
+                self.skipTest(f"symbolic links are unavailable: {error}")
+
+            try:
                 with self.assertRaises(ValueError):
                     decode_solid_archive_v2(archive, alias, PASSWORD)
             finally:
                 self.assertEqual(archive.read_bytes(), original_archive)
+                self.assertTrue(alias.is_symlink())
                 self.assertEqual(alias.read_bytes(), original_archive)
 
     def test_decoder_rechecks_open_archive_identity_before_publication(self) -> None:
