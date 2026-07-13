@@ -1,11 +1,14 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
+  "release_tag": "",
+  "release_commit": "",
   "gates": {
     "independent_security_review": {
       "complete": false,
       "evidence": "Commission and publish an independent review of the current release candidate.",
       "reviewer": "",
       "reviewed_commit": "",
+      "review_bundle_sha256": "",
       "completed_at": ""
     },
     "first_attested_binary_release": {
@@ -14,6 +17,7 @@
       "source_commit": "",
       "checksum_manifest_url": "",
       "attestation_url": "",
+      "candidate_tag": "",
       "verified_by": "",
       "verified_at": ""
     }

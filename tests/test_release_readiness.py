@@ -62,7 +62,11 @@ def _release_repository() -> Iterator[Path]:
         yield root
 
 
-def _complete_tag_evidence(commit: str, tag: str = "v1.0.0") -> dict[str, object]:
+def _complete_tag_evidence(
+    commit: str,
+    tag: str = "v1.0.0",
+    review_bundle_sha256: str = "b" * 64,
+) -> dict[str, object]:
     return {
         "schema_version": 3,
         "release_tag": tag,
@@ -73,7 +77,7 @@ def _complete_tag_evidence(commit: str, tag: str = "v1.0.0") -> dict[str, object
                 "evidence": "https://example.invalid/security-report",
                 "reviewer": "Independent Reviewer",
                 "reviewed_commit": commit,
-                "review_bundle_sha256": "b" * 64,
+                "review_bundle_sha256": review_bundle_sha256,
                 "completed_at": "2026-07-13",
             },
             "first_attested_binary_release": {
@@ -225,12 +229,20 @@ class ReleaseReadinessTests(unittest.TestCase):
             commit = _git(root, "rev-parse", "HEAD")
             tag = "v1.0.0"
             _candidate_tag(root, commit)
-            _annotated_tag(root, tag, commit, _complete_tag_evidence(commit, tag))
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(b"reviewed source bundle")
+            evidence = _complete_tag_evidence(
+                commit,
+                tag,
+                hashlib.sha256(bundle.read_bytes()).hexdigest(),
+            )
+            _annotated_tag(root, tag, commit, evidence)
 
             report = evaluate_release_readiness(
                 root,
                 release_tag=tag,
                 release_commit=commit,
+                review_bundle=bundle,
             )
 
             self.assertEqual(report.completed_gates, 9)
@@ -247,6 +259,8 @@ class ReleaseReadinessTests(unittest.TestCase):
                         tag,
                         "--release-commit",
                         commit,
+                        "--review-bundle",
+                        str(bundle),
                         "--require-ready",
                         "--json",
                     ]
@@ -303,7 +317,14 @@ class ReleaseReadinessTests(unittest.TestCase):
             with self.subTest(mutation=mutate), _release_repository() as root:
                 commit = _git(root, "rev-parse", "HEAD")
                 _candidate_tag(root, commit)
-                evidence = _complete_tag_evidence(commit)
+                bundle = root.parent / "review.zip"
+                bundle.write_bytes(b"reviewed source bundle")
+                evidence = _complete_tag_evidence(
+                    commit,
+                    review_bundle_sha256=hashlib.sha256(
+                        bundle.read_bytes()
+                    ).hexdigest(),
+                )
                 mutate(evidence)
                 _annotated_tag(root, "v1.0.0", commit, evidence)
 
@@ -311,6 +332,7 @@ class ReleaseReadinessTests(unittest.TestCase):
                     root,
                     release_tag="v1.0.0",
                     release_commit=commit,
+                    review_bundle=bundle,
                 )
 
                 self.assertEqual(report.completed_gates, 8)
@@ -319,17 +341,25 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_attested_candidate_tag_must_exist_at_release_commit(self) -> None:
         with _release_repository() as root:
             commit = _git(root, "rev-parse", "HEAD")
+            bundle = root.parent / "review.zip"
+            bundle.write_bytes(b"reviewed source bundle")
             _annotated_tag(
                 root,
                 "v1.0.0",
                 commit,
-                _complete_tag_evidence(commit),
+                _complete_tag_evidence(
+                    commit,
+                    review_bundle_sha256=hashlib.sha256(
+                        bundle.read_bytes()
+                    ).hexdigest(),
+                ),
             )
 
             report = evaluate_release_readiness(
                 root,
                 release_tag="v1.0.0",
                 release_commit=commit,
+                review_bundle=bundle,
             )
 
             self.assertEqual(report.completed_gates, 8)

@@ -9,9 +9,9 @@ findings.
 Public reviewer coordination and scope declarations belong in
 [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50).
 
-## Candidate identity
+## Current baseline identity
 
-The current review candidate is the released `v0.39.0` source:
+The released `v0.39.0` source is the current reproducible review baseline:
 
 - source commit: `f99495cfc5be73617da8f929f89c3c044abbce89`;
 - source tree: `e8c56dbecc0398deafcbcdf6c2193f503a084b8d`;
@@ -47,6 +47,43 @@ The `Independent review bundle` workflow performs the same build for
 `GITHUB_SHA` and uploads the result. Tagged releases include this bundle in
 `SHA256SUMS` and GitHub's signed build provenance alongside the native
 executables.
+
+The v0.39 baseline is useful for reviewer onboarding, but it cannot close the
+stable 1.0 gates: its package version and source predate the final 1.0 commit.
+The exact final candidate must already declare version 1.0.0 and contain every
+source, dependency, workflow, and release-metadata change intended for stable
+publication. Native build tooling and its transitive dependencies must already
+be frozen in `uv.lock`.
+
+## Final 1.0 candidate identity
+
+When protected `main` is frozen for 1.0, manually dispatch the cross-platform
+release workflow at that exact commit with `publish_candidate` enabled. It
+publishes a durable `candidate-v1.0.0-COMMIT12` prerelease containing native
+binaries, checksums, provenance, and the deterministic source bundle. The
+workflow refuses to publish a candidate from an arbitrary branch or stale main
+commit. Stable preflight later requires that candidate release to be immutable,
+checks every asset digest, pins attestation identity to this release workflow
+and protected-main source commit, and compares the downloaded review bundle to
+the digest recorded by the reviewer. Stable publication promotes these exact
+verified candidate payload bytes instead of substituting a later rebuild.
+
+The reviewer and independent binary verifier must both name the same full
+40-character candidate commit. Any later change to code, dependency locks,
+package version, or workflows invalidates that candidate and requires a new
+bundle, candidate release, review disposition, and verification.
+
+## Human trust boundary
+
+The automated gate cryptographically binds the candidate tag, source commit,
+workflow provenance, artifact digests, and reviewed bundle bytes. It does not
+authenticate the people named in `reviewer` or `verified_by`, establish their
+independence, fetch or evaluate the linked report, or prove that they authored
+it. Until reviewer-signed evidence is pinned to a separately verified identity,
+these fields are maintainer assertions sealed into the release tag. Maintainers
+and consumers must verify report authorship, independence, and disposition out
+of band. A machine result of 9/9 proves evidence-to-source binding; it is not by
+itself proof that an independent review occurred.
 
 ## Review scope
 
@@ -103,8 +140,14 @@ The published report must state:
 6. a clear statement about whether unresolved findings block the reviewed
    candidate from its intended experimental 1.0 use.
 
-After the report is public, update `docs/1.0-external-gates.json` with its HTTPS
-URL, reviewer, exact commit, and completion date. The readiness evaluator
-rejects a bare `complete: true`, malformed evidence, and an attested release
-whose source commit differs from the independently reviewed commit.
+After the report and candidate verification are public, copy
+`docs/1.0-external-gates.json` outside the working tree and fill its schema-v3
+tag, commit, review-bundle digest, candidate-tag, URL, identity, and date fields.
+Use that JSON as the complete message of the annotated stable tag; do not commit
+a post-review evidence edit to the candidate. The readiness evaluator rejects a
+bare `complete: true`, a missing or malformed bundle digest, the wrong candidate
+identity, a lightweight tag, malformed or oversized evidence, a tag/version
+mismatch, and any difference among the reviewed commit, attested candidate
+commit, tag target, workflow SHA, or checked-out source. The exact commands are
+in [RELEASES.md](RELEASES.md).
 

@@ -24,16 +24,32 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: src
+
 jobs:
   preflight:
     name: Release policy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: read
+    outputs:
+      package_version: ${{ steps.package_version.outputs.value }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Require published candidate to be current protected main
         if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          git fetch --no-tags origin main
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
+      - name: Require release tag to target current protected main
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           git fetch --no-tags origin main
@@ -41,24 +57,107 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
+      - name: Read package version
+        id: package_version
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "value=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
         with:
-          enable-cache: true
-      - run: uv sync --frozen
+          enable-cache: false
+      - run: uv sync --frozen --no-install-project
       - name: Require repository gates for non-stable builds
         if: >-
           ${{ !startsWith(github.ref, 'refs/tags/') ||
               startsWith(github.ref, 'refs/tags/v0.') }}
-        run: uv run --frozen msc readiness --require-automatic --json
+        run: >-
+          uv run --frozen --no-sync python -m mosaic_archive
+          readiness --require-automatic --json
       - name: Require candidate-bound evidence for stable releases
         if: >-
           ${{ startsWith(github.ref, 'refs/tags/') &&
               !startsWith(github.ref, 'refs/tags/v0.') }}
-        run: >-
-          uv run --frozen msc readiness
-          --release-tag "$GITHUB_REF_NAME"
-          --release-commit "$GITHUB_SHA"
-          --require-ready --json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          CANDIDATE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+          CANDIDATE_DIR="${RUNNER_TEMP}/mosaic-candidate"
+          mkdir -p "$CANDIDATE_DIR"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${CANDIDATE_TAG}" > "$CANDIDATE_DIR/release.json"
+          python - "$CANDIDATE_TAG" "$GITHUB_SHA" "$CANDIDATE_DIR/release.json" <<'PY'
+          import json
+          import sys
+
+          candidate_tag, commit, path = sys.argv[1:]
+          with open(path, encoding="utf-8") as source:
+              release = json.load(source)
+          expected_assets = {
+              "SHA256SUMS",
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          immutable_ok = release["immutable"] is True
+          if not (
+              release["tag_name"] == candidate_tag
+              and release["draft"] is False
+              and release["prerelease"] is True
+              and immutable_ok
+              and {asset["name"] for asset in release["assets"]} == expected_assets
+          ):
+              raise SystemExit("candidate release is incomplete or mutable")
+          PY
+          gh release download "$CANDIDATE_TAG" --dir "$CANDIDATE_DIR" --skip-existing
+          python - "$CANDIDATE_DIR/SHA256SUMS" "$GITHUB_SHA" <<'PY'
+          import re
+          import sys
+
+          manifest_path, commit = sys.argv[1:]
+          expected = {
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          names = []
+          with open(manifest_path, encoding="utf-8") as manifest:
+              for raw_line in manifest:
+                  match = re.fullmatch(r"[0-9a-f]{64} [ *](.+)\n?", raw_line)
+                  if match is None:
+                      raise SystemExit("candidate checksum manifest is malformed")
+                  names.append(match.group(1))
+          if len(names) != len(expected) or set(names) != expected:
+              raise SystemExit("candidate checksum manifest does not match assets")
+          PY
+          (
+            cd "$CANDIDATE_DIR"
+            sha256sum --check SHA256SUMS
+            echo "Verify candidate checksum manifest provenance"
+            gh attestation verify "SHA256SUMS" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-digest "$GITHUB_SHA" \
+              --source-ref "refs/heads/main" \
+              --deny-self-hosted-runners
+            while read -r _ artifact; do
+              artifact="${artifact#\*}"
+              gh attestation verify "$artifact" \
+                --repo "$GITHUB_REPOSITORY" \
+                --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+                --source-digest "$GITHUB_SHA" \
+                --source-ref "refs/heads/main" \
+                --deny-self-hosted-runners
+            done < SHA256SUMS
+          )
+          uv run --frozen --no-sync python -m mosaic_archive readiness \
+            --release-tag "$GITHUB_REF_NAME" \
+            --release-commit "$GITHUB_SHA" \
+            --review-bundle "$CANDIDATE_DIR/mosaic-review-${GITHUB_SHA}.zip" \
+            --require-ready --json
 
   build:
     name: ${{ matrix.os }} binary
@@ -73,22 +172,28 @@ jobs:
           - macos-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
         with:
-          enable-cache: true
-      - run: uv sync --frozen
+          enable-cache: false
+      - run: uv sync --frozen --extra release --no-install-project
       - name: Build native one-file executable
         run: >
-          uv run --frozen --with pyinstaller==6.21.0 pyinstaller
+          uv run --frozen --no-sync pyinstaller
           --clean --noconfirm --onefile --noupx --paths src
           --name msc src/mosaic_archive/__main__.py
       - name: Name and smoke-test executable
+        env:
+          EXPECTED_VERSION: ${{ needs.preflight.outputs.package_version }}
+        shell: bash
         run: >
-          uv run --frozen python scripts/prepare_release_binary.py
-          dist/msc release --expected-version 0.39.0
+          uv run --frozen --no-sync python scripts/prepare_release_binary.py
+          dist/msc release
+          --expected-version "$EXPECTED_VERSION"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: mosaic-${{ runner.os }}-${{ runner.arch }}
@@ -110,6 +215,20 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          enable-cache: false
+      - run: uv sync --frozen --no-install-project
+      - name: Re-verify tagged release source before publication
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
       - name: Require tag to match the package version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -120,17 +239,117 @@ jobs:
         with:
           path: release
           merge-multiple: true
-      - name: Export stable release evidence
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: >-
-          git for-each-ref --format='%(contents)'
-          "refs/tags/${GITHUB_REF_NAME}" > release/RELEASE-EVIDENCE.json
       - name: Build and verify deterministic source review bundle
         shell: bash
         run: |
           python scripts/prepare_review_bundle.py build "release/mosaic-review-${GITHUB_SHA}.zip" --revision "$GITHUB_SHA"
           python scripts/prepare_review_bundle.py verify "release/mosaic-review-${GITHUB_SHA}.zip"
+      - name: Re-verify stable candidate seal before publication
+        if: >-
+          ${{ startsWith(github.ref, 'refs/tags/v') &&
+              !startsWith(github.ref, 'refs/tags/v0.') }}
+        shell: bash
+        run: |
+          git fetch --force --tags origin
+          git fetch --no-tags origin main
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
+          uv run --frozen --no-sync python -m mosaic_archive readiness \
+            --release-tag "$GITHUB_REF_NAME" \
+            --release-commit "$GITHUB_SHA" \
+            --review-bundle "release/mosaic-review-${GITHUB_SHA}.zip" \
+            --require-ready --json
+      - name: Promote exact verified candidate assets
+        if: >-
+          ${{ startsWith(github.ref, 'refs/tags/v') &&
+              !startsWith(github.ref, 'refs/tags/v0.') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          CANDIDATE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+          CANDIDATE_DIR=$(mktemp -d "${RUNNER_TEMP}/mosaic-candidate-promote.XXXXXX")
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${CANDIDATE_TAG}" > "$CANDIDATE_DIR/release.json"
+          python - "$CANDIDATE_TAG" "$GITHUB_SHA" "$CANDIDATE_DIR/release.json" <<'PY'
+          import json
+          import sys
+
+          candidate_tag, commit, path = sys.argv[1:]
+          with open(path, encoding="utf-8") as source:
+              release = json.load(source)
+          expected_assets = {
+              "SHA256SUMS",
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          if not (
+              release["tag_name"] == candidate_tag
+              and release["draft"] is False
+              and release["prerelease"] is True
+              and release["immutable"] is True
+              and {asset["name"] for asset in release["assets"]} == expected_assets
+          ):
+              raise SystemExit("candidate release is incomplete or mutable")
+          PY
+          cp -- "$CANDIDATE_DIR/release.json" \
+            "${RUNNER_TEMP}/mosaic-promoted-release.json"
+          gh release download "$CANDIDATE_TAG" --dir "$CANDIDATE_DIR"
+          python - "$CANDIDATE_DIR/SHA256SUMS" "$GITHUB_SHA" <<'PY'
+          import re
+          import sys
+
+          manifest_path, commit = sys.argv[1:]
+          expected = {
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          names = []
+          with open(manifest_path, encoding="utf-8") as manifest:
+              for raw_line in manifest:
+                  match = re.fullmatch(r"[0-9a-f]{64} [ *](.+)\n?", raw_line)
+                  if match is None:
+                      raise SystemExit("candidate checksum manifest is malformed")
+                  names.append(match.group(1))
+          if len(names) != len(expected) or set(names) != expected:
+              raise SystemExit("candidate checksum manifest does not match assets")
+          PY
+          (
+            cd "$CANDIDATE_DIR"
+            sha256sum --check SHA256SUMS
+            gh attestation verify "SHA256SUMS" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-digest "$GITHUB_SHA" \
+              --source-ref "refs/heads/main" \
+              --deny-self-hosted-runners
+            while read -r _ artifact; do
+              artifact="${artifact#\*}"
+              gh attestation verify "$artifact" \
+                --repo "$GITHUB_REPOSITORY" \
+                --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+                --source-digest "$GITHUB_SHA" \
+                --source-ref "refs/heads/main" \
+                --deny-self-hosted-runners
+            done < SHA256SUMS
+          )
+          cmp -- "release/mosaic-review-${GITHUB_SHA}.zip" \
+            "$CANDIDATE_DIR/mosaic-review-${GITHUB_SHA}.zip"
+          rm -- release/msc-* "release/mosaic-review-${GITHUB_SHA}.zip"
+          cp -- "$CANDIDATE_DIR"/msc-* \
+            "$CANDIDATE_DIR/mosaic-review-${GITHUB_SHA}.zip" release/
+          cp -- "$CANDIDATE_DIR/SHA256SUMS" release/CANDIDATE-SHA256SUMS
+      - name: Export stable release evidence
+        if: >-
+          ${{ startsWith(github.ref, 'refs/tags/v') &&
+              !startsWith(github.ref, 'refs/tags/v0.') }}
+        shell: bash
+        run: >-
+          git for-each-ref --format='%(contents)'
+          "refs/tags/${GITHUB_REF_NAME}" > release/RELEASE-EVIDENCE.json
       - name: Generate checksums
         working-directory: release
         shell: bash
@@ -139,16 +358,88 @@ jobs:
           if [[ -f RELEASE-EVIDENCE.json ]]; then
             files+=(RELEASE-EVIDENCE.json)
           fi
+          if [[ -f CANDIDATE-SHA256SUMS ]]; then
+            files+=(CANDIDATE-SHA256SUMS)
+          fi
           sha256sum "${files[@]}" > SHA256SUMS
       - name: Sign SLSA build provenance with Sigstore
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-checksums: release/SHA256SUMS
+      - name: Sign checksum manifest provenance with Sigstore
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: release/SHA256SUMS
+      - name: Re-confirm remote release inputs
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          LOCAL_TAG_OBJECT=$(git rev-parse "refs/tags/${GITHUB_REF_NAME}")
+          REMOTE_TAG_OBJECT=$(git ls-remote --refs origin "refs/tags/${GITHUB_REF_NAME}" | awk '{print $1}')
+          test -n "$REMOTE_TAG_OBJECT"
+          test "$LOCAL_TAG_OBJECT" = "$REMOTE_TAG_OBJECT"
+          git fetch --no-tags origin main
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
+
+          if [[ "$GITHUB_REF" != refs/tags/v0.* ]]; then
+            PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+            CANDIDATE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+            CURRENT_RELEASE="${RUNNER_TEMP}/mosaic-promoted-release-current.json"
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${CANDIDATE_TAG}" > "$CURRENT_RELEASE"
+            python - "$CANDIDATE_TAG" "$GITHUB_SHA" \
+              "${RUNNER_TEMP}/mosaic-promoted-release.json" "$CURRENT_RELEASE" <<'PY'
+          import json
+          import sys
+
+          candidate_tag, commit, original_path, current_path = sys.argv[1:]
+          with open(original_path, encoding="utf-8") as source:
+              original = json.load(source)
+          with open(current_path, encoding="utf-8") as source:
+              current = json.load(source)
+          expected_assets = {
+              "SHA256SUMS",
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          current_is_valid = (
+              current["tag_name"] == candidate_tag
+              and current["draft"] is False
+              and current["prerelease"] is True
+              and current["immutable"] is True
+              and {asset["name"] for asset in current["assets"]} == expected_assets
+          )
+          if original.get("id") != current.get("id") or not current_is_valid:
+              raise SystemExit("candidate release is incomplete or mutable")
+          PY
+          fi
       - name: Publish immutable stable release assets
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${GITHUB_REF_NAME}" release/* --verify-tag --generate-notes
+      - name: Re-verify candidate source before publication
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          git fetch --no-tags origin main
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
+      - name: Reject pre-existing mismatched candidate tag
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          CANDIDATE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+          REMOTE_CANDIDATE=$(git ls-remote --refs origin "refs/tags/${CANDIDATE_TAG}")
+          if [[ -n "$REMOTE_CANDIDATE" ]]; then
+            git fetch --force --no-tags origin \
+              "refs/tags/${CANDIDATE_TAG}:refs/tags/${CANDIDATE_TAG}"
+            test "$(git rev-parse "refs/tags/${CANDIDATE_TAG}^{commit}")" = "$GITHUB_SHA"
+          fi
       - name: Publish immutable candidate release assets
         if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
         env:
@@ -162,3 +453,95 @@ jobs:
             --prerelease \
             --title "Mosaic Archive v${PACKAGE_VERSION} candidate ${GITHUB_SHA::12}" \
             --notes "Attested candidate built from ${GITHUB_SHA} for independent review."
+      - name: Verify published release is immutable and complete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [[ "$GITHUB_REF" == refs/tags/v0.* ]]; then
+            RELEASE_TAG="$GITHUB_REF_NAME"
+            RELEASE_MODE="v0"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            RELEASE_TAG="$GITHUB_REF_NAME"
+            RELEASE_MODE="stable"
+          else
+            RELEASE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+            RELEASE_MODE="candidate"
+          fi
+          git fetch --force --no-tags origin \
+            "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$GITHUB_SHA"
+          RELEASE_JSON="${RUNNER_TEMP}/mosaic-published-release.json"
+          for _ in 1 2 3 4 5; do
+            if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > "$RELEASE_JSON" && \
+              python - "$RELEASE_TAG" "$RELEASE_MODE" "$GITHUB_SHA" \
+                "$RELEASE_JSON" release <<'PY'
+          import hashlib
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          release_tag, mode, commit, path, release_dir_raw = sys.argv[1:]
+          with open(path, encoding="utf-8") as source:
+              release = json.load(source)
+          release_dir = Path(release_dir_raw)
+          expected_assets = {
+              "SHA256SUMS",
+              f"mosaic-review-{commit}.zip",
+              "msc-darwin-arm64",
+              "msc-linux-x86_64",
+              "msc-windows-x86_64.exe",
+          }
+          if mode == "stable":
+              expected_assets.update({"CANDIDATE-SHA256SUMS", "RELEASE-EVIDENCE.json"})
+          metadata_is_valid = (
+              release["tag_name"] == release_tag
+              and release["draft"] is False
+              and release["prerelease"] == (mode == "candidate")
+              and release["immutable"] is True
+              and {asset["name"] for asset in release["assets"]} == expected_assets
+          )
+          if not metadata_is_valid:
+              raise SystemExit("published release is mutable or incomplete")
+
+          manifest_path = release_dir / "SHA256SUMS"
+          manifest: dict[str, str] = {}
+          with manifest_path.open(encoding="utf-8") as source:
+              for raw_line in source:
+                  match = re.fullmatch(r"([0-9a-f]{64}) [ *](.+)\n?", raw_line)
+                  if match is None or match.group(2) in manifest:
+                      raise SystemExit("published release checksum manifest is malformed")
+                  manifest[match.group(2)] = match.group(1)
+          if set(manifest) != expected_assets - {"SHA256SUMS"}:
+              raise SystemExit("published release checksum manifest is incomplete")
+
+          def sha256(path: Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as source:
+                  for block in iter(lambda: source.read(1024 * 1024), b""):
+                      digest.update(block)
+              return digest.hexdigest()
+
+          local_digests = {name: sha256(release_dir / name) for name in manifest}
+          if local_digests != manifest:
+              raise SystemExit("published release local assets do not match manifest")
+          local_digests["SHA256SUMS"] = sha256(manifest_path)
+          api_assets = {asset["name"]: asset for asset in release["assets"]}
+          if any(
+              api_assets[name].get("state") != "uploaded"
+              or api_assets[name].get("digest") != f"sha256:{digest}"
+              for name, digest in local_digests.items()
+          ):
+              raise SystemExit(
+                  "published release asset digests do not match local manifest"
+              )
+          PY
+            then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "published release did not become immutable and complete" >&2
+          exit 1

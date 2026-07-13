@@ -65,7 +65,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('--expected-version "$EXPECTED_VERSION"', workflow)
         self.assertNotIn("--expected-version 0.39.0", workflow)
         self.assertNotIn("enable-cache: true", workflow)
-        self.assertIn("msc readiness --require-automatic --json", workflow)
+        self.assertIn("readiness --require-automatic --json", workflow)
 
     def test_release_jobs_never_install_the_project_with_privileged_tokens(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")

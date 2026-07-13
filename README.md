@@ -130,6 +130,14 @@ uv run msc compatibility --json
 uv run msc readiness --json
 ```
 
+The ordinary readiness report remains 7/9 by design until an independently
+reviewed, attested final candidate exists. Stable release automation additionally passes
+`--release-tag`, `--release-commit`, and `--review-bundle`; only a schema-v3
+annotated tag targeting that exact checked-out candidate, with matching bundle
+bytes and an immutable attested candidate release, can satisfy the two external
+gates. Stable publication promotes those exact verified candidate payload bytes;
+its fresh cross-platform rebuilds are smoke checks, not replacements.
+
 Decode and inspect accept caller-defined resource ceilings:
 
 ```console
@@ -377,9 +385,11 @@ remain.
 The v0.34 review-evidence pass builds a byte-reproducible source ZIP from an
 exact Git commit, verifies every tracked payload against its embedded manifest,
 and attaches that source bundle to tagged-release checksums and provenance.
-The readiness evaluator now requires structured external evidence and refuses
-to accept an attested release built from a commit different from the reviewed
-one.
+The readiness evaluator requires structured external evidence and refuses an
+attested release built from a commit different from the reviewed one. Stable
+publication now seals that evidence into an annotated tag and also requires the
+reviewed commit, candidate-attestation commit, tag target, workflow SHA, and
+checked-out source to be identical before any native build starts.
 
 The v0.35 evidence pass replaces the single-run benchmark with schema-v2
 median reporting and expands the deterministic corpus from seven to thirteen

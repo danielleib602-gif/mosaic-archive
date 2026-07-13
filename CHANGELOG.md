@@ -12,11 +12,36 @@ is preserved.
   unless all nine automatic and external 1.0 readiness gates are complete.
 - The readiness CLI exposes a fail-closed `--require-ready` policy for release
   automation while preserving the seven-gate pre-1.0 policy.
+- Stable evidence is sealed into a schema-v3 annotated tag and must bind the
+  reviewed commit, attested candidate, tag target, workflow SHA, and checkout
+  before native builds start; fake, lightweight, malformed, oversized, moved,
+  or version-mismatched tags are rejected.
+- Stable preflight verifies the immutable candidate release's exact assets,
+  checksums, workflow/source-pinned attestations, candidate tag target, and
+  review-bundle digest, then repeats source and bundle checks before publishing.
+- The release workflow can publish an attested prerelease candidate only from
+  the exact current protected-main commit, closing the post-review evidence
+  circularity without permitting source changes.
+- Candidate publication rechecks protected `main` immediately before release,
+  binary smoke tests derive their expected version from project metadata, and
+  the checksum manifest now receives and must pass its own workflow-pinned
+  attestation.
+- PyInstaller and its transitive release-build dependencies are lockfile-pinned.
+  Stable releases repeat candidate verification and promote the exact reviewed
+  candidate payload bytes; fresh platform rebuilds remain smoke checks only.
+- Final publication rechecks the remote annotated-tag object, protected `main`,
+  and candidate release identity, preserves the candidate checksum manifest,
+  and rejects any published release whose immutable API asset digests differ
+  from the locally attested manifest.
+- Repository rulesets restrict stable tag creation to the release authority and
+  prevent stable or candidate tag mutation and deletion after publication.
 
 ### Documentation
 
 - Exact hosted v0.39 benchmark JSON and Markdown, workflow provenance, source
   tree binding, and artifact hashes are committed for independent review.
+- The independent-review and release guides document the candidate-seal flow
+  and treat the committed external-gate JSON as an incomplete tag template.
 
 ### Changed
 

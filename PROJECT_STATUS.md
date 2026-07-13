@@ -17,7 +17,18 @@
   `v0.39.0` release includes checksum-verified native binaries, keyless
   GitHub/Sigstore build provenance, and an exact-source review bundle.
 - The release workflow fails closed for `v1.*` and later stable tags until all
-  nine automatic and external readiness gates are complete.
+  nine readiness gates are complete and schema-v3 tag evidence binds the
+  reviewed and attested candidate to the tag target and workflow checkout. It
+  verifies the immutable candidate release, all checksums and attestations, and
+  the deterministic review-bundle digest before building or publishing stable
+  assets. Native build dependencies are lockfile-pinned, and stable publication
+  promotes the exact verified candidate bytes rather than a later rebuild. A
+  post-publication check requires immutable release metadata and exact API asset
+  digests before the workflow can succeed.
+- Immutable releases and repository tag rulesets now make stable tags
+  release-authority-only and prevent published candidate tags from being moved
+  or deleted. Human reviewer identity remains an explicit out-of-band trust
+  boundary until evidence is signed by a pinned independent identity.
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
   harnesses, scheduled 256 MiB soak test, and cross-platform test matrix are
   committed.
@@ -110,7 +121,11 @@ binary release. The v0.33 maintainer review is documented in
 `docs/SECURITY_REVIEW_v0.33.md`; it does not claim independence.
 The v0.34 handoff adds a deterministic exact-commit review bundle and rejects
 unstructured external evidence or a release commit that differs from the
-reviewed commit.
+reviewed commit. The stable release preflight now also rejects filled templates,
+fake commits, lightweight tags, tag/version mismatches, and any difference
+among the reviewed source, candidate attestation, annotated tag, workflow SHA,
+and checkout. A manual workflow can publish the final protected-main commit as
+an attested prerelease candidate before external review begins.
 
 ## Known release boundaries
 
