@@ -39,6 +39,13 @@ class ReleaseBinaryTests(unittest.TestCase):
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
         self.assertEqual(project["project"]["version"], "0.39.0")
+        self.assertEqual(
+            project["project"]["optional-dependencies"]["release"],
+            ["pyinstaller==6.21.0"],
+        )
+        self.assertIn("uv sync --frozen --extra release", workflow)
+        self.assertIn("uv run --frozen --extra release pyinstaller", workflow)
+        self.assertNotIn("--with pyinstaller", workflow)
         self.assertIn(
             "EXPECTED_VERSION: ${{ needs.preflight.outputs.package_version }}",
             workflow,
@@ -90,7 +97,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn('tags: ["v*"]', workflow)
         for runner in ("ubuntu-latest", "windows-latest", "macos-latest"):
             self.assertIn(runner, workflow)
-        self.assertIn("pyinstaller==6.21.0", workflow)
+        self.assertIn("--extra release pyinstaller", workflow)
         self.assertIn("--onefile", workflow)
         self.assertIn("--noupx", workflow)
         self.assertIn("actions/upload-artifact@", workflow)
@@ -110,9 +117,17 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("subject-path: release/SHA256SUMS", workflow)
         self.assertIn("Verify candidate checksum manifest provenance", workflow)
         self.assertNotIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
-        self.assertIn("Re-confirm candidate release before stable publication", workflow)
+        self.assertIn("Promote exact verified candidate assets", workflow)
         self.assertGreaterEqual(
             workflow.count("candidate release is incomplete or mutable"), 2
+        )
+        self.assertGreaterEqual(
+            workflow.count("candidate checksum manifest does not match assets"), 2
+        )
+        self.assertIn('cmp -- "release/mosaic-review-${GITHUB_SHA}.zip"', workflow)
+        self.assertLess(
+            workflow.index("Promote exact verified candidate assets"),
+            workflow.index("Generate checksums"),
         )
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
