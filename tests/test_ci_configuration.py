@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import configparser
 import unittest
 from pathlib import Path
 
@@ -31,6 +32,15 @@ class CiConfigurationTests(unittest.TestCase):
             "msc readiness --require-automatic --json",
         ):
             self.assertIn(command, workflow)
+
+    def test_coverage_gate_measures_branches_across_the_entire_package(self) -> None:
+        configuration = configparser.ConfigParser()
+        configuration.read(".coveragerc", encoding="utf-8")
+
+        run = configuration["run"]
+        self.assertTrue(run.getboolean("branch"))
+        self.assertEqual(run.get("source"), "src/mosaic_archive")
+        self.assertNotIn("omit", run)
 
 
 if __name__ == "__main__":
