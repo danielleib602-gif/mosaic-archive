@@ -35,6 +35,10 @@ is preserved.
   from the locally attested manifest.
 - Repository rulesets restrict stable tag creation to the release authority and
   prevent stable or candidate tag mutation and deletion after publication.
+- Structured MSC2 corruption regressions now re-authenticate traversal,
+  digest-mismatch, and entry-index/size metadata mutations. Separate structural
+  cases cover trailing bytes, frame order, padding alignment, frame-size
+  budgets, and atomic temporary-output cleanup.
 
 ### Documentation
 

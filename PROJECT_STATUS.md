@@ -153,9 +153,9 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout passes 216 unit/integration tests on Python 3.13.
-Full-package coverage is 3,976 of 4,488 statements and 1,078 of 1,454 branches
-(5,054 of 5,942 combined opportunities, 85.06%); no package module is omitted
+The current checkout passes 225 unit/integration tests on Python 3.13.
+Full-package coverage is 4,011 of 4,488 statements and 1,108 of 1,454 branches
+(5,119 of 5,942 combined opportunities, 86.15%); no package module is omitted
 from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,

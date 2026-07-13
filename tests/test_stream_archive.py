@@ -9,7 +9,12 @@ from mosaic_archive.archive import encode_file
 from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.exceptions import ArchiveFormatError, AuthenticationError
 from mosaic_archive.paths import validate_relative_path
-from mosaic_archive.stream_archive import encode_stream_archive
+from mosaic_archive.stream_archive import (
+    decode_stream_archive,
+    encode_stream_archive,
+    inspect_stream_archive,
+    is_msc2,
+)
 from mosaic_archive.stream_format import MSC2_HEADER, parse_msc2_header
 
 PASSWORD = "folder archive test password"
@@ -99,6 +104,34 @@ class StreamArchiveTests(unittest.TestCase):
         self.assertEqual(header.version, 2)
         self.assertGreater(header.frame_count, 2)
         self.assertEqual(restored.read_bytes(), source.read_bytes())
+
+    def test_streaming_msc2_folder_decoder_and_inspector_remain_compatible(self) -> None:
+        source = self.make_folder()
+        archive = self.root / "legacy-folder.msc"
+        restored = self.root / "legacy-restored"
+        not_archive = self.root / "plain.bin"
+        not_archive.write_bytes(b"not an MSC2 archive")
+
+        encoded = encode_stream_archive(
+            source,
+            archive,
+            PASSWORD,
+            chunk_size=1024,
+            padding_size=256,
+            kdf_log_n=14,
+        )
+        inspected = inspect_stream_archive(archive, PASSWORD)
+        decoded = decode_stream_archive(archive, restored, PASSWORD)
+
+        self.assertTrue(is_msc2(archive))
+        self.assertFalse(is_msc2(not_archive))
+        self.assertEqual(encoded.format_version, 2)
+        self.assertEqual(inspected.archive_kind, "folder")
+        self.assertEqual(inspected.file_count, 3)
+        self.assertTrue(inspected.hash_verified)
+        self.assertEqual(decoded.file_count, 3)
+        self.assertTrue(decoded.hash_verified)
+        self.assertEqual(tree_contents(restored), tree_contents(source))
 
     def test_wrong_password_does_not_create_folder(self) -> None:
         source = self.make_folder()
