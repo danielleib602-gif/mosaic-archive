@@ -109,8 +109,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
         self.assertIn("subject-path: release/SHA256SUMS", workflow)
         self.assertIn("Verify candidate checksum manifest provenance", workflow)
-        self.assertIn("Require immutable releases before publication", workflow)
-        self.assertIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
+        self.assertNotIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
         self.assertIn("Re-confirm candidate release before stable publication", workflow)
         self.assertGreaterEqual(
             workflow.count("candidate release is incomplete or mutable"), 2
