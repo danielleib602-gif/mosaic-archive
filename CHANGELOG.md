@@ -23,6 +23,8 @@ is preserved.
 - Pinned `astral-sh/setup-uv` 8.3.0 and `actions/attest` 4.1.1 across the CI,
   benchmark, fuzzing, reliability, and release workflows, with policy tests
   bound to the reviewed upstream tag SHAs.
+- Pinned the security-hardened `actions/checkout` 7.0.0 in every workflow and
+  completed the remaining `actions/upload-artifact` 7.0.1 migration.
 
 ## [0.39.0] - 2026-07-05
 

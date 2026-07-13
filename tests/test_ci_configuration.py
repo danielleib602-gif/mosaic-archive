@@ -8,7 +8,7 @@ class CiConfigurationTests(unittest.TestCase):
     def test_ci_uses_pinned_actions_and_read_only_permissions(self) -> None:
         workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("permissions:\n  contents: read", workflow)
-        self.assertIn("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10", workflow)
+        self.assertIn("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0", workflow)
         self.assertIn(
             "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
             workflow,
