@@ -72,6 +72,7 @@ def _complete_tag_evidence(commit: str, tag: str = "v1.0.0") -> dict[str, object
                 "evidence": "https://example.invalid/security-report",
                 "reviewer": "Independent Reviewer",
                 "reviewed_commit": commit,
+                "review_bundle_sha256": "b" * 64,
                 "completed_at": "2026-07-13",
             },
             "first_attested_binary_release": {
@@ -82,6 +83,7 @@ def _complete_tag_evidence(commit: str, tag: str = "v1.0.0") -> dict[str, object
                     "https://example.invalid/releases/candidate-v1.0.0/SHA256SUMS"
                 ),
                 "attestation_url": "https://example.invalid/attestation",
+                "candidate_tag": f"candidate-{tag}-{commit[:12]}",
                 "verified_by": "Independent Verifier",
                 "verified_at": "2026-07-13",
             },
@@ -279,6 +281,31 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(report.completed_gates, 7)
             self.assertFalse(report.release_binding_verified)
             self.assertFalse(report.ready_for_1_0)
+
+    def test_tag_evidence_requires_bundle_digest_and_candidate_identity(self) -> None:
+        mutations = (
+            lambda evidence: evidence["gates"]["independent_security_review"].pop(
+                "review_bundle_sha256"
+            ),
+            lambda evidence: evidence["gates"]["first_attested_binary_release"].update(
+                {"candidate_tag": "candidate-v1.0.0-wrongcommit"}
+            ),
+        )
+        for mutate in mutations:
+            with self.subTest(mutation=mutate), _release_repository() as root:
+                commit = _git(root, "rev-parse", "HEAD")
+                evidence = _complete_tag_evidence(commit)
+                mutate(evidence)
+                _annotated_tag(root, "v1.0.0", commit, evidence)
+
+                report = evaluate_release_readiness(
+                    root,
+                    release_tag="v1.0.0",
+                    release_commit=commit,
+                )
+
+                self.assertEqual(report.completed_gates, 7)
+                self.assertFalse(report.ready_for_1_0)
 
     def test_release_tag_must_match_project_version(self) -> None:
         with _release_repository() as root:
