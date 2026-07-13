@@ -39,7 +39,11 @@ class ReleaseBinaryTests(unittest.TestCase):
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
         self.assertEqual(project["project"]["version"], "0.39.0")
-        self.assertIn("--expected-version 0.39.0", workflow)
+        self.assertIn(
+            "--expected-version ${{ needs.preflight.outputs.package_version }}",
+            workflow,
+        )
+        self.assertNotIn("--expected-version 0.39.0", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
     def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
@@ -71,6 +75,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("git fetch --no-tags origin main", workflow)
         self.assertIn('test "$GITHUB_REF" = "refs/heads/main"', workflow)
         self.assertIn('test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"', workflow)
+        self.assertIn("Re-verify candidate source before publication", workflow)
         self.assertIn("--prerelease", workflow)
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
 
