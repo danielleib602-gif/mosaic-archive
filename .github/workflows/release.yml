@@ -7,19 +7,56 @@ on:
       - "scripts/prepare_release_binary.py"
       - "scripts/prepare_review_bundle.py"
       - "tests/test_release_binaries.py"
+      - "tests/test_release_readiness.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/release.yml"
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publish_candidate:
+        description: Publish an attested prerelease candidate from this exact commit
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
+  preflight:
+    name: Release policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Require repository gates for non-stable builds
+        if: >-
+          ${{ !startsWith(github.ref, 'refs/tags/') ||
+              startsWith(github.ref, 'refs/tags/v0.') }}
+        run: uv run --frozen msc readiness --require-automatic --json
+      - name: Require candidate-bound evidence for stable releases
+        if: >-
+          ${{ startsWith(github.ref, 'refs/tags/') &&
+              !startsWith(github.ref, 'refs/tags/v0.') }}
+        run: >-
+          uv run --frozen msc readiness
+          --release-tag "$GITHUB_REF_NAME"
+          --release-commit "$GITHUB_SHA"
+          --require-ready --json
+
   build:
     name: ${{ matrix.os }} binary
+    needs: preflight
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,16 +74,6 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --frozen
-      - name: Require repository gates for pre-1.0 builds
-        if: >-
-          ${{ !startsWith(github.ref, 'refs/tags/') ||
-              startsWith(github.ref, 'refs/tags/v0.') }}
-        run: uv run --frozen msc readiness --require-automatic --json
-      - name: Require all gates for stable releases
-        if: >-
-          ${{ startsWith(github.ref, 'refs/tags/') &&
-              !startsWith(github.ref, 'refs/tags/v0.') }}
-        run: uv run --frozen msc readiness --require-ready --json
       - name: Build native one-file executable
         run: >
           uv run --frozen --with pyinstaller==6.21.0 pyinstaller
@@ -63,8 +90,10 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Attest and publish tagged release
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Attest and publish release
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_candidate)
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -73,7 +102,10 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
       - name: Require tag to match the package version
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
@@ -82,6 +114,12 @@ jobs:
         with:
           path: release
           merge-multiple: true
+      - name: Export stable release evidence
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: >-
+          git for-each-ref --format='%(contents)'
+          "refs/tags/${GITHUB_REF_NAME}" > release/RELEASE-EVIDENCE.json
       - name: Build and verify deterministic source review bundle
         shell: bash
         run: |
@@ -89,12 +127,32 @@ jobs:
           python scripts/prepare_review_bundle.py verify "release/mosaic-review-${GITHUB_SHA}.zip"
       - name: Generate checksums
         working-directory: release
-        run: sha256sum msc-* mosaic-review-*.zip > SHA256SUMS
+        shell: bash
+        run: |
+          files=(msc-* mosaic-review-*.zip)
+          if [[ -f RELEASE-EVIDENCE.json ]]; then
+            files+=(RELEASE-EVIDENCE.json)
+          fi
+          sha256sum "${files[@]}" > SHA256SUMS
       - name: Sign SLSA build provenance with Sigstore
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-checksums: release/SHA256SUMS
-      - name: Publish immutable release assets
+      - name: Publish immutable stable release assets
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${GITHUB_REF_NAME}" release/* --verify-tag --generate-notes
+      - name: Publish immutable candidate release assets
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          CANDIDATE_TAG="candidate-v${PACKAGE_VERSION}-${GITHUB_SHA::12}"
+          gh release create "$CANDIDATE_TAG" release/* \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Mosaic Archive v${PACKAGE_VERSION} candidate ${GITHUB_SHA::12}" \
+            --notes "Attested candidate built from ${GITHUB_SHA} for independent review."

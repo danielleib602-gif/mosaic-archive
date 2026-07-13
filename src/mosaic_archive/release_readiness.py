@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import tomllib
 from dataclasses import dataclass
 from datetime import date
@@ -29,7 +30,16 @@ class ReleaseReadiness:
     automatic_completed_gates: int
     automatic_total_gates: int
     automatic_ready: bool
+    release_binding_verified: bool
+    release_tag: str | None
+    release_commit: str | None
     gates: tuple[ReadinessGate, ...]
+
+
+_MAX_TAG_EVIDENCE_BYTES = 64 * 1024
+_STABLE_TAG_PATTERN = re.compile(
+    r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+)
 
 
 def _contains(path: Path, *markers: str) -> bool:
@@ -77,6 +87,95 @@ def _is_commit(value: object) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
 
 
+def _git_bytes(root: Path, *arguments: str) -> bytes | None:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def _git_text(root: Path, *arguments: str) -> str | None:
+    output = _git_bytes(root, *arguments)
+    if output is None:
+        return None
+    try:
+        return output.decode("utf-8").strip()
+    except UnicodeDecodeError:
+        return None
+
+
+def _tag_external_gate_state(
+    root: Path,
+    package_version: str,
+    release_tag: str,
+    release_commit: str | None,
+) -> tuple[dict[str, dict[str, object]], bool, str | None]:
+    expected_tag = f"v{package_version}"
+    if (
+        _STABLE_TAG_PATTERN.fullmatch(release_tag) is None
+        or release_tag != expected_tag
+    ):
+        return {}, False, None
+
+    tag_ref = f"refs/tags/{release_tag}"
+    if _git_text(root, "cat-file", "-t", tag_ref) != "tag":
+        return {}, False, None
+    tag_target = _git_text(root, "rev-parse", "--verify", f"{tag_ref}^{{commit}}")
+    checkout_commit = _git_text(root, "rev-parse", "--verify", "HEAD^{commit}")
+    supplied_commit = release_commit if release_commit is not None else checkout_commit
+    if not all(_is_commit(value) for value in (tag_target, checkout_commit, supplied_commit)):
+        return {}, False, tag_target
+    if tag_target != checkout_commit or tag_target != supplied_commit:
+        return {}, False, tag_target
+
+    raw_tag = _git_bytes(root, "cat-file", "tag", tag_ref)
+    if raw_tag is None:
+        return {}, False, tag_target
+    _, separator, message = raw_tag.partition(b"\n\n")
+    if not separator or len(message) > _MAX_TAG_EVIDENCE_BYTES:
+        return {}, False, tag_target
+    try:
+        payload = json.loads(message.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return {}, False, tag_target
+    if not isinstance(payload, dict) or set(payload) != {
+        "schema_version",
+        "release_tag",
+        "release_commit",
+        "gates",
+    }:
+        return {}, False, tag_target
+    if (
+        payload.get("schema_version") != 3
+        or payload.get("release_tag") != release_tag
+        or payload.get("release_commit") != tag_target
+    ):
+        return {}, False, tag_target
+    gates = payload.get("gates")
+    if not isinstance(gates, dict) or set(gates) != {
+        "independent_security_review",
+        "first_attested_binary_release",
+    }:
+        return {}, False, tag_target
+    external = {
+        str(name): value
+        for name, value in gates.items()
+        if isinstance(value, dict)
+    }
+    if len(external) != len(gates):
+        return {}, False, tag_target
+    return external, True, tag_target
+
+
 def _is_nonempty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
@@ -91,12 +190,17 @@ def _is_date(value: object) -> bool:
     return True
 
 
-def _security_review_complete(state: dict[str, object]) -> bool:
+def _security_review_complete(
+    state: dict[str, object],
+    release_commit: str | None,
+) -> bool:
     return (
-        state.get("complete") is True
+        release_commit is not None
+        and state.get("complete") is True
         and _is_https_url(state.get("evidence"))
         and _is_nonempty_string(state.get("reviewer"))
         and _is_commit(state.get("reviewed_commit"))
+        and state.get("reviewed_commit") == release_commit
         and _is_date(state.get("completed_at"))
     )
 
@@ -104,12 +208,15 @@ def _security_review_complete(state: dict[str, object]) -> bool:
 def _attested_release_complete(
     state: dict[str, object],
     reviewed_commit: object,
+    release_commit: str | None,
 ) -> bool:
     return (
-        state.get("complete") is True
+        release_commit is not None
+        and state.get("complete") is True
         and _is_https_url(state.get("evidence"))
         and _is_commit(state.get("source_commit"))
         and state.get("source_commit") == reviewed_commit
+        and state.get("source_commit") == release_commit
         and _is_https_url(state.get("checksum_manifest_url"))
         and _is_https_url(state.get("attestation_url"))
         and _is_nonempty_string(state.get("verified_by"))
@@ -117,12 +224,26 @@ def _attested_release_complete(
     )
 
 
-def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
+def evaluate_release_readiness(
+    root: Path,
+    *,
+    release_tag: str | None = None,
+    release_commit: str | None = None,
+) -> ReleaseReadiness:
     """Evaluate the nine committed MSC 1.0 roadmap gates under ``root``."""
     root = root.resolve()
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     package_version = str(project["project"]["version"])
     external = _external_gate_state(root)
+    release_binding_verified = False
+    bound_commit: str | None = None
+    if release_tag is not None:
+        external, release_binding_verified, bound_commit = _tag_external_gate_state(
+            root,
+            package_version,
+            release_tag,
+            release_commit,
+        )
 
     automatic_gates = (
         ReadinessGate(
@@ -189,7 +310,7 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
     external_gates = (
         ReadinessGate(
             "independent_security_review",
-            _security_review_complete(review_state),
+            _security_review_complete(review_state, bound_commit),
             str(review_state.get("evidence", "external evidence required")),
             True,
         ),
@@ -198,6 +319,7 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
             _attested_release_complete(
                 release_state,
                 review_state.get("reviewed_commit"),
+                bound_commit,
             ),
             str(release_state.get("evidence", "external evidence required")),
             True,
@@ -210,13 +332,16 @@ def evaluate_release_readiness(root: Path) -> ReleaseReadiness:
     automatic_completed = sum(gate.complete for gate in repository_gates)
     automatic_total = len(repository_gates)
     return ReleaseReadiness(
-        package_version,
-        completed,
-        total,
-        (completed / total) * 100,
-        completed == total,
-        automatic_completed,
-        automatic_total,
-        automatic_completed == automatic_total,
-        gates,
+        package_version=package_version,
+        completed_gates=completed,
+        total_gates=total,
+        completion_percent=(completed / total) * 100,
+        ready_for_1_0=completed == total and release_binding_verified,
+        automatic_completed_gates=automatic_completed,
+        automatic_total_gates=automatic_total,
+        automatic_ready=automatic_completed == automatic_total,
+        release_binding_verified=release_binding_verified,
+        release_tag=release_tag,
+        release_commit=bound_commit,
+        gates=gates,
     )
