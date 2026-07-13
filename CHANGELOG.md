@@ -39,6 +39,14 @@ is preserved.
   digest-mismatch, and entry-index/size metadata mutations. Separate structural
   cases cover trailing bytes, frame order, padding alignment, frame-size
   budgets, and atomic temporary-output cleanup.
+- MSC2 and MSC6 decoding now invokes caller progress callbacks inside the
+  atomic-output cleanup scope, so an exception from the first callback cannot
+  leak a temporary file or folder tree.
+- MSC2 and MSC6 caller frame-count budgets now reject from the public header,
+  before expensive key derivation or manifest decryption.
+- Structured MSC6 regressions now re-authenticate traversal, file/chunk digest,
+  truncation, and occurrence/size metadata mutations. Separate MSC6 cases cover
+  trailing bytes, frame order, padding alignment, and caller resource limits.
 
 ### Documentation
 

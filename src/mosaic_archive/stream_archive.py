@@ -751,6 +751,8 @@ def _decode_or_inspect(
         stream = cast(BinaryIO, raw_stream)
         global_header = _read_exact(stream, MSC2_HEADER.size, "public header")
         header = parse_msc2_header(global_header)
+        if header.frame_count - 1 > max_frame_count:
+            raise ArchiveFormatError("MSC2 frame count exceeds the decode limit")
         key = derive_key(
             password,
             header.salt,
@@ -770,19 +772,17 @@ def _decode_or_inspect(
         total_bytes = sum(entry.size for entry in manifest.entries)
         if total_bytes > max_output_size:
             raise ArchiveFormatError("MSC2 restored size exceeds the decode limit")
-        if header.frame_count - 1 > max_frame_count:
-            raise ArchiveFormatError("MSC2 frame count exceeds the decode limit")
         output_root, temporary_root = _prepare_output(destination, manifest)
-        distribution: Counter[str] = Counter()
-        compressed_size = len(manifest_payload)
-        padded_size = manifest_padded_size
-        frame_index = 1
-        total_files = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
-        completed_bytes = 0
-        completed_files = 0
-        if progress is not None:
-            progress(ProgressEvent("decode", 0, total_bytes, 0, total_files))
         try:
+            distribution: Counter[str] = Counter()
+            compressed_size = len(manifest_payload)
+            padded_size = manifest_padded_size
+            frame_index = 1
+            total_files = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
+            completed_bytes = 0
+            completed_files = 0
+            if progress is not None:
+                progress(ProgressEvent("decode", 0, total_bytes, 0, total_files))
             for entry_index, entry in enumerate(manifest.entries):
                 target = _target_for_entry(output_root, manifest, entry)
                 if entry.entry_type == ENTRY_DIRECTORY:

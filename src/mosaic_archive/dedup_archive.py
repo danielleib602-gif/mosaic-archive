@@ -644,6 +644,8 @@ def _decode(
         stream = cast(BinaryIO, raw)
         global_header = _read_exact(stream, MSC3_HEADER.size, "public header")
         header = parse_msc3_header(global_header)
+        if header.frame_count - 1 > max_frame_count:
+            raise ArchiveFormatError("MSC3 frame count exceeds the decode limit")
         key = derive_key(password, header.salt, log_n=header.kdf_log_n, r=8, p=1)
         manifest_payload, manifest_padded = _read_frame(
             stream, 0, FRAME_MANIFEST, key, global_header, header
@@ -652,8 +654,6 @@ def _decode(
         total_size = sum(entry.size for entry in manifest.entries)
         if total_size > max_output_size:
             raise ArchiveFormatError("MSC3 restored size exceeds the decode limit")
-        if header.frame_count - 1 > max_frame_count:
-            raise ArchiveFormatError("MSC3 frame count exceeds the decode limit")
         if destination is None:
             output_root = None
         elif manifest.kind == KIND_FOLDER:
@@ -672,20 +672,20 @@ def _decode(
                 temporary_root = Path(temporary.name)
             output_root = temporary_root
 
-        cache = Path(cache_name)
-        referenced = {
-            chunk.source_index
-            for index, chunk in enumerate(manifest.chunks)
-            if chunk.source_index != index
-        }
-        distribution: Counter[str] = Counter()
-        frame_index = 1
-        compressed, padded_total = len(manifest_payload), manifest_padded
-        completed_bytes = completed_files = 0
-        file_count = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
-        if progress:
-            progress(ProgressEvent("decode", 0, total_size, 0, file_count))
         try:
+            cache = Path(cache_name)
+            referenced = {
+                chunk.source_index
+                for index, chunk in enumerate(manifest.chunks)
+                if chunk.source_index != index
+            }
+            distribution: Counter[str] = Counter()
+            frame_index = 1
+            compressed, padded_total = len(manifest_payload), manifest_padded
+            completed_bytes = completed_files = 0
+            file_count = sum(entry.entry_type == ENTRY_FILE for entry in manifest.entries)
+            if progress:
+                progress(ProgressEvent("decode", 0, total_size, 0, file_count))
             for entry in manifest.entries:
                 target = _target(output_root, manifest, entry)
                 if entry.entry_type == ENTRY_DIRECTORY:
