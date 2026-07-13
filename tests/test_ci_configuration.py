@@ -14,7 +14,7 @@ class CiConfigurationTests(unittest.TestCase):
             workflow,
         )
         self.assertIn(
-            "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b",
+            "astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3",
             workflow,
         )
 

@@ -18,6 +18,12 @@ is preserved.
 - Exact hosted v0.39 benchmark JSON and Markdown, workflow provenance, source
   tree binding, and artifact hashes are committed for independent review.
 
+### Changed
+
+- Pinned `astral-sh/setup-uv` 8.3.0 and `actions/attest` 4.1.1 across the CI,
+  benchmark, fuzzing, reliability, and release workflows, with policy tests
+  bound to the reviewed upstream tag SHAs.
+
 ## [0.39.0] - 2026-07-05
 
 ### Added
