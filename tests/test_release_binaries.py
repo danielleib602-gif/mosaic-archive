@@ -105,6 +105,8 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("subject-checksums: release/SHA256SUMS", workflow)
         self.assertIn("subject-path: release/SHA256SUMS", workflow)
         self.assertIn("Verify candidate checksum manifest provenance", workflow)
+        self.assertIn("Require immutable releases before publication", workflow)
+        self.assertIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
         self.assertIn("prepare_review_bundle.py verify", workflow)
