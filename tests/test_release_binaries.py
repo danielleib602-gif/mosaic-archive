@@ -67,6 +67,24 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertNotIn("enable-cache: true", workflow)
         self.assertIn("msc readiness --require-automatic --json", workflow)
 
+    def test_release_jobs_never_install_the_project_with_privileged_tokens(self) -> None:
+        workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+        sync_commands = [
+            line.strip()
+            for line in workflow.splitlines()
+            if "uv sync --frozen" in line
+        ]
+        self.assertEqual(len(sync_commands), 3)
+        for command in sync_commands:
+            self.assertIn("--no-install-project", command)
+        self.assertIn("PYTHONPATH: src", workflow)
+        self.assertNotIn("uv run --frozen msc", workflow)
+        self.assertGreaterEqual(
+            workflow.count("uv run --frozen --no-sync python -m mosaic_archive"),
+            3,
+        )
+
     def test_stable_tags_require_all_one_zero_gates_before_building(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
