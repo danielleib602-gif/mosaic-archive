@@ -107,6 +107,10 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("Verify candidate checksum manifest provenance", workflow)
         self.assertIn("Require immutable releases before publication", workflow)
         self.assertIn("repos/${GITHUB_REPOSITORY}/immutable-releases", workflow)
+        self.assertIn("Re-confirm candidate release before stable publication", workflow)
+        self.assertGreaterEqual(
+            workflow.count("candidate release is incomplete or mutable"), 2
+        )
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
         self.assertIn("prepare_review_bundle.py verify", workflow)
