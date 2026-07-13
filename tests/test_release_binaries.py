@@ -58,6 +58,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertIn("--review-bundle", workflow)
         self.assertIn("gh attestation verify", workflow)
         self.assertIn('release["immutable"] is True', workflow)
+        self.assertIn("candidate checksum manifest does not match assets", workflow)
         self.assertIn("Re-verify stable candidate seal before publication", workflow)
         self.assertIn("refs/tags/v0.", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/')", workflow)
