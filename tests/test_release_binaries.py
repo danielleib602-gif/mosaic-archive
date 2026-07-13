@@ -57,6 +57,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertEqual(workflow.count("persist-credentials: false"), 3)
         self.assertIn("Require repository gates for non-stable builds", workflow)
         self.assertIn("Require candidate-bound evidence for stable releases", workflow)
+        self.assertIn("attestations: read", workflow)
         self.assertIn("Require release tag to target current protected main", workflow)
         self.assertIn('--release-tag "$GITHUB_REF_NAME"', workflow)
         self.assertIn('--release-commit "$GITHUB_SHA"', workflow)
