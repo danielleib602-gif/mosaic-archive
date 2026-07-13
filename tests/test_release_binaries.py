@@ -130,9 +130,20 @@ class ReleaseBinaryTests(unittest.TestCase):
             workflow.count("candidate checksum manifest does not match assets"), 2
         )
         self.assertIn('cmp -- "release/mosaic-review-${GITHUB_SHA}.zip"', workflow)
+        self.assertIn("CANDIDATE-SHA256SUMS", workflow)
+        self.assertIn("Re-confirm remote release inputs", workflow)
+        self.assertIn(
+            'git ls-remote --refs origin "refs/tags/${GITHUB_REF_NAME}"',
+            workflow,
+        )
+        self.assertIn("Verify published release is immutable and complete", workflow)
         self.assertLess(
             workflow.index("Promote exact verified candidate assets"),
             workflow.index("Generate checksums"),
+        )
+        self.assertLess(
+            workflow.index("Re-confirm remote release inputs"),
+            workflow.index("Publish immutable stable release assets"),
         )
         self.assertIn('test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"', workflow)
         self.assertIn("prepare_review_bundle.py build", workflow)
