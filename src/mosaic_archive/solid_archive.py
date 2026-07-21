@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Final, cast
 
-from mosaic_archive.cdc import DEFAULT_CHUNKING, ChunkingConfig, iter_content_defined_chunks
+from mosaic_archive.cdc import DEFAULT_CHUNKING, ChunkingConfig
 from mosaic_archive.container_format import AEAD_CHACHA20_POLY1305, KDF_SCRYPT
 from mosaic_archive.crypto import (
     AEAD_TAG_LENGTH,
@@ -26,7 +26,6 @@ from mosaic_archive.dedup_archive import (
     DedupManifest,
     _apply_metadata,
     _scan_manifest,
-    _source_path,
     parse_dedup_manifest,
     serialize_dedup_manifest,
 )
@@ -35,7 +34,8 @@ from mosaic_archive.exceptions import ArchiveFormatError, IntegrityError
 from mosaic_archive.padding import pad_payload, unpad_payload
 from mosaic_archive.paths import path_matches_file_identity
 from mosaic_archive.solid_research import decode_solid_chunks, encode_solid_chunks
-from mosaic_archive.stream_archive import ENTRY_DIRECTORY, ENTRY_FILE, KIND_FILE, KIND_FOLDER
+from mosaic_archive.source_identity import SourceSession
+from mosaic_archive.stream_archive import ENTRY_DIRECTORY, KIND_FILE, KIND_FOLDER
 from mosaic_archive.stream_format import MAX_MANIFEST_CIPHERTEXT
 
 _MAGIC: Final = b"MSR1"
@@ -66,38 +66,6 @@ class SolidArchiveDecodeStats:
     elapsed_seconds: float
 
 
-def _collect_unique_chunks(
-    source: Path,
-    manifest: DedupManifest,
-    config: ChunkingConfig,
-) -> tuple[bytes, ...]:
-    chunks = manifest.chunks
-    entries = manifest.entries
-    kind = manifest.kind
-    unique: list[bytes] = []
-    occurrence = 0
-    for entry in entries:
-        if entry.entry_type != ENTRY_FILE:
-            continue
-        path = _source_path(source, kind, entry.relative_path)
-        digest = hashlib.sha256()
-        with path.open("rb") as stream:
-            for chunk in iter_content_defined_chunks(stream, config):
-                record = chunks[occurrence]
-                actual_digest = hashlib.sha256(chunk).digest()
-                if len(chunk) != record.size or actual_digest != record.digest:
-                    raise OSError(f"input changed while it was encoded: {path}")
-                digest.update(chunk)
-                if record.source_index == occurrence:
-                    unique.append(chunk)
-                occurrence += 1
-        if digest.digest() != entry.digest:
-            raise OSError(f"input changed while it was encoded: {path}")
-    if occurrence != len(chunks):
-        raise RuntimeError("internal solid archive chunk mismatch")
-    return tuple(unique)
-
-
 def encode_solid_archive(
     input_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
@@ -112,13 +80,27 @@ def encode_solid_archive(
     source, destination = Path(input_path), Path(output_path)
     if source.resolve() == destination.resolve():
         raise ValueError("input and output paths must be different")
-    if source.is_dir() and destination.resolve().is_relative_to(source.resolve()):
+    source_is_directory = source.is_dir()
+    if source_is_directory and destination.resolve().is_relative_to(source.resolve()):
         raise ValueError("folder archives must be written outside the input tree")
     if not 256 <= padding_size <= 16 * 1024 * 1024 or not 14 <= kdf_log_n <= 18:
         raise ValueError("padding or scrypt cost is outside supported limits")
 
-    manifest, _ = _scan_manifest(source, config)
-    unique_chunks = _collect_unique_chunks(source, manifest, config)
+    source_session = SourceSession(source)
+    if (
+        not source_is_directory
+        and not source_session.root_is_file
+        and destination.resolve().is_relative_to(source.resolve())
+    ):
+        raise ValueError("folder archives must be written outside the input tree")
+    unique_chunks_list: list[bytes] = []
+    manifest, _ = _scan_manifest(
+        source,
+        config,
+        on_unique_chunk=unique_chunks_list.append,
+        source_session=source_session,
+    )
+    unique_chunks = tuple(unique_chunks_list)
     solid = encode_solid_chunks(unique_chunks)
     manifest_payload = serialize_dedup_manifest(manifest)
     if len(manifest_payload) > MAX_MANIFEST_CIPHERTEXT:
@@ -160,6 +142,7 @@ def encode_solid_archive(
             temporary.write(ciphertext)
             temporary.flush()
             os.fsync(temporary.fileno())
+        source_session.verify_bindings()
         os.replace(temporary_name, destination)
         temporary_name = None
     finally:

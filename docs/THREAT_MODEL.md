@@ -63,10 +63,27 @@ job runs 10,000 deterministic mutations under a 45-minute job budget and
 round-trips a streaming 256 MiB file. Atheris additionally runs bounded
 coverage-guided campaigns from valid seeds for outer headers, frame headers,
 encrypted-manifest parsers, and all compression modes. Larger soak tiers and
-race-resistant source traversal are still required before a stable large-file
-release. Decode and inspect callers can lower the shared 1 TiB restored-output
+independent review are still required before a stable large-file release.
+Decode and inspect callers can lower the shared 1 TiB restored-output
 and 1,000,000-frame ceilings. Legacy whole-buffer MSC1 input defaults to a
 separate 1 GiB archive cap.
+
+Every active MSC1, MSC2, MSC6, MSR1, and MSR2 encoder captures the identity and
+replacement-sensitive metadata of the selected root and each discovered
+directory and file. Each content read validates its ancestor bindings and the
+metadata from the exact opened handle before and after reading. Immediately
+before atomic publication, the encoder rescans the complete topology and
+rejects additions, removals, replacements, and link/reparse-point substitution.
+Failures remove temporary output. Persistent namespace changes observable when
+a binding is checked are rejected, but portable filesystem calls do not form a
+transaction. A hostile local process can race a replacement after an object's
+final check, make transient changes between `stat`, `scandir`, `open`, and
+`replace`, or mutate the same file object while restoring its size and
+timestamps. Those attacks are outside the uncompromised-local-machine
+assumption above.
+
+The final `os.replace` is an atomic namespace switch, but Mosaic does not fsync
+the containing directory and therefore does not promise power-loss durability.
 
 Deterministic mutation tests exercise authenticated archive corruption, every
 public header/frame parser, both encrypted-manifest parsers, and malformed

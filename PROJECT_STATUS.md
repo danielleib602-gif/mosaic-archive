@@ -14,6 +14,11 @@
   direct, symbolic-link, hard-link, and late-rebound output aliases using the
   identity and size of the archive file actually opened. Initial aliases fail
   before password derivation and publication repeats the identity check.
+- Every active MSC1, MSC2, MSC6, MSR1, and MSR2 encoder binds discovered root,
+  directory, and file identities through ancestor and exact-handle validation,
+  then repeats a complete topology and identity scan before atomic publication.
+  Source replacement, additions, removals, and link/reparse-point substitution
+  observable at a binding check fail without publishing partial output.
 - The opt-in `--format solid` path writes the experimental MSR2 container with
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
@@ -106,6 +111,16 @@ The locked corpora retain identical route-sequence hashes, lane distributions,
 archive bytes, chunk counts, maximum frame payloads, and authenticated round
 trips. This is scoped evidence, not a universal route-equivalence claim.
 
+The identity-bound one-pass scorecard in
+`.ecc/benchmarks/msc-v0.40-source-identity-one-pass.json` compares 33
+alternating independent Windows processes per revision. Manifest hashing and
+chunk discovery now share one content pass, reducing physical source opens to
+two per file for MSC6 and one per file for MSR1/MSR2. Median encode time is
+effectively flat from 0.214052 to 0.214684 seconds on corpus v1 (0.295302%
+slower) and improves from 0.342857 to 0.318950 seconds on corpus v2
+(6.972763%). The 275,859-byte and 291,731-byte archives, unique-chunk counts,
+maximum frame payloads, and authenticated tree round trips remain unchanged.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -136,8 +151,10 @@ binary release. The v0.33 maintainer review is documented in
 `docs/SECURITY_REVIEW_v0.33.md`; it does not claim independence.
 The percentage reports completed checklist gates, not a statistical estimate
 of security, quality, or total engineering completion. Residual work such as
-encoder source-identity race hardening and larger sustained soak coverage is
-tracked separately instead of being disguised inside that fixed denominator.
+larger sustained soak coverage is tracked separately instead of being
+disguised inside that fixed denominator. Encoder source-identity hardening is
+implemented across every active writer; portable filesystem operations still
+retain the explicitly documented hostile-local-process boundary.
 The v0.34 handoff adds a deterministic exact-commit review bundle and rejects
 unstructured external evidence or a release commit that differs from the
 reviewed commit. The stable release preflight now also rejects filled templates,
@@ -172,9 +189,10 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout passes 273 unit/integration tests on Python 3.13.
-Full-package coverage is 4,156 of 4,595 statements and 1,181 of 1,500 branches
-(5,337 of 6,095 combined opportunities, 87.56%); no package module is omitted
+The current checkout's Python 3.13 suite runs 290 unit/integration tests: 283
+pass and seven platform- or privilege-specific cases skip on Windows.
+Full-package coverage is 4,324 of 4,788 statements and 1,216 of 1,540 branches
+(5,540 of 6,328 combined opportunities, 87.55%); no package module is omitted
 from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
@@ -199,22 +217,19 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. bind every MSC1-through-MSC6 and MSR1/MSR2 encoder read to the identity
-   discovered during traversal, rejecting concurrent parent/file replacement
-   rather than silently archiving a different source;
-2. extend sustained reliability coverage beyond the existing 256 MiB tier and
+1. extend sustained reliability coverage beyond the existing 256 MiB tier and
    reconcile stable-large-file scope across local and hosted runs;
-3. freeze and publish a new exact-commit attested candidate after the current
+2. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
    and the review handoff to that candidate rather than the older v0.39 commit;
-4. complete the independent security review and resolve or document its
+3. complete the independent security review and resolve or document its
    findings;
-5. decide whether a separate compression-only profile is worth the security
+4. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
-6. decide whether and how MSR2 should graduate from opt-in research format;
-7. add PyPI trusted publishing only if a Python-package release channel is
+5. decide whether and how MSR2 should graduate from opt-in research format;
+6. add PyPI trusted publishing only if a Python-package release channel is
    desired.
 
 The detailed milestone history and rollback rules remain in
