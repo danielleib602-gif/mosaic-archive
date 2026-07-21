@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import lzma
 import math
 import struct
@@ -28,6 +29,17 @@ _DELTA_FILTERS: Final = (
     {"id": lzma.FILTER_DELTA, "dist": 4},
     {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
 )
+_DELTA_EXACT_OBSERVATION_LIMIT: Final = 8192
+_DELTA_SAMPLE_OBSERVATION_COUNT: Final = 4095
+_DELTA_SAMPLE_WINDOW_COUNT: Final = 15
+_DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW: Final = (
+    _DELTA_SAMPLE_OBSERVATION_COUNT // _DELTA_SAMPLE_WINDOW_COUNT
+)
+_DELTA_SAMPLE_WINDOW_BYTES: Final = _DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW + 4
+_DELTA_ROUTE_GUARD_BITS: Final = 0.25
+_DELTA_SAMPLE_ENTROPY_GUARD_BITS: Final = 1.0
+_DELTA_SAMPLE_GOLDEN_STEP: Final = 0x9E3779B97F4A7C15
+_UINT64_MASK: Final = (1 << 64) - 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,9 +59,7 @@ def _compress_standard(data: bytes) -> bytes:
 
 def _compress_delta4(data: bytes) -> bytes:
     return (
-        lzma.compress(data, format=lzma.FORMAT_RAW, filters=list(_DELTA_FILTERS))
-        if data
-        else b""
+        lzma.compress(data, format=lzma.FORMAT_RAW, filters=list(_DELTA_FILTERS)) if data else b""
     )
 
 
@@ -60,19 +70,40 @@ def _delta4_entropy_bits_per_byte(chunk: bytes) -> float:
     for index in range(4, len(chunk)):
         counts[(chunk[index] - chunk[index - 4]) & 0xFF] += 1
     total = len(chunk) - 4
-    return -sum(
-        (count / total) * math.log2(count / total)
-        for count in counts
-        if count
-    )
+    return -sum((count / total) * math.log2(count / total) for count in counts if count)
+
+
+def _delta_sample_window_starts(chunk: bytes) -> tuple[int, ...]:
+    seed = int.from_bytes(hashlib.sha256(chunk).digest()[:8], "big")
+    starts: list[int] = []
+    for index in range(_DELTA_SAMPLE_WINDOW_COUNT):
+        region_start = index * len(chunk) // _DELTA_SAMPLE_WINDOW_COUNT
+        region_end = (index + 1) * len(chunk) // _DELTA_SAMPLE_WINDOW_COUNT
+        available_starts = region_end - region_start - _DELTA_SAMPLE_WINDOW_BYTES + 1
+        seed = (seed + _DELTA_SAMPLE_GOLDEN_STEP) & _UINT64_MASK
+        starts.append(region_start + seed % available_starts)
+    return tuple(starts)
+
+
+def _sampled_delta4_and_byte_entropy_bits_per_byte(
+    chunk: bytes,
+) -> tuple[float, float]:
+    counts = [0] * 256
+    sampled_bytes: list[bytes] = []
+    total = 0
+    for start in _delta_sample_window_starts(chunk):
+        stop = start + _DELTA_SAMPLE_WINDOW_BYTES
+        sampled_bytes.append(chunk[start:stop])
+        for index in range(start + 4, stop):
+            counts[(chunk[index] - chunk[index - 4]) & 0xFF] += 1
+            total += 1
+    delta_entropy = -sum((count / total) * math.log2(count / total) for count in counts if count)
+    return delta_entropy, _byte_entropy_bits_per_byte(b"".join(sampled_bytes))
 
 
 def _byte_entropy_bits_per_byte(chunk: bytes) -> float:
     total = len(chunk)
-    return -sum(
-        (count / total) * math.log2(count / total)
-        for count in Counter(chunk).values()
-    )
+    return -sum((count / total) * math.log2(count / total) for count in Counter(chunk).values())
 
 
 def choose_solid_lane(chunk: bytes) -> int:
@@ -82,7 +113,30 @@ def choose_solid_lane(chunk: bytes) -> int:
     entropy = _byte_entropy_bits_per_byte(chunk)
     if entropy >= 7.75:
         return _HIGH_ENTROPY
-    if entropy >= 3.0 and entropy - _delta4_entropy_bits_per_byte(chunk) >= 2.0:
+    if entropy < 3.0:
+        return _STANDARD
+
+    delta_observations = len(chunk) - 4
+    if delta_observations <= _DELTA_EXACT_OBSERVATION_LIMIT:
+        delta_entropy = _delta4_entropy_bits_per_byte(chunk)
+    else:
+        sampled_delta_entropy, sampled_byte_entropy = (
+            _sampled_delta4_and_byte_entropy_bits_per_byte(chunk)
+        )
+        sampled_advantage = entropy - sampled_delta_entropy
+        sampled_lane: int | None = None
+        if sampled_advantage >= 2.0 + _DELTA_ROUTE_GUARD_BITS:
+            sampled_lane = _DELTA4
+        elif sampled_advantage <= 2.0 - _DELTA_ROUTE_GUARD_BITS:
+            sampled_lane = _STANDARD
+        if (
+            sampled_lane is not None
+            and abs(entropy - sampled_byte_entropy) <= _DELTA_SAMPLE_ENTROPY_GUARD_BITS
+        ):
+            return sampled_lane
+        delta_entropy = _delta4_entropy_bits_per_byte(chunk)
+
+    if entropy - delta_entropy >= 2.0:
         return _DELTA4
     return _STANDARD
 
@@ -169,11 +223,7 @@ def decode_solid_chunks(
     for expected_size in expected_sizes:
         lane, size = _DESCRIPTOR.unpack_from(payload, position)
         position += _DESCRIPTOR.size
-        if (
-            lane >= _LANE_COUNT
-            or size != expected_size
-            or size > _MAX_CHUNK_SIZE
-        ):
+        if lane >= _LANE_COUNT or size != expected_size or size > _MAX_CHUNK_SIZE:
             raise ArchiveFormatError("solid lane chunk descriptor is invalid")
         descriptors.append((lane, size))
         calculated_raw_sizes[lane] += size

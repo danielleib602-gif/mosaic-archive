@@ -255,9 +255,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self,
     ) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.36-raw-entropy-lane.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.36-raw-entropy-lane.json").read_text(encoding="utf-8")
         )
 
         for category in ("random", "precompressed"):
@@ -274,9 +272,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
 
     def test_v0_19_category_scorecard_reports_losses_as_plainly_as_wins(self) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.19-category-suite.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.19-category-suite.json").read_text(encoding="utf-8")
         )
         categories = {row["category"]: row for row in scorecard["categories"]}
         self.assertEqual(categories["numeric"]["delta_vs_zip_bytes"], -43566)
@@ -288,9 +284,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
         self,
     ) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.20-compact-suite.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.20-compact-suite.json").read_text(encoding="utf-8")
         )
         categories = {row["category"]: row for row in scorecard["categories"]}
         self.assertEqual(scorecard["mixed"]["archive_bytes"], 276115)
@@ -335,6 +329,31 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertEqual(encoded.routing_reuse_probes, 1)
             self.assertLess(encoded.archive_size, seven_zip_size)
             self.assertLessEqual(encoded.maximum_frame_payload, 1024 * 1024)
+            self.assertTrue(decoded.hash_verified)
+            self.assertEqual(_tree_digest(source), _tree_digest(restored))
+
+    def test_expanded_public_corpus_preserves_routes_size_and_round_trip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "corpus", root / "corpus.msr", root / "out"
+            generate_corpus(source, corpus_version=2)
+
+            encoded = encode_solid_archive_v2(
+                source,
+                archive,
+                "correct horse battery staple",
+                padding_size=256,
+                kdf_log_n=14,
+            )
+            decoded = decode_solid_archive_v2(
+                archive,
+                restored,
+                "correct horse battery staple",
+            )
+
+            self.assertEqual(encoded.archive_size, 291731)
+            self.assertEqual(encoded.unique_chunk_count, 89)
+            self.assertEqual(encoded.routing_trial_compressions, 0)
             self.assertTrue(decoded.hash_verified)
             self.assertEqual(_tree_digest(source), _tree_digest(restored))
 
