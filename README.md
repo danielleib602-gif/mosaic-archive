@@ -433,6 +433,17 @@ maximum frame payloads, and authenticated round trips remain unchanged on both
 corpora. These measurements are corpus-specific rather than a claim of
 universal route equivalence or compressor superiority.
 
+The unreleased identity-bound one-pass encoder captures each root, directory,
+and file accepted during traversal, validates ancestor paths and the exact
+opened handle around every read, and performs a complete topology rescan before
+atomic publication. Consolidating manifest hashing and chunk discovery reduces
+physical source opens from three to two per file for MSC6, from three to one
+for MSR1, and from two to one for MSR2. Thirty-three alternating independent
+Windows processes per revision show corpus v1 effectively flat at 0.295302%
+slower; corpus v2 improves by 6.972763%. The 275,859-byte and 291,731-byte
+archives, unique-chunk counts, maximum frame payloads, and authenticated round
+trips are unchanged.
+
 The v0.37 Gear chunker skips the subminimum prefix where a content boundary
 cannot legally occur. Eleven contemporaneous Windows runs per revision improve
 median encode time by 3.557517% on corpus v1 and 7.923612% on corpus v2. Chunk
@@ -455,8 +466,12 @@ its 275,859-byte result. MC21 and fixed-width MSR2 metadata remain readable.
 - file data is bounded by the configured chunk size, but the encrypted manifest
   still scales in memory with the number and length of archived paths;
 - links, junctions/reparse points, device nodes, sockets, and FIFOs are rejected;
-- input paths are revalidated when opened, but encoder traversal does not yet
-  hold every discovered source identity across the complete scan/encode window;
+- encoders bind discovered source identities through every read and a final
+  topology rescan, but portable path lookup/open/publication operations are not
+  one indivisible transaction against a hostile local process; replacement
+  after an object's final check, a transient rebind, or a same-object,
+  same-size write that restores timestamps is outside the
+  uncompromised-local-machine threat assumption;
 - folder restoration refuses an existing destination instead of merging;
 - duplicate restoration uses a temporary disk-backed cache for canonical chunks
   referenced later in the archive;

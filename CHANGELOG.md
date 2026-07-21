@@ -8,6 +8,12 @@ is preserved.
 
 ### Security
 
+- Every active MSC1, MSC2, MSC6, MSR1, and MSR2 encoder now binds traversal
+  and reads to captured root, directory, and file identities. Ancestors and the
+  exact opened file handle are checked for every read, and a complete topology
+  and identity rescan runs immediately before atomic publication. Source
+  replacement, additions, removals, and link/reparse-point substitution
+  observable at a binding check are rejected with temporary-output cleanup.
 - Stable `v1.*` and later release tags now fail before binary construction
   unless all nine automatic and external 1.0 readiness gates are complete.
 - The readiness CLI exposes a fail-closed `--require-ready` policy for release
@@ -59,6 +65,9 @@ is preserved.
 
 ### Documentation
 
+- Added a locked-corpus scorecard for identity-bound one-pass encoding,
+  including all 33 timing samples per revision, physical source-open counts,
+  archive sizes, frame bounds, and authenticated tree round trips.
 - Added a locked-corpus scorecard for bounded delta routing, including the raw
   11-run timing samples, route-sequence hashes, archive sizes, frame bounds,
   observation counts, and authenticated round-trip results.
@@ -69,6 +78,13 @@ is preserved.
 
 ### Changed
 
+- Dedup and solid manifest construction now computes file digests, chunks,
+  owners, and unique-chunk callbacks in one content pass. MSR1 and MSR2 open
+  each source file once and MSC6 twice instead of three times. Thirty-three
+  alternating independent Windows processes per revision show corpus v1
+  effectively flat at 0.295302% slower, while corpus v2 improves by 6.972763%.
+  Archive bytes, unique-chunk counts, maximum frame payloads, and authenticated
+  round trips are preserved.
 - Solid-lane delta routing remains exact through 8,192 observations and uses 15
   deterministic, region-stratified windows for larger chunks, capping the
   sampled Python work at 4,095 observations. Entropy, decision-band, and

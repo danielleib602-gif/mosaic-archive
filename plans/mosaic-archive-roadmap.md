@@ -297,17 +297,18 @@ the frozen compatibility policy, versioned mature-compressor results, and the
 cross-platform attested-binary release pipeline are in place; independent
 review and independent verification of an attested release candidate remain.
 The 7/9 figure is a fixed release-checklist count, not a probability of safety
-or a measure of total code maturity. Encoder source-identity race hardening and
-larger sustained soak coverage remain active engineering work outside those two
-formal external gates.
+or a measure of total code maturity. Identity-bound traversal and reads now
+cover every active writer; larger sustained soak coverage remains active
+engineering work outside those two formal external gates.
 
 Tasks:
 
 - [x] freeze a versioned format and compatibility policy;
 - [x] add deterministic parser fuzzing and scheduled large-file soak tests;
 - [x] add seeded coverage-guided parser and decoder fuzzing;
-- bind encoder reads to the source identities accepted during traversal and
-  reject concurrent parent/file replacement across every writer;
+- [x] bind encoder reads to the source identities accepted during traversal and
+  reject parent/file replacement observable at binding checks across every
+  writer;
 - extend sustained large-file coverage beyond the existing 256 MiB tier;
 - complete an independent security review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
