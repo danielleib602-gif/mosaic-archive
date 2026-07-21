@@ -38,6 +38,7 @@ _DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW: Final = (
 _DELTA_SAMPLE_WINDOW_BYTES: Final = _DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW + 4
 _DELTA_ROUTE_GUARD_BITS: Final = 0.25
 _DELTA_SAMPLE_ENTROPY_GUARD_BITS: Final = 1.0
+_DELTA_SAMPLE_ADVANTAGE_RANGE_GUARD_BITS: Final = 1.0
 _DELTA_SAMPLE_GOLDEN_STEP: Final = 0x9E3779B97F4A7C15
 _UINT64_MASK: Final = (1 << 64) - 1
 
@@ -87,16 +88,33 @@ def _delta_sample_window_starts(chunk: bytes) -> tuple[int, ...]:
 
 def _sampled_delta4_and_byte_entropy_bits_per_byte(
     chunk: bytes,
-) -> tuple[float, float]:
+) -> tuple[float, float] | None:
     counts = [0] * 256
     sampled_bytes: list[bytes] = []
+    minimum_advantage = math.inf
+    maximum_advantage = -math.inf
     total = 0
     for start in _delta_sample_window_starts(chunk):
         stop = start + _DELTA_SAMPLE_WINDOW_BYTES
-        sampled_bytes.append(chunk[start:stop])
+        window = chunk[start:stop]
+        sampled_bytes.append(window)
+        window_counts = [0] * 256
         for index in range(start + 4, stop):
-            counts[(chunk[index] - chunk[index - 4]) & 0xFF] += 1
+            delta = (chunk[index] - chunk[index - 4]) & 0xFF
+            counts[delta] += 1
+            window_counts[delta] += 1
             total += 1
+        window_delta_entropy = -sum(
+            (count / _DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW)
+            * math.log2(count / _DELTA_SAMPLE_OBSERVATIONS_PER_WINDOW)
+            for count in window_counts
+            if count
+        )
+        window_advantage = _byte_entropy_bits_per_byte(window) - window_delta_entropy
+        minimum_advantage = min(minimum_advantage, window_advantage)
+        maximum_advantage = max(maximum_advantage, window_advantage)
+        if maximum_advantage - minimum_advantage > _DELTA_SAMPLE_ADVANTAGE_RANGE_GUARD_BITS:
+            return None
     delta_entropy = -sum((count / total) * math.log2(count / total) for count in counts if count)
     return delta_entropy, _byte_entropy_bits_per_byte(b"".join(sampled_bytes))
 
@@ -120,20 +138,20 @@ def choose_solid_lane(chunk: bytes) -> int:
     if delta_observations <= _DELTA_EXACT_OBSERVATION_LIMIT:
         delta_entropy = _delta4_entropy_bits_per_byte(chunk)
     else:
-        sampled_delta_entropy, sampled_byte_entropy = (
-            _sampled_delta4_and_byte_entropy_bits_per_byte(chunk)
-        )
-        sampled_advantage = entropy - sampled_delta_entropy
-        sampled_lane: int | None = None
-        if sampled_advantage >= 2.0 + _DELTA_ROUTE_GUARD_BITS:
-            sampled_lane = _DELTA4
-        elif sampled_advantage <= 2.0 - _DELTA_ROUTE_GUARD_BITS:
-            sampled_lane = _STANDARD
-        if (
-            sampled_lane is not None
-            and abs(entropy - sampled_byte_entropy) <= _DELTA_SAMPLE_ENTROPY_GUARD_BITS
-        ):
-            return sampled_lane
+        sampled_entropies = _sampled_delta4_and_byte_entropy_bits_per_byte(chunk)
+        if sampled_entropies is not None:
+            sampled_delta_entropy, sampled_byte_entropy = sampled_entropies
+            sampled_advantage = entropy - sampled_delta_entropy
+            sampled_lane: int | None = None
+            if sampled_advantage >= 2.0 + _DELTA_ROUTE_GUARD_BITS:
+                sampled_lane = _DELTA4
+            elif sampled_advantage <= 2.0 - _DELTA_ROUTE_GUARD_BITS:
+                sampled_lane = _STANDARD
+            if (
+                sampled_lane is not None
+                and abs(entropy - sampled_byte_entropy) <= _DELTA_SAMPLE_ENTROPY_GUARD_BITS
+            ):
+                return sampled_lane
         delta_entropy = _delta4_entropy_bits_per_byte(chunk)
 
     if entropy - delta_entropy >= 2.0:

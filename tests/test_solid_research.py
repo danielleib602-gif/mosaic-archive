@@ -241,7 +241,7 @@ class SolidLaneResearchTests(unittest.TestCase):
             self.assertEqual(choose_solid_lane(chunk), SOLID_LANE_STANDARD)
             self.assertEqual(spy.call_count, 1)
 
-    def test_distributed_sample_ignores_fixed_window_poison(self) -> None:
+    def test_heterogeneous_fixed_window_poison_falls_back_to_exact(self) -> None:
         size = 64 * 1024
         chunk = bytearray(_numeric_ramp(size))
         window = 1369
@@ -251,21 +251,16 @@ class SolidLaneResearchTests(unittest.TestCase):
         for start in starts:
             chunk[start : start + window] = replacement
         payload = bytes(chunk)
-        sampled_delta_entropy, _ = solid_research._sampled_delta4_and_byte_entropy_bits_per_byte(
-            payload
-        )
+        exact = solid_research._delta4_entropy_bits_per_byte
 
-        self.assertGreaterEqual(
-            solid_research._byte_entropy_bits_per_byte(payload) - sampled_delta_entropy,
-            2.25,
-        )
+        self.assertIsNone(solid_research._sampled_delta4_and_byte_entropy_bits_per_byte(payload))
         with patch.object(
             solid_research,
             "_delta4_entropy_bits_per_byte",
-            side_effect=AssertionError("distributed sample used exact fallback"),
+            wraps=exact,
         ) as spy:
             self.assertEqual(choose_solid_lane(payload), SOLID_LANE_DELTA4)
-            self.assertEqual(spy.call_count, 0)
+            self.assertEqual(spy.call_count, 1)
 
     def test_distributed_sample_rejects_fixed_window_false_delta(self) -> None:
         size = 64 * 1024
@@ -308,6 +303,49 @@ class SolidLaneResearchTests(unittest.TestCase):
             len(solid_research._compress_standard(chunk)),
         )
         self.assertEqual(choose_solid_lane(chunk), SOLID_LANE_DELTA4)
+
+    def test_heterogeneous_windows_fall_back_to_the_smaller_delta_lane(self) -> None:
+        size = 64 * 1024
+        numeric = _numeric_ramp(size)
+        fragment = b"Compression is prediction. Mosaic routes local structure safely.\n"
+        text = (fragment * ((size + len(fragment) - 1) // len(fragment)))[:size]
+        random_data = random.Random(999).randbytes(size)
+        layout = "0001200020101010"
+        sources = (numeric, text, random_data)
+        chunk = b"".join(
+            sources[int(kind)][index * 4096 : (index + 1) * 4096]
+            for index, kind in enumerate(layout)
+        )
+
+        class CountingBytes(bytes):
+            def __new__(cls, value: bytes):
+                instance = super().__new__(cls, value)
+                instance.accesses = []
+                return instance
+
+            def __getitem__(self, key):
+                if isinstance(key, int):
+                    self.accesses.append(key)
+                return super().__getitem__(key)
+
+        counted = CountingBytes(chunk)
+        exact = solid_research._delta4_entropy_bits_per_byte
+
+        self.assertIsNone(solid_research._sampled_delta4_and_byte_entropy_bits_per_byte(counted))
+        self.assertLess(len(counted.accesses), 8190)
+        self.assertEqual(len(counted.accesses) % (273 * 2), 0)
+        self.assertEqual(_legacy_exact_route(chunk), SOLID_LANE_DELTA4)
+        self.assertLess(
+            len(solid_research._compress_delta4(chunk)),
+            len(solid_research._compress_standard(chunk)),
+        )
+        with patch.object(
+            solid_research,
+            "_delta4_entropy_bits_per_byte",
+            wraps=exact,
+        ) as spy:
+            self.assertEqual(choose_solid_lane(chunk), SOLID_LANE_DELTA4)
+            self.assertEqual(spy.call_count, 1)
 
     def test_contiguous_sampling_avoids_unicode_stride_phase_alias(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
