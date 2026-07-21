@@ -49,12 +49,12 @@ def choose_routed_mode(block: bytes, *, profile: str = "balanced") -> EncodedBlo
     """Try a cheap, feature-routed candidate set for the default encoder."""
     if profile not in {"fast", "balanced", "research"}:
         raise ValueError(f"unknown compression profile: {profile}")
-    features = analyze_block(block)
     if profile == "fast":
         candidate_ids = {ModeId.RAW, ModeId.DEFLATE}
     elif profile == "research":
         candidate_ids = {mode.id for mode in ALL_MODES}
     else:
+        features = analyze_block(block)
         candidate_ids = {ModeId.RAW, ModeId.RLE, ModeId.DEFLATE}
         if features.delta_smoothness_ratio >= 0.55:
             candidate_ids.add(ModeId.DELTA8)
