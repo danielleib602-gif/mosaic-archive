@@ -452,6 +452,7 @@ class EncoderSourceIdentityTests(unittest.TestCase):
             self.assertEqual(stream.read(), b"selected root is not a link")
         session.verify_bindings()
 
+    @unittest.skipUnless(os.name == "posix", "symlink/.. resolution differs on Windows")
     def test_source_session_preserves_dotdot_after_a_symlinked_ancestor(self) -> None:
         real_container = self.root / "real-container"
         real_parent = real_container / "real-parent"
