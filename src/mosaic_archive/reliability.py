@@ -6,7 +6,9 @@ import argparse
 import hashlib
 import json
 import random
+import shutil
 import tempfile
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -14,6 +16,7 @@ from pathlib import Path
 from mosaic_archive.archive_api import decode_path, encode_path
 from mosaic_archive.container_format import PublicHeader, parse_public_header
 from mosaic_archive.dedup_archive import (
+    DedupDecodeStats,
     DedupEntry,
     DedupManifest,
     parse_dedup_manifest,
@@ -41,6 +44,8 @@ from mosaic_archive.stream_format import (
 
 _PASSWORD = "mosaic-public-reliability-harness"
 _WRITE_BLOCK_SIZE = 1024 * 1024
+_MIN_DISK_HEADROOM = 64 * 1024 * 1024
+_MAX_DISK_HEADROOM = 1024 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +67,15 @@ class SoakSummary:
     source_sha256: str
     restored_sha256: str
     hash_verified: bool
+    archive_overhead_bytes: int
+    logical_chunk_count: int
+    unique_chunk_count: int
+    peak_payload_bytes: int
+    source_released_before_decode: bool
+    generation_seconds: float
+    encode_seconds: float
+    decode_seconds: float
+    verify_seconds: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,6 +276,14 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _required_soak_free_bytes(size_bytes: int) -> int:
+    headroom = min(
+        _MAX_DISK_HEADROOM,
+        max(_MIN_DISK_HEADROOM, size_bytes // 2),
+    )
+    return 2 * size_bytes + headroom
+
+
 def run_large_file_soak(work_dir: Path, *, size_bytes: int, seed: int) -> SoakSummary:
     """Stream a deterministic file through MSC6 and verify its restored digest."""
     if size_bytes < 1:
@@ -272,8 +294,18 @@ def run_large_file_soak(work_dir: Path, *, size_bytes: int, seed: int) -> SoakSu
     restored = work_dir / "soak-restored.bin"
     for path in (source, archive, restored):
         path.unlink(missing_ok=True)
+    required_free = _required_soak_free_bytes(size_bytes)
+    available_free = shutil.disk_usage(work_dir).free
+    if available_free < required_free:
+        raise OSError(
+            "large-file soak requires at least "
+            f"{required_free} free bytes; {available_free} available"
+        )
 
+    phase_started = time.perf_counter()
     source_sha256 = _write_deterministic_file(source, size_bytes=size_bytes, seed=seed)
+    generation_seconds = time.perf_counter() - phase_started
+    phase_started = time.perf_counter()
     encoded = encode_path(
         source,
         archive,
@@ -283,18 +315,53 @@ def run_large_file_soak(work_dir: Path, *, size_bytes: int, seed: int) -> SoakSu
         kdf_log_n=14,
         profile="fast",
     )
-    decoded = decode_path(archive, restored, _PASSWORD)
+    encode_seconds = time.perf_counter() - phase_started
+    if encoded.format_version != 6 or encoded.original_size != size_bytes:
+        raise AssertionError("large-file soak encoder reported inconsistent sizes")
+    archive_size = archive.stat().st_size
+    # The seed and size make this input reproducible. Releasing it after a
+    # successful encode keeps extended tiers from holding source, archive, and
+    # restored payloads at the same time.
+    source.unlink()
+    phase_started = time.perf_counter()
+    decoded = decode_path(
+        archive,
+        restored,
+        _PASSWORD,
+        max_output_size=size_bytes,
+    )
+    decode_seconds = time.perf_counter() - phase_started
+    if not isinstance(decoded, DedupDecodeStats):
+        raise AssertionError("large-file soak decoder returned unexpected statistics")
+    if (
+        decoded.format_version != 6
+        or decoded.original_size != size_bytes
+        or restored.stat().st_size != size_bytes
+        or not decoded.hash_verified
+    ):
+        raise AssertionError("large-file soak decoder reported inconsistent sizes")
+    phase_started = time.perf_counter()
     restored_sha256 = _sha256_file(restored)
+    verify_seconds = time.perf_counter() - phase_started
     if source_sha256 != restored_sha256:
         raise AssertionError("large-file soak round trip changed the content digest")
     return SoakSummary(
         seed=seed,
         size_bytes=size_bytes,
-        archive_size=archive.stat().st_size,
+        archive_size=archive_size,
         format_version=encoded.format_version,
         source_sha256=source_sha256,
         restored_sha256=restored_sha256,
         hash_verified=decoded.hash_verified,
+        archive_overhead_bytes=archive_size - size_bytes,
+        logical_chunk_count=encoded.logical_chunk_count,
+        unique_chunk_count=encoded.unique_chunk_count,
+        peak_payload_bytes=size_bytes + archive_size,
+        source_released_before_decode=True,
+        generation_seconds=generation_seconds,
+        encode_seconds=encode_seconds,
+        decode_seconds=decode_seconds,
+        verify_seconds=verify_seconds,
     )
 
 

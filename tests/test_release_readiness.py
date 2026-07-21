@@ -136,6 +136,134 @@ class ReleaseReadinessTests(unittest.TestCase):
             all(gate.evidence for gate in report.gates if gate.complete)
         )
 
+    def test_soak_gate_requires_the_extended_signed_offset_tier(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repository"
+            shutil.copytree(
+                ".",
+                root,
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    ".venv",
+                    ".mypy_cache",
+                    ".ruff_cache",
+                    "__pycache__",
+                    "build",
+                    "dist",
+                ),
+            )
+            workflow_path = root / ".github/workflows/reliability.yml"
+            workflow = workflow_path.read_text(encoding="utf-8")
+            workflow_path.write_text(
+                workflow.replace("--size-mib 2049", "--size-mib 2048"),
+                encoding="utf-8",
+            )
+
+            report = evaluate_release_readiness(root)
+            soak_gate = next(
+                gate
+                for gate in report.gates
+                if gate.name == "deterministic_mutation_and_soak_testing"
+            )
+
+            self.assertFalse(soak_gate.complete)
+            self.assertEqual(report.automatic_completed_gates, 6)
+
+    def test_soak_gate_ignores_commented_markers_and_disabled_steps(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repository"
+            shutil.copytree(
+                ".",
+                root,
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    ".venv",
+                    ".mypy_cache",
+                    ".ruff_cache",
+                    "__pycache__",
+                    "build",
+                    "dist",
+                ),
+            )
+            workflow_path = root / ".github/workflows/reliability.yml"
+            workflow = workflow_path.read_text(encoding="utf-8")
+            workflow_path.write_text(
+                workflow.replace(
+                    "if: github.event_name == 'schedule' && "
+                    "github.event.schedule == '19 3 1 * *'",
+                    "if: false # --size-mib 2049",
+                ),
+                encoding="utf-8",
+            )
+
+            report = evaluate_release_readiness(root)
+            soak_gate = next(
+                gate
+                for gate in report.gates
+                if gate.name == "deterministic_mutation_and_soak_testing"
+            )
+
+            self.assertFalse(soak_gate.complete)
+            self.assertEqual(report.automatic_completed_gates, 6)
+
+    def test_soak_gate_rejects_disabled_or_non_enforcing_fuzz_job(self) -> None:
+        mutations = (
+            (
+                "      - name: Run deterministic parser fuzz\n",
+                "      - name: Run deterministic parser fuzz\n        if: false\n",
+            ),
+            (
+                "      - name: Run deterministic parser fuzz\n",
+                "      - name: Run deterministic parser fuzz\n"
+                "        continue-on-error: true\n",
+            ),
+            (
+                "    runs-on: ubuntu-latest\n",
+                "    runs-on: ubuntu-latest\n    if: false\n",
+            ),
+            (
+                "        run: uv run --frozen python -m mosaic_archive.reliability fuzz",
+                "        run: true || uv run --frozen python -m mosaic_archive.reliability fuzz",
+            ),
+            (
+                "      - name: Run 256 MiB pull-request soak\n",
+                "      - name: Run 256 MiB pull-request soak\n        shell: sh\n",
+            ),
+        )
+        for old, new in mutations:
+            with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "repository"
+                shutil.copytree(
+                    ".",
+                    root,
+                    ignore=shutil.ignore_patterns(
+                        ".git",
+                        ".venv",
+                        ".mypy_cache",
+                        ".ruff_cache",
+                        "__pycache__",
+                        "build",
+                        "dist",
+                    ),
+                )
+                workflow_path = root / ".github/workflows/reliability.yml"
+                workflow = workflow_path.read_text(encoding="utf-8")
+                self.assertIn(old, workflow)
+                workflow_path.write_text(
+                    workflow.replace(old, new, 1),
+                    encoding="utf-8",
+                )
+
+                report = evaluate_release_readiness(root)
+                soak_gate = next(
+                    gate
+                    for gate in report.gates
+                    if gate.name == "deterministic_mutation_and_soak_testing"
+                )
+
+                self.assertFalse(soak_gate.complete)
+                self.assertEqual(report.automatic_completed_gates, 6)
+
     def test_external_gates_reject_unsubstantiated_boolean_flips(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
