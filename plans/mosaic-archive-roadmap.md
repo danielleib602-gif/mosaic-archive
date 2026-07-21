@@ -261,6 +261,13 @@ properties. Bounded standard-lane search and a faster delta-lane preset shrink
 expanded corpus v2 by 1,792 bytes while improving 11-run Windows median encode
 time by 6.7% on corpus v1 and 3.0% on corpus v2. The unchanged v0.38 decoder
 restores the new streams.
+The unreleased v0.40 delta router uses exact analysis through 8,192 observations
+and 15 deterministic, region-stratified windows above that threshold. Three
+conservative guards fall back to exact analysis when samples are ambiguous or
+heterogeneous. Eleven alternating independent Windows processes per revision
+improve locked-corpus median encode time by 10.3% on corpus v1 and 10.9% on
+corpus v2 while route hashes, lane distributions, archive bytes, chunk counts,
+frame bounds, and authenticated round trips remain unchanged.
 
 Parallel research tracks:
 
@@ -289,12 +296,19 @@ fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
 the frozen compatibility policy, versioned mature-compressor results, and the
 cross-platform attested-binary release pipeline are in place; independent
 review and independent verification of an attested release candidate remain.
+The 7/9 figure is a fixed release-checklist count, not a probability of safety
+or a measure of total code maturity. Encoder source-identity race hardening and
+larger sustained soak coverage remain active engineering work outside those two
+formal external gates.
 
 Tasks:
 
 - [x] freeze a versioned format and compatibility policy;
 - [x] add deterministic parser fuzzing and scheduled large-file soak tests;
 - [x] add seeded coverage-guided parser and decoder fuzzing;
+- bind encoder reads to the source identities accepted during traversal and
+  reject concurrent parent/file replacement across every writer;
+- extend sustained large-file coverage beyond the existing 256 MiB tier;
 - complete an independent security review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder

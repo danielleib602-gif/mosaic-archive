@@ -1,0 +1,158 @@
+{
+  "baseline_commit": "a03f2370706e92cfdddfc42874eea6300767730c",
+  "candidate_commit": "77983d8d1f55e9df5bb4ebba891b1a71cc2abb6d",
+  "configuration": {
+    "corpus_seed": 20260629,
+    "corpus_unit_size": 65536,
+    "delta_exact_observation_limit": 8192,
+    "delta_route_guard_bits": 0.25,
+    "delta_sample_advantage_range_guard_bits": 1.0,
+    "delta_sample_entropy_guard_bits": 1.0,
+    "delta_sample_observations": 4095,
+    "delta_sample_observations_per_window": 273,
+    "delta_sample_window_bytes": 277,
+    "delta_sample_windows": 15,
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "runs_per_case": 11
+  },
+  "corpus_v1": {
+    "after": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.19649990000107209,
+      "encode_seconds_median_absolute_deviation": 0.0028106000008847332,
+      "encode_seconds_runs": [
+        0.20463439999912225,
+        0.19368930000018736,
+        0.19096689999969385,
+        0.19649990000107209,
+        0.19833160000052885,
+        0.19092490000002729,
+        0.19659979999960345,
+        0.19630850000066857,
+        0.19871640000019397,
+        0.19098139999914565,
+        0.19986269999935757
+      ],
+      "lane_distribution": {
+        "delta4": 3,
+        "high_entropy": 7,
+        "standard": 3
+      },
+      "maximum_frame_payload": 263510,
+      "python_delta_observations": 22240,
+      "route_sequence_sha256": "1fe1124036db535821b6aff60a9c0d2216be4b8bac6eaac5f15b8ceef392a4f7",
+      "round_trip_verified": true,
+      "sampled_chunks": 5,
+      "sampling_exact_fallbacks": 0,
+      "unique_chunks": 13
+    },
+    "archive_improvement_bytes": 0,
+    "before": {
+      "archive_bytes": 275859,
+      "encode_seconds_median": 0.21907520000058869,
+      "encode_seconds_median_absolute_deviation": 0.002222199998868718,
+      "encode_seconds_runs": [
+        0.2183459000007133,
+        0.21907520000058869,
+        0.22129739999945741,
+        0.22086850000050617,
+        0.215808000000834,
+        0.21635359999891079,
+        0.2193107000002783,
+        0.21715659999972561,
+        0.2221652999996877,
+        0.21524479999970936,
+        0.2270472999989579
+      ],
+      "lane_distribution": {
+        "delta4": 3,
+        "high_entropy": 7,
+        "standard": 3
+      },
+      "maximum_frame_payload": 263510,
+      "python_delta_observations": 394961,
+      "route_sequence_sha256": "1fe1124036db535821b6aff60a9c0d2216be4b8bac6eaac5f15b8ceef392a4f7",
+      "round_trip_verified": true,
+      "unique_chunks": 13
+    },
+    "encode_improvement_percent": 10.304818,
+    "manifest_sha256": "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
+    "python_delta_observation_reduction_percent": 94.369064,
+    "routes_unchanged": true
+  },
+  "corpus_v2": {
+    "after": {
+      "archive_bytes": 291731,
+      "encode_seconds_median": 0.32782630000110657,
+      "encode_seconds_median_absolute_deviation": 0.0028451000016502803,
+      "encode_seconds_runs": [
+        0.32659629999943718,
+        0.3287873999997828,
+        0.3265716000005341,
+        0.3325555000010354,
+        0.3249811999994563,
+        0.31724729999950796,
+        0.3352238000006764,
+        0.3307044000011956,
+        0.32782630000110657,
+        0.33028919999924256,
+        0.32458869999936724
+      ],
+      "lane_distribution": {
+        "delta4": 6,
+        "high_entropy": 7,
+        "standard": 76
+      },
+      "maximum_frame_payload": 263510,
+      "python_delta_observations": 70521,
+      "route_sequence_sha256": "5c6c8b7ee2110f8017b3537353bbb9e42d1552731b2e2f31db09d79b0ff6728c",
+      "round_trip_verified": true,
+      "sampled_chunks": 17,
+      "sampling_exact_fallbacks": 0,
+      "unique_chunks": 89
+    },
+    "archive_improvement_bytes": 0,
+    "before": {
+      "archive_bytes": 291731,
+      "encode_seconds_median": 0.36782100000164064,
+      "encode_seconds_median_absolute_deviation": 0.0024313000012625707,
+      "encode_seconds_runs": [
+        0.36603570000079344,
+        0.36538970000037807,
+        0.3701764999987063,
+        0.3602048000011564,
+        0.36782100000164064,
+        0.3691048000000592,
+        0.3837356000003638,
+        0.3803243000002112,
+        0.37339760000031674,
+        0.36185389999991457,
+        0.366033399999651
+      ],
+      "lane_distribution": {
+        "delta4": 6,
+        "high_entropy": 7,
+        "standard": 76
+      },
+      "maximum_frame_payload": 263510,
+      "python_delta_observations": 933143,
+      "route_sequence_sha256": "5c6c8b7ee2110f8017b3537353bbb9e42d1552731b2e2f31db09d79b0ff6728c",
+      "round_trip_verified": true,
+      "unique_chunks": 89
+    },
+    "encode_improvement_percent": 10.873414,
+    "manifest_sha256": "57bd4b92efbdeb8be023b2e1c92c586bebe56f90f5cd219f2df97c8f74f20d13",
+    "python_delta_observation_reduction_percent": 92.442637,
+    "routes_unchanged": true
+  },
+  "environment": {
+    "machine": "X64",
+    "platform": "Microsoft Windows 10.0.26200",
+    "processor": "Intel(R) Core(TM) i7-14650HX",
+    "python": "3.13.13"
+  },
+  "measurement": "one unrecorded warm-up per revision and corpus; 11 alternating independent Windows processes per revision; median internally measured encoder time; identical interpreter, dependencies, password, and generated corpus; every sample authenticated, decoded, and tree-digest verified",
+  "schema_version": 1,
+  "status": "locked corpus v1/v2 routes, archive sizes, chunk counts, frame bounds, and round trips are preserved while bounded Python delta sampling improves local Windows encode medians; not a universal route-equivalence or release claim"
+}

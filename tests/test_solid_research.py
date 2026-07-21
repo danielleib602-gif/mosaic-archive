@@ -6,6 +6,7 @@ import json
 import lzma
 import math
 import random
+import statistics
 import struct
 import tempfile
 import unittest
@@ -424,6 +425,78 @@ class SolidLaneResearchTests(unittest.TestCase):
             "7588b726e796b3abf6047ead06101ea63c4e37900bcef5c060f8e36351c82290",
         )
         self.assertIn("not an MSC archive or release claim", scorecard["status"])
+
+    def test_v0_40_scorecard_preserves_routes_and_improves_encode_time(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.40-bounded-delta-routing.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            scorecard["baseline_commit"],
+            "a03f2370706e92cfdddfc42874eea6300767730c",
+        )
+        self.assertEqual(
+            scorecard["candidate_commit"],
+            "77983d8d1f55e9df5bb4ebba891b1a71cc2abb6d",
+        )
+        for corpus, archive_bytes, unique_chunks in (
+            ("corpus_v1", 275859, 13),
+            ("corpus_v2", 291731, 89),
+        ):
+            result = scorecard[corpus]
+            before, after = result["before"], result["after"]
+            self.assertEqual(before["archive_bytes"], archive_bytes)
+            self.assertEqual(after["archive_bytes"], archive_bytes)
+            self.assertEqual(before["unique_chunks"], unique_chunks)
+            self.assertEqual(after["unique_chunks"], unique_chunks)
+            self.assertEqual(before["lane_distribution"], after["lane_distribution"])
+            self.assertEqual(
+                before["route_sequence_sha256"],
+                after["route_sequence_sha256"],
+            )
+            self.assertEqual(len(before["encode_seconds_runs"]), 11)
+            self.assertEqual(len(after["encode_seconds_runs"]), 11)
+            for measurement in (before, after):
+                median = statistics.median(measurement["encode_seconds_runs"])
+                mad = statistics.median(
+                    abs(run - median) for run in measurement["encode_seconds_runs"]
+                )
+                self.assertEqual(measurement["encode_seconds_median"], median)
+                self.assertEqual(
+                    measurement["encode_seconds_median_absolute_deviation"],
+                    mad,
+                )
+            self.assertTrue(before["round_trip_verified"])
+            self.assertTrue(after["round_trip_verified"])
+            self.assertTrue(result["routes_unchanged"])
+            self.assertEqual(after["sampling_exact_fallbacks"], 0)
+            self.assertEqual(
+                result["archive_improvement_bytes"],
+                before["archive_bytes"] - after["archive_bytes"],
+            )
+            self.assertAlmostEqual(
+                result["encode_improvement_percent"],
+                100
+                * (before["encode_seconds_median"] - after["encode_seconds_median"])
+                / before["encode_seconds_median"],
+                places=6,
+            )
+            self.assertAlmostEqual(
+                result["python_delta_observation_reduction_percent"],
+                100
+                * (
+                    before["python_delta_observations"]
+                    - after["python_delta_observations"]
+                )
+                / before["python_delta_observations"],
+                places=6,
+            )
+            self.assertGreater(result["encode_improvement_percent"], 8)
+            self.assertGreater(
+                result["python_delta_observation_reduction_percent"],
+                90,
+            )
+        self.assertIn("not a universal route-equivalence", scorecard["status"])
 
     def test_three_content_routed_lanes_round_trip(self) -> None:
         random_bytes = random.Random(17).randbytes(64 * 1024)

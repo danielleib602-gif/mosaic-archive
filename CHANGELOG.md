@@ -59,6 +59,9 @@ is preserved.
 
 ### Documentation
 
+- Added a locked-corpus scorecard for bounded delta routing, including the raw
+  11-run timing samples, route-sequence hashes, archive sizes, frame bounds,
+  observation counts, and authenticated round-trip results.
 - Exact hosted v0.39 benchmark JSON and Markdown, workflow provenance, source
   tree binding, and artifact hashes are committed for independent review.
 - The independent-review and release guides document the candidate-seal flow
@@ -66,6 +69,14 @@ is preserved.
 
 ### Changed
 
+- Solid-lane delta routing remains exact through 8,192 observations and uses 15
+  deterministic, region-stratified windows for larger chunks, capping the
+  sampled Python work at 4,095 observations. Entropy, decision-band, and
+  per-window advantage-spread guards fall back to exact analysis when the
+  sample is not decisive. Eleven alternating independent Windows processes per
+  revision improved locked-corpus median encode time by 10.304818% on corpus v1
+  and 10.873414% on corpus v2 while preserving route sequences, archive bytes,
+  chunk counts, frame bounds, and authenticated round trips.
 - Coverage CI now measures branches across every package module instead of
   omitting the CLI, module entrypoint, benchmark runner, and comparison tools.
   Reports retain two decimal places, and focused in-process tests exercise

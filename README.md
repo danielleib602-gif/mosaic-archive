@@ -423,6 +423,16 @@ from 293,523 to 291,731 bytes (1,792 bytes) while improving median encode time
 by 6.727759% on corpus v1 and 2.986441% on corpus v2. Chunk counts and maximum
 frame payloads are unchanged.
 
+The unreleased bounded-delta router keeps exact analysis for small chunks and
+uses 15 deterministic, region-stratified windows for larger chunks, with
+conservative exact fallbacks when the sample is ambiguous or heterogeneous.
+Eleven alternating independent Windows processes per revision improve median
+encode time by 10.304818% on locked corpus v1 and 10.873414% on locked corpus
+v2. Route-sequence hashes, lane distributions, archive bytes, chunk counts,
+maximum frame payloads, and authenticated round trips remain unchanged on both
+corpora. These measurements are corpus-specific rather than a claim of
+universal route equivalence or compressor superiority.
+
 The v0.37 Gear chunker skips the subminimum prefix where a content boundary
 cannot legally occur. Eleven contemporaneous Windows runs per revision improve
 median encode time by 3.557517% on corpus v1 and 7.923612% on corpus v2. Chunk
@@ -445,6 +455,8 @@ its 275,859-byte result. MC21 and fixed-width MSR2 metadata remain readable.
 - file data is bounded by the configured chunk size, but the encrypted manifest
   still scales in memory with the number and length of archived paths;
 - links, junctions/reparse points, device nodes, sockets, and FIFOs are rejected;
+- input paths are revalidated when opened, but encoder traversal does not yet
+  hold every discovered source identity across the complete scan/encode window;
 - folder restoration refuses an existing destination instead of merging;
 - duplicate restoration uses a temporary disk-backed cache for canonical chunks
   referenced later in the archive;
