@@ -37,6 +37,7 @@ from mosaic_archive.resource_limits import (
     DEFAULT_MAX_OUTPUT_SIZE,
     validate_decode_limits,
 )
+from mosaic_archive.source_identity import SourceSession
 from mosaic_archive.stream_archive import (
     ENTRY_DIRECTORY,
     ENTRY_FILE,
@@ -44,7 +45,7 @@ from mosaic_archive.stream_archive import (
     KIND_FOLDER,
     ProgressCallback,
     ProgressEvent,
-    scan_input,
+    _scan_input,
 )
 from mosaic_archive.stream_format import (
     FRAME_DATA,
@@ -302,18 +303,15 @@ def parse_dedup_manifest(data: bytes, header: Msc3Header) -> DedupManifest:
                 raise ArchiveFormatError("MSC3 manifest omits a required parent directory")
     return DedupManifest(kind, root_name, tuple(entries), tuple(chunks))
 
-
-def _source_path(source: Path, manifest_kind: int, relative: str) -> Path:
-    return source if manifest_kind == KIND_FILE else source.joinpath(*relative.split("/"))
-
-
 def _scan_manifest(
     source: Path,
     config: ChunkingConfig,
     *,
     on_unique_chunk: Callable[[bytes], None] | None = None,
+    source_session: SourceSession | None = None,
 ) -> tuple[DedupManifest, list[int]]:
-    base = scan_input(source, config.max_size)
+    session = source_session or SourceSession(source)
+    base = _scan_input(session, config.max_size, hash_files=False)
     chunks: list[ChunkRecord] = []
     entries: list[DedupEntry] = []
     canonical: dict[tuple[bytes, int], int] = {}
@@ -334,11 +332,14 @@ def _scan_manifest(
             )
             continue
         first = len(chunks)
-        path = _source_path(source, base.kind, entry.relative_path)
+        relative = "" if session.root_is_file else entry.relative_path
+        path = session.path_for(relative)
         file_digest = hashlib.sha256()
-        with path.open("rb") as stream:
+        file_size = 0
+        with session.open_file(relative) as stream:
             for chunk in iter_content_defined_chunks(stream, config):
                 file_digest.update(chunk)
+                file_size += len(chunk)
                 digest = hashlib.sha256(chunk).digest()
                 key = (digest, len(chunk))
                 source_index = canonical.setdefault(key, len(chunks))
@@ -346,8 +347,9 @@ def _scan_manifest(
                     on_unique_chunk(chunk)
                 chunks.append(ChunkRecord(digest, len(chunk), source_index))
                 owners.append(file_index)
-        if file_digest.digest() != entry.digest:
+        if file_size != entry.size:
             raise OSError(f"input changed while content-defined chunks were scanned: {path}")
+        digest = file_digest.digest()
         entries.append(
             DedupEntry(
                 entry.entry_type,
@@ -357,7 +359,7 @@ def _scan_manifest(
                 entry.size,
                 first,
                 len(chunks) - first,
-                entry.digest,
+                digest,
             )
         )
     return DedupManifest(base.kind, base.root_name, tuple(entries), tuple(chunks)), owners
@@ -454,13 +456,25 @@ def encode_dedup_archive(
     source, destination = Path(input_path), Path(output_path)
     if source.resolve() == destination.resolve():
         raise ValueError("input and output paths must be different")
-    if source.is_dir() and destination.resolve().is_relative_to(source.resolve()):
+    source_is_directory = source.is_dir()
+    if source_is_directory and destination.resolve().is_relative_to(source.resolve()):
         raise ValueError("folder archives must be written outside the input tree")
     if not 256 <= padding_size <= 16 * 1024 * 1024 or not 14 <= kdf_log_n <= 18:
         raise ValueError("padding or scrypt cost is outside supported limits")
     if profile not in {"fast", "balanced", "research"}:
         raise ValueError(f"unknown compression profile: {profile}")
-    manifest, owners = _scan_manifest(source, config)
+    source_session = SourceSession(source)
+    if (
+        not source_is_directory
+        and not source_session.root_is_file
+        and destination.resolve().is_relative_to(source.resolve())
+    ):
+        raise ValueError("folder archives must be written outside the input tree")
+    manifest, owners = _scan_manifest(
+        source,
+        config,
+        source_session=source_session,
+    )
     unique = sum(chunk.source_index == index for index, chunk in enumerate(manifest.chunks))
     if unique + 1 > 16_777_216:
         raise ValueError("input produces too many unique MSC3 chunks")
@@ -516,9 +530,10 @@ def encode_dedup_archive(
             for entry in manifest.entries:
                 if entry.entry_type != ENTRY_FILE:
                     continue
-                path = _source_path(source, manifest.kind, entry.relative_path)
+                relative = "" if source_session.root_is_file else entry.relative_path
+                path = source_session.path_for(relative)
                 digest = hashlib.sha256()
-                with path.open("rb") as stream:
+                with source_session.open_file(relative) as stream:
                     for chunk in iter_content_defined_chunks(stream, config):
                         record = manifest.chunks[occurrence]
                         actual_digest = hashlib.sha256(chunk).digest()
@@ -574,6 +589,7 @@ def encode_dedup_archive(
             os.fsync(output.fileno())
         if occurrence != len(manifest.chunks) or frame_index != header.frame_count:
             raise RuntimeError("internal MSC3 occurrence/frame mismatch")
+        source_session.verify_bindings()
         os.replace(temporary_name, destination)
         temporary_name = None
     finally:

@@ -36,6 +36,7 @@ from mosaic_archive.resource_limits import (
     DEFAULT_MAX_OUTPUT_SIZE,
     validate_decode_limits,
 )
+from mosaic_archive.source_identity import SourceEntry, SourceSession
 from mosaic_archive.stream_format import (
     FRAME_DATA,
     FRAME_HEADER,
@@ -157,42 +158,33 @@ def _kind_name(kind: int) -> str:
     return "file" if kind == KIND_FILE else "folder"
 
 
-def _is_link_or_reparse(path: Path) -> bool:
-    metadata = path.stat(follow_symlinks=False)
-    attributes = getattr(metadata, "st_file_attributes", 0)
-    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
-    return stat.S_ISLNK(metadata.st_mode) or bool(attributes & reparse_flag)
-
-
-def _hash_file(path: Path) -> tuple[int, bytes, os.stat_result]:
-    before = path.stat(follow_symlinks=False)
+def _hash_file(session: SourceSession, relative_path: str) -> tuple[int, bytes]:
     digest = hashlib.sha256()
     size = 0
-    with path.open("rb") as stream:
+    with session.open_file(relative_path) as stream:
         while block := stream.read(1024 * 1024):
             digest.update(block)
             size += len(block)
-    after = path.stat(follow_symlinks=False)
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or size != after.st_size
-    ):
-        raise OSError(f"input changed while it was being scanned: {path}")
-    return size, digest.digest(), after
+    identity = session.identity_for(relative_path)
+    if size != identity.st_size:
+        raise OSError(
+            f"input changed while it was being scanned: {session.path_for(relative_path)}"
+        )
+    return size, digest.digest()
 
 
 def _entry_metadata(
+    session: SourceSession,
+    source_entry: SourceEntry,
     entry_type: int,
     relative_path: str,
-    path: Path,
     *,
     chunk_size: int,
     first_frame: int,
+    hash_file: bool,
 ) -> ManifestEntry:
-    if _is_link_or_reparse(path):
-        raise ValueError(f"symbolic links and reparse points are not supported: {path}")
-    metadata = path.stat(follow_symlinks=False)
+    metadata = source_entry.identity
+    path = session.path_for(source_entry.relative_path)
     mode = stat.S_IMODE(metadata.st_mode) & 0o777
     if entry_type == ENTRY_DIRECTORY:
         if not stat.S_ISDIR(metadata.st_mode):
@@ -209,13 +201,16 @@ def _entry_metadata(
         )
     if not stat.S_ISREG(metadata.st_mode):
         raise ValueError(f"special files are not supported: {path}")
-    size, digest, stable_metadata = _hash_file(path)
+    if hash_file:
+        size, digest = _hash_file(session, source_entry.relative_path)
+    else:
+        size, digest = metadata.st_size, ZERO_HASH
     frame_count = (size + chunk_size - 1) // chunk_size
     return ManifestEntry(
         entry_type,
         validate_relative_path(relative_path),
         mode,
-        stable_metadata.st_mtime_ns,
+        metadata.st_mtime_ns,
         size,
         first_frame,
         frame_count,
@@ -223,60 +218,46 @@ def _entry_metadata(
     )
 
 
-def scan_input(source: Path, chunk_size: int) -> Manifest:
-    if not source.exists():
-        raise FileNotFoundError(f"input path does not exist: {source}")
-    if _is_link_or_reparse(source):
-        raise ValueError("the archive root cannot be a symbolic link or reparse point")
+def _scan_input(
+    session: SourceSession,
+    chunk_size: int,
+    *,
+    hash_files: bool = True,
+) -> Manifest:
+    source = session.source
     root_name = validate_relative_path(source.name)
-    if source.is_file():
+    if session.root_is_file:
+        source_entry = session.entries[0]
         entry = _entry_metadata(
+            session,
+            source_entry,
             ENTRY_FILE,
             root_name,
-            source,
             chunk_size=chunk_size,
             first_frame=1,
+            hash_file=hash_files,
         )
         return Manifest(KIND_FILE, root_name, (entry,))
-    if not source.is_dir():
-        raise ValueError(f"input is neither a regular file nor a directory: {source}")
 
-    discovered: list[tuple[int, str, Path]] = []
-    for current_root, directory_names, file_names in os.walk(
-        source, topdown=True, followlinks=False
-    ):
-        current = Path(current_root)
-        directory_names.sort()
-        file_names.sort()
-        for name in directory_names:
-            path = current / name
-            relative = path.relative_to(source).as_posix()
-            if _is_link_or_reparse(path):
-                raise ValueError(
-                    f"symbolic links and reparse points are not supported: {path}"
-                )
-            discovered.append((ENTRY_DIRECTORY, relative, path))
-        for name in file_names:
-            path = current / name
-            relative = path.relative_to(source).as_posix()
-            discovered.append((ENTRY_FILE, relative, path))
-
-    discovered.sort(key=lambda item: (item[1].count("/"), item[1].casefold(), item[0]))
     entries: list[ManifestEntry] = []
     next_frame = 1
     casefolded_paths: set[str] = set()
-    for entry_type, relative, path in discovered:
+    for source_entry in session.entries:
+        entry_type = ENTRY_DIRECTORY if source_entry.is_directory else ENTRY_FILE
+        relative = source_entry.relative_path
         normalized = validate_relative_path(relative)
         collision_key = normalized.casefold()
         if collision_key in casefolded_paths:
             raise ValueError(f"portable path collision in input tree: {relative}")
         casefolded_paths.add(collision_key)
         entry = _entry_metadata(
+            session,
+            source_entry,
             entry_type,
             normalized,
-            path,
             chunk_size=chunk_size,
             first_frame=next_frame,
+            hash_file=hash_files,
         )
         entries.append(entry)
         if entry.entry_type == ENTRY_FILE:
@@ -284,6 +265,10 @@ def scan_input(source: Path, chunk_size: int) -> Manifest:
     if len(entries) > MAX_ENTRY_COUNT:
         raise ValueError("input tree has too many entries for MSC2")
     return Manifest(KIND_FOLDER, root_name, tuple(entries))
+
+
+def scan_input(source: Path, chunk_size: int) -> Manifest:
+    return _scan_input(SourceSession(source), chunk_size)
 
 
 def serialize_manifest(manifest: Manifest) -> bytes:
@@ -450,12 +435,6 @@ def _write_frame(
     return len(payload), len(padded), len(padded) - 8 - len(payload)
 
 
-def _source_for_entry(source: Path, manifest: Manifest, entry: ManifestEntry) -> Path:
-    if manifest.kind == KIND_FILE:
-        return source
-    return source.joinpath(*entry.relative_path.split("/"))
-
-
 def encode_stream_archive(
     input_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
@@ -482,10 +461,18 @@ def encode_stream_archive(
         raise ValueError("MSC2 supports only scrypt r=8 and p=1")
     if source.resolve() == destination.resolve():
         raise ValueError("input and output paths must be different")
-    if source.is_dir() and destination.resolve().is_relative_to(source.resolve()):
+    source_is_directory = source.is_dir()
+    if source_is_directory and destination.resolve().is_relative_to(source.resolve()):
+        raise ValueError("folder archives must be written outside the input tree")
+    source_session = SourceSession(source)
+    if (
+        not source_is_directory
+        and not source_session.root_is_file
+        and destination.resolve().is_relative_to(source.resolve())
+    ):
         raise ValueError("folder archives must be written outside the input tree")
 
-    manifest = scan_input(source, chunk_size)
+    manifest = _scan_input(source_session, chunk_size)
     data_frame_count = sum(
         entry.frame_count for entry in manifest.entries if entry.entry_type == ENTRY_FILE
     )
@@ -558,10 +545,11 @@ def encode_stream_archive(
             for entry_index, entry in enumerate(manifest.entries):
                 if entry.entry_type != ENTRY_FILE:
                     continue
-                path = _source_for_entry(source, manifest, entry)
+                relative_path = "" if manifest.kind == KIND_FILE else entry.relative_path
+                path = source_session.path_for(relative_path)
                 digest = hashlib.sha256()
                 bytes_read = 0
-                with path.open("rb") as file_stream:
+                with source_session.open_file(relative_path) as file_stream:
                     while block := file_stream.read(chunk_size):
                         digest.update(block)
                         bytes_read += len(block)
@@ -616,6 +604,7 @@ def encode_stream_archive(
                 raise RuntimeError("internal MSC2 frame-count mismatch")
             output.flush()
             os.fsync(output.fileno())
+        source_session.verify_bindings()
         os.replace(temporary_name, destination)
         temporary_name = None
     finally:

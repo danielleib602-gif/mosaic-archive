@@ -47,6 +47,7 @@ from mosaic_archive.resource_limits import (
     DEFAULT_MAX_OUTPUT_SIZE,
     validate_decode_limits,
 )
+from mosaic_archive.source_identity import SourceSession
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +149,7 @@ def _average_features(features: list[BlockFeatures]) -> dict[str, float]:
 
 
 def _build_inner_stream(
-    input_path: Path,
+    source_session: SourceSession,
     chunk_size: int,
 ) -> tuple[bytes, int, Counter[str], int, dict[str, float]]:
     records: list[_EncodedRecord] = []
@@ -159,7 +160,7 @@ def _build_inner_stream(
     duplicate_blocks = 0
     all_features: list[BlockFeatures] = []
 
-    with input_path.open("rb") as source:
+    with source_session.open_file("") as source:
         while block := source.read(chunk_size):
             original_size += len(block)
             digest.update(block)
@@ -174,7 +175,7 @@ def _build_inner_stream(
 
     if len(records) > MAX_BLOCK_COUNT:
         raise ValueError("input produces too many blocks for MSC1")
-    name_bytes = input_path.name.encode("utf-8")
+    name_bytes = source_session.source.name.encode("utf-8")
     if len(name_bytes) > 65_535:
         raise ValueError("input filename is too long for MSC1")
 
@@ -195,7 +196,11 @@ def _build_inner_stream(
     )
 
 
-def _write_atomic(destination: Path, data: bytes) -> None:
+def _write_atomic(
+    destination: Path,
+    data: bytes,
+    source_session: SourceSession,
+) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
     try:
@@ -210,6 +215,7 @@ def _write_atomic(destination: Path, data: bytes) -> None:
             temporary.write(data)
             temporary.flush()
             os.fsync(temporary.fileno())
+        source_session.verify_bindings()
         os.replace(temporary_name, destination)
         temporary_name = None
     finally:
@@ -236,11 +242,14 @@ def encode_file(
         raise FileNotFoundError(f"input file does not exist: {source}")
     if source.resolve() == destination.resolve():
         raise ValueError("input and output paths must be different")
+    source_session = SourceSession(source)
+    if not source_session.root_is_file:
+        raise FileNotFoundError(f"input file does not exist: {source}")
     normalize_password(password)
     _validate_encode_options(chunk_size, padding_size, kdf_log_n, kdf_r, kdf_p)
 
     inner, original_size, distribution, duplicates, features = _build_inner_stream(
-        source, chunk_size
+        source_session, chunk_size
     )
     padded = pad_payload(inner, padding_size)
     salt = os.urandom(SALT_LENGTH)
@@ -263,7 +272,7 @@ def encode_file(
     key = derive_key(password, salt, log_n=kdf_log_n, r=kdf_r, p=kdf_p)
     ciphertext = encrypt(key, nonce, padded, associated_data)
     archive_data = associated_data + ciphertext
-    _write_atomic(destination, archive_data)
+    _write_atomic(destination, archive_data, source_session)
 
     return EncodeStats(
         original_size=original_size,

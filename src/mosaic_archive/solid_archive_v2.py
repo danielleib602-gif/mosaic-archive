@@ -42,6 +42,7 @@ from mosaic_archive.solid_frames import (
     write_precompressed_solid_lane_frames,
 )
 from mosaic_archive.solid_research import choose_solid_lane
+from mosaic_archive.source_identity import SourceSession
 from mosaic_archive.stream_archive import (
     ENTRY_DIRECTORY,
     ENTRY_FILE,
@@ -328,7 +329,8 @@ def encode_solid_archive_v2(
     source, destination = Path(input_path), Path(output_path)
     if source.resolve() == destination.resolve():
         raise ValueError("input and output paths must be different")
-    if source.is_dir() and destination.resolve().is_relative_to(source.resolve()):
+    source_is_directory = source.is_dir()
+    if source_is_directory and destination.resolve().is_relative_to(source.resolve()):
         raise ValueError("folder archives must be written outside the input tree")
     if (
         not isinstance(frame_payload_size, int)
@@ -349,6 +351,13 @@ def encode_solid_archive_v2(
     ):
         raise ValueError("scrypt cost is outside supported limits")
 
+    source_session = SourceSession(source)
+    if (
+        not source_is_directory
+        and not source_session.root_is_file
+        and destination.resolve().is_relative_to(source.resolve())
+    ):
+        raise ValueError("folder archives must be written outside the input tree")
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
 
@@ -371,6 +380,7 @@ def encode_solid_archive_v2(
                 source,
                 config,
                 on_unique_chunk=spool_unique_chunk,
+                source_session=source_session,
             )
         finally:
             for stream in lane_streams:
@@ -497,6 +507,7 @@ def encode_solid_archive_v2(
                     index = stats.next_index
                 output.flush()
                 os.fsync(output.fileno())
+            source_session.verify_bindings()
             os.replace(temporary_name, destination)
             temporary_name = None
         finally:
