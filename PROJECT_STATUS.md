@@ -95,6 +95,17 @@ with encrypted 7-Zip, 336,723 bytes with compression-only 7-Zip, and 496,246
 bytes with zstd. Mosaic remains slower; these results are corpus-specific and
 do not establish universal superiority.
 
+The unreleased v0.40 scorecard in
+`.ecc/benchmarks/msc-v0.40-bounded-delta-routing.json` compares 11 alternating
+independent Windows processes per revision. Large-chunk delta routing now uses
+15 deterministic, region-stratified windows capped at 4,095 Python delta
+observations, with exact analysis retained through 8,192 observations and
+conservative exact fallbacks for ambiguous or heterogeneous samples. Median
+encode time improves by 10.304818% on corpus v1 and 10.873414% on corpus v2.
+The locked corpora retain identical route-sequence hashes, lane distributions,
+archive bytes, chunk counts, maximum frame payloads, and authenticated round
+trips. This is scoped evidence, not a universal route-equivalence claim.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -123,6 +134,10 @@ Seven are complete (77.777778%). The two remaining formal gates are an
 independent security review and the first independently verified attested
 binary release. The v0.33 maintainer review is documented in
 `docs/SECURITY_REVIEW_v0.33.md`; it does not claim independence.
+The percentage reports completed checklist gates, not a statistical estimate
+of security, quality, or total engineering completion. Residual work such as
+encoder source-identity race hardening and larger sustained soak coverage is
+tracked separately instead of being disguised inside that fixed denominator.
 The v0.34 handoff adds a deterministic exact-commit review bundle and rejects
 unstructured external evidence or a release commit that differs from the
 reviewed commit. The stable release preflight now also rejects filled templates,
@@ -157,9 +172,9 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout passes 260 unit/integration tests on Python 3.13.
-Full-package coverage is 4,094 of 4,533 statements and 1,163 of 1,480 branches
-(5,257 of 6,013 combined opportunities, 87.43%); no package module is omitted
+The current checkout passes 273 unit/integration tests on Python 3.13.
+Full-package coverage is 4,156 of 4,595 statements and 1,181 of 1,500 branches
+(5,337 of 6,095 combined opportunities, 87.56%); no package module is omitted
 from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
@@ -184,17 +199,22 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. freeze and publish a new exact-commit attested candidate after the current
+1. bind every MSC1-through-MSC6 and MSR1/MSR2 encoder read to the identity
+   discovered during traversal, rejecting concurrent parent/file replacement
+   rather than silently archiving a different source;
+2. extend sustained reliability coverage beyond the existing 256 MiB tier and
+   reconcile stable-large-file scope across local and hosted runs;
+3. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
    and the review handoff to that candidate rather than the older v0.39 commit;
-2. complete the independent security review and resolve or document its
+4. complete the independent security review and resolve or document its
    findings;
-3. decide whether a separate compression-only profile is worth the security
+5. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
-4. decide whether and how MSR2 should graduate from opt-in research format;
-5. add PyPI trusted publishing only if a Python-package release channel is
+6. decide whether and how MSR2 should graduate from opt-in research format;
+7. add PyPI trusted publishing only if a Python-package release channel is
    desired.
 
 The detailed milestone history and rollback rules remain in
