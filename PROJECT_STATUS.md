@@ -208,10 +208,11 @@ unsafe paths, invalid source identities, and resource-limit violations before
 publication.
 
 The deterministic reliability campaign executes 10,000 mutations across 14
-targets. A local 1,025 MiB high-entropy MSC6 soak crossed 1 GiB, produced a
-1,076,869,840-byte archive from 1,074,790,400 source bytes, and restored the
-exact source SHA-256; exact-commit evidence is in
-`.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. The v0.39 PR and `main`
+targets. A local 1,025 MiB high-entropy MSC6 soak crossed 1 GiB and restored
+exactly. The protected-main 2,049 MiB hosted tier crossed signed 32-bit offsets,
+produced a 2,152,567,212-byte archive from 2,148,532,224 source bytes, and
+restored exactly; durable evidence for both runs is committed under
+`.ecc/benchmarks/`. The v0.39 PR and `main`
 checks passed across Python 3.11 and 3.13 on
 Linux and Windows, Python 3.13 on macOS, all three native-binary smoke builds,
 the quality/security job, deterministic review-bundle generation, and the
@@ -228,19 +229,17 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. complete and retain the hosted 2,049 MiB signed-offset-boundary soak
-   artifact; the local 1,025 MiB tier already restores exactly;
-2. freeze and publish a new exact-commit attested candidate after the current
+1. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
    and the review handoff to that candidate rather than the older v0.39 commit;
-3. complete the independent security review and resolve or document its
+2. complete the independent security review and resolve or document its
    findings;
-4. decide whether a separate compression-only profile is worth the security
+3. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
-5. decide whether and how MSR2 should graduate from opt-in research format;
-6. add PyPI trusted publishing only if a Python-package release channel is
+4. decide whether and how MSR2 should graduate from opt-in research format;
+5. add PyPI trusted publishing only if a Python-package release channel is
    desired.
 
 The detailed milestone history and rollback rules remain in

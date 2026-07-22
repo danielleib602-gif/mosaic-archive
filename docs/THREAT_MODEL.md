@@ -61,9 +61,9 @@ encrypted manifest is still held in memory and is capped at 256 MiB; entry,
 frame, chunk, padding, and KDF parameters also have explicit limits. A
 60-minute sustained-reliability job runs 10,000 deterministic mutations plus a
 256 MiB pull-request soak, a weekly 1,025 MiB tier crossing 1 GiB, or a monthly
-2,049 MiB tier crossing signed 32-bit offsets. The local 1,025 MiB tier restores
-exactly; the hosted 2,049 MiB artifact and independent review remain required
-before a stable large-file release. Atheris additionally runs bounded
+2,049 MiB tier crossing signed 32-bit offsets. Both the local 1,025 MiB tier and
+the protected-main hosted 2,049 MiB tier restore exactly; independent review
+remains required before a stable large-file release. Atheris additionally runs bounded
 coverage-guided campaigns from valid seeds for outer headers, frame headers,
 encrypted-manifest parsers, and all compression modes.
 Decode and inspect callers can lower the shared 1 TiB restored-output

@@ -13,6 +13,49 @@ from mosaic_archive.reliability import run_large_file_soak, run_parser_fuzz
 
 
 class ReliabilityHarnessTests(unittest.TestCase):
+    def test_committed_2049_mib_hosted_soak_crosses_signed_offsets(self) -> None:
+        evidence = json.loads(
+            Path(".ecc/benchmarks/msc-v0.40-2049mib-soak-ubuntu.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        result = evidence["result"]
+
+        self.assertEqual(
+            evidence["tested_commit"],
+            "cc03280b8abbcd128bf861114eb0cce670feb4f9",
+        )
+        self.assertEqual(evidence["configuration"]["size_mib"], 2049)
+        self.assertEqual(result["size_bytes"], 2049 * 1024 * 1024)
+        self.assertGreater(result["size_bytes"], 2**31)
+        self.assertGreater(result["archive_size"], 2**31)
+        self.assertGreater(result["peak_payload_bytes"], 2**32)
+        self.assertEqual(
+            result["archive_overhead_bytes"],
+            result["archive_size"] - result["size_bytes"],
+        )
+        self.assertEqual(
+            result["peak_payload_bytes"],
+            result["archive_size"] + result["size_bytes"],
+        )
+        self.assertGreaterEqual(
+            result["logical_chunk_count"],
+            result["unique_chunk_count"],
+        )
+        self.assertEqual(result["seed"], evidence["configuration"]["seed"])
+        self.assertEqual(result["source_sha256"], result["restored_sha256"])
+        self.assertTrue(result["hash_verified"])
+        self.assertTrue(result["source_released_before_decode"])
+        self.assertTrue(evidence["scope"]["crosses_1_gib"])
+        self.assertTrue(evidence["scope"]["crosses_signed_32_bit_offset"])
+        self.assertTrue(evidence["scope"]["hosted_runner"])
+        self.assertEqual(evidence["environment"]["workflow_run_id"], 29917626770)
+        self.assertEqual(evidence["artifact"]["artifact_id"], 8529159835)
+        self.assertEqual(
+            evidence["artifact"]["summary_sha256"],
+            "8ce7bd09e6a4e6bb27d9f1a3bdfec9f37c4534295a168f9f486e8cf5d2dcd3bf",
+        )
+
     def test_committed_1025_mib_soak_evidence_is_exact_and_scoped(self) -> None:
         evidence = json.loads(
             Path(".ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json").read_text(
