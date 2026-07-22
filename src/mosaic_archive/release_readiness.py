@@ -469,7 +469,7 @@ def evaluate_release_readiness(
     release_commit: str | None = None,
     review_bundle: Path | None = None,
 ) -> ReleaseReadiness:
-    """Evaluate the nine committed MSC 1.0 roadmap gates under ``root``."""
+    """Evaluate the ten committed MSC 1.0 roadmap gates under ``root``."""
     root = root.resolve()
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     package_version = str(project["project"]["version"])
@@ -495,7 +495,7 @@ def evaluate_release_readiness(
             "frozen_format_and_compatibility_policy",
             _contains(
                 root / "docs/COMPATIBILITY.md",
-                "MSC6 writer format is frozen",
+                "MSC6 writer format and decoder semantics are frozen",
                 "MSC1 through MSC6",
             ),
             "docs/COMPATIBILITY.md",
@@ -571,6 +571,12 @@ def evaluate_release_readiness(
                 review_bundle_verified,
             ),
             str(review_state.get("evidence", "external evidence required")),
+            True,
+        ),
+        ReadinessGate(
+            "competitive_single_profile_dominance",
+            False,
+            "schema-v4 competitive evidence required",
             True,
         ),
         ReadinessGate(

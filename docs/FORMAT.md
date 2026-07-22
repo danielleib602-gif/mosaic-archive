@@ -1,7 +1,9 @@
 # MSC format specification
 
-Status: frozen for MSC 1.0, package version 0.39. Integer fields are unsigned and big-endian
-unless stated otherwise.
+Status: the MSC1-through-MSC6 formats and their decoder compatibility are
+frozen for MSC 1.0, package version 0.39. The additive MSC7 candidate is not
+yet specified or frozen. Integer fields are unsigned and big-endian unless
+stated otherwise.
 All offsets below are decimal. Implementations must reject truncated fields,
 unknown required identifiers, impossible sizes, trailing manifest bytes, and
 decoded blocks that do not match their declared sizes.

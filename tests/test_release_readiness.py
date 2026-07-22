@@ -8,11 +8,31 @@ import subprocess
 import tempfile
 import unittest
 from collections.abc import Iterator
-from contextlib import contextmanager, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from mosaic_archive.cli import main
 from mosaic_archive.release_readiness import evaluate_release_readiness
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_READINESS_INPUTS = (
+    Path("pyproject.toml"),
+    Path("docs/COMPATIBILITY.md"),
+    Path("docs/1.0-external-gates.json"),
+    Path(".github/workflows/reliability.yml"),
+    Path(".github/workflows/coverage-fuzz.yml"),
+    Path(".github/workflows/benchmark.yml"),
+    Path("tests/fixtures/compat/manifest.json"),
+    Path("benchmarks/v0.12.0/report.json"),
+    Path(".ecc/benchmarks/msc-v0.32-gear-cdc.json"),
+)
+
+
+def _copy_readiness_fixture(root: Path) -> None:
+    for relative_path in _READINESS_INPUTS:
+        destination = root / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(_REPOSITORY_ROOT / relative_path, destination)
 
 
 def _git(root: Path, *arguments: str) -> str:
@@ -30,21 +50,7 @@ def _git(root: Path, *arguments: str) -> str:
 def _release_repository() -> Iterator[Path]:
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary) / "repository"
-        shutil.copytree(
-            ".",
-            root,
-            ignore=shutil.ignore_patterns(
-                ".git",
-                ".venv",
-                ".mypy_cache",
-                ".ruff_cache",
-                "__pycache__",
-                "build",
-                "dist",
-                "htmlcov",
-                ".coverage*",
-            ),
-        )
+        _copy_readiness_fixture(root)
         project_path = root / "pyproject.toml"
         project_path.write_text(
             project_path.read_text(encoding="utf-8").replace(
@@ -117,20 +123,43 @@ def _candidate_tag(root: Path, commit: str, version: str = "1.0.0") -> str:
 
 
 class ReleaseReadinessTests(unittest.TestCase):
-    def test_current_repository_is_seven_of_nine_gates_complete(self) -> None:
+    def test_fixture_copies_only_release_readiness_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repository"
+
+            _copy_readiness_fixture(root)
+
+            copied_files = {
+                path.relative_to(root) for path in root.rglob("*") if path.is_file()
+            }
+            self.assertEqual(copied_files, set(_READINESS_INPUTS))
+
+    def test_current_repository_is_seven_of_ten_gates_complete(self) -> None:
         report = evaluate_release_readiness(Path("."))
 
         self.assertEqual(report.package_version, "0.39.0")
         self.assertEqual(report.completed_gates, 7)
-        self.assertEqual(report.total_gates, 9)
+        self.assertEqual(report.total_gates, 10)
         self.assertEqual(report.automatic_completed_gates, 7)
         self.assertEqual(report.automatic_total_gates, 7)
         self.assertTrue(report.automatic_ready)
-        self.assertAlmostEqual(report.completion_percent, 77.777778, places=6)
+        self.assertEqual(report.completion_percent, 70.0)
         self.assertFalse(report.ready_for_1_0)
         self.assertEqual(
             {gate.name for gate in report.gates if not gate.complete},
-            {"independent_security_review", "first_attested_binary_release"},
+            {
+                "independent_security_review",
+                "competitive_single_profile_dominance",
+                "first_attested_binary_release",
+            },
+        )
+        gate_names = [gate.name for gate in report.gates]
+        self.assertEqual(
+            gate_names[-2:],
+            [
+                "competitive_single_profile_dominance",
+                "first_attested_binary_release",
+            ],
         )
         self.assertTrue(
             all(gate.evidence for gate in report.gates if gate.complete)
@@ -139,19 +168,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_soak_gate_requires_the_extended_signed_offset_tier(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
-            shutil.copytree(
-                ".",
-                root,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    ".venv",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                    "__pycache__",
-                    "build",
-                    "dist",
-                ),
-            )
+            _copy_readiness_fixture(root)
             workflow_path = root / ".github/workflows/reliability.yml"
             workflow = workflow_path.read_text(encoding="utf-8")
             workflow_path.write_text(
@@ -172,19 +189,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_soak_gate_ignores_commented_markers_and_disabled_steps(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
-            shutil.copytree(
-                ".",
-                root,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    ".venv",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                    "__pycache__",
-                    "build",
-                    "dist",
-                ),
-            )
+            _copy_readiness_fixture(root)
             workflow_path = root / ".github/workflows/reliability.yml"
             workflow = workflow_path.read_text(encoding="utf-8")
             workflow_path.write_text(
@@ -258,19 +263,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         for old, new in mutations:
             with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary) / "repository"
-                shutil.copytree(
-                    ".",
-                    root,
-                    ignore=shutil.ignore_patterns(
-                        ".git",
-                        ".venv",
-                        ".mypy_cache",
-                        ".ruff_cache",
-                        "__pycache__",
-                        "build",
-                        "dist",
-                    ),
-                )
+                _copy_readiness_fixture(root)
                 workflow_path = root / ".github/workflows/reliability.yml"
                 workflow = workflow_path.read_text(encoding="utf-8")
                 self.assertIn(old, workflow)
@@ -292,19 +285,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_soak_gate_requires_the_canonical_pull_request_trigger(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
-            shutil.copytree(
-                ".",
-                root,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    ".venv",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                    "__pycache__",
-                    "build",
-                    "dist",
-                ),
-            )
+            _copy_readiness_fixture(root)
             workflow_path = root / ".github/workflows/reliability.yml"
             workflow = workflow_path.read_text(encoding="utf-8")
             workflow_path.write_text(
@@ -325,46 +306,33 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_external_gates_reject_unsubstantiated_boolean_flips(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
-            shutil.copytree(
-                ".",
-                root,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    ".venv",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                    "__pycache__",
-                    "build",
-                    "dist",
-                ),
-            )
+            _copy_readiness_fixture(root)
             gates_path = root / "docs/1.0-external-gates.json"
             payload = json.loads(gates_path.read_text(encoding="utf-8"))
             for gate in payload["gates"].values():
                 gate["complete"] = True
+            payload["gates"]["competitive_single_profile_dominance"] = {
+                "complete": True,
+                "evidence": "https://example.invalid/competitive-report",
+            }
             gates_path.write_text(json.dumps(payload), encoding="utf-8")
 
             report = evaluate_release_readiness(root)
+            competitive_gate = next(
+                gate
+                for gate in report.gates
+                if gate.name == "competitive_single_profile_dominance"
+            )
 
             self.assertEqual(report.completed_gates, 7)
+            self.assertFalse(competitive_gate.complete)
+            self.assertTrue(competitive_gate.external)
             self.assertFalse(report.ready_for_1_0)
 
     def test_structured_external_evidence_without_tag_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repository"
-            shutil.copytree(
-                ".",
-                root,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    ".venv",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                    "__pycache__",
-                    "build",
-                    "dist",
-                ),
-            )
+            _copy_readiness_fixture(root)
             commit = "a" * 40
             payload = {
                 "schema_version": 2,
@@ -397,7 +365,8 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(report.completed_gates, 7)
             self.assertFalse(report.ready_for_1_0)
             stdout = io.StringIO()
-            with redirect_stdout(stdout):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), redirect_stdout(stdout):
                 return_code = main(
                     [
                         "readiness",
@@ -410,7 +379,7 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(return_code, 2)
             self.assertEqual(stdout.getvalue(), "")
 
-    def test_annotated_stable_tag_binds_evidence_to_checkout(self) -> None:
+    def test_schema_v3_tag_reaches_nine_of_ten_but_never_ready(self) -> None:
         with _release_repository() as root:
             commit = _git(root, "rev-parse", "HEAD")
             tag = "v1.0.0"
@@ -432,10 +401,12 @@ class ReleaseReadinessTests(unittest.TestCase):
             )
 
             self.assertEqual(report.completed_gates, 9)
+            self.assertEqual(report.total_gates, 10)
             self.assertTrue(report.release_binding_verified)
-            self.assertTrue(report.ready_for_1_0)
+            self.assertFalse(report.ready_for_1_0)
             stdout = io.StringIO()
-            with redirect_stdout(stdout):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), redirect_stdout(stdout):
                 return_code = main(
                     [
                         "readiness",
@@ -451,8 +422,9 @@ class ReleaseReadinessTests(unittest.TestCase):
                         "--json",
                     ]
                 )
-            self.assertEqual(return_code, 0)
-            self.assertTrue(json.loads(stdout.getvalue())["release_binding_verified"])
+            self.assertEqual(return_code, 2)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("MSC 1.0 release gates are incomplete", stderr.getvalue())
 
     def test_lightweight_tag_cannot_bind_external_evidence(self) -> None:
         with _release_repository() as root:
@@ -581,7 +553,8 @@ class ReleaseReadinessTests(unittest.TestCase):
             )
 
             self.assertTrue(matching.review_bundle_verified)
-            self.assertTrue(matching.ready_for_1_0)
+            self.assertEqual(matching.completed_gates, 9)
+            self.assertFalse(matching.ready_for_1_0)
             self.assertFalse(mismatching.review_bundle_verified)
             self.assertEqual(mismatching.completed_gates, 8)
             self.assertFalse(mismatching.ready_for_1_0)

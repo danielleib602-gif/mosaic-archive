@@ -34,9 +34,25 @@ class CliTests(unittest.TestCase):
         report = json.loads(completed.stdout)
         self.assertEqual(report["operation"], "readiness")
         self.assertEqual(report["completed_gates"], 7)
-        self.assertEqual(report["total_gates"], 9)
+        self.assertEqual(report["total_gates"], 10)
+        self.assertEqual(report["completion_percent"], 70.0)
+        self.assertEqual(report["automatic_completed_gates"], 7)
+        self.assertEqual(report["automatic_total_gates"], 7)
         self.assertTrue(report["automatic_ready"])
         self.assertFalse(report["ready_for_1_0"])
+        self.assertFalse(
+            next(
+                gate
+                for gate in report["gates"]
+                if gate["name"] == "competitive_single_profile_dominance"
+            )["complete"]
+        )
+
+    def test_readiness_help_reports_ten_committed_gates(self) -> None:
+        completed = self.run_cli("--help")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("ten committed MSC 1.0 release gates", completed.stdout)
 
     def test_require_ready_fails_while_external_gates_are_incomplete(self) -> None:
         completed = self.run_cli("readiness", "--require-ready", "--json")

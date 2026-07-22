@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "plan_id": "mosaic-competitive-corpus-plan-v1",
+  "binding": false,
+  "minimum_prepared_bytes": 67108864,
+  "binding_manifest_path": "corpora.lock.json",
+  "approval_requirements": [
+    "immutable HTTPS source URL or content-addressed mirror",
+    "source byte length and SHA-256 verified from downloaded bytes",
+    "license and required attribution captured with immutable evidence",
+    "redistribution and benchmark use approved explicitly",
+    "multi-artifact inputs use one content-addressed aggregate bundle and a per-member source and license manifest",
+    "deterministic preparation recipe and prepared-payload SHA-256",
+    "prepared payload contains at least 67108864 bytes"
+  ],
+  "corpora": [
+    {
+      "id": "silesia-mixed",
+      "category": "mixed public compression corpus",
+      "status": "blocked",
+      "blockers": [
+        "verify an explicit license grant for every bundled component",
+        "pin source and prepared-payload byte lengths and SHA-256 digests"
+      ]
+    },
+    {
+      "id": "enwik8-text",
+      "category": "100 MB Wikipedia XML text",
+      "status": "blocked",
+      "blockers": [
+        "capture the applicable Wikimedia content license and attribution",
+        "pin the downloaded and prepared payload SHA-256 digests"
+      ]
+    },
+    {
+      "id": "linux-v6.12-v6.13-source-tree",
+      "category": "related real source trees and version deduplication",
+      "status": "blocked",
+      "blockers": [
+        "pin both kernel.org release artifacts and their verified SHA-256 digests",
+        "freeze canonical extraction and tree-archive normalization"
+      ]
+    },
+    {
+      "id": "gharchive-utc-hour-json",
+      "category": "structured event JSON",
+      "status": "blocked",
+      "blockers": [
+        "select one immutable UTC-hour object of sufficient prepared size",
+        "resolve benchmark and redistribution permission for embedded event content",
+        "pin source and decompressed SHA-256 digests"
+      ]
+    },
+    {
+      "id": "geonames-allcountries",
+      "category": "tabular and geospatial text",
+      "status": "blocked",
+      "blockers": [
+        "replace the mutable live download with an immutable dated snapshot",
+        "capture CC BY 4.0 attribution and pin source/prepared SHA-256 digests"
+      ]
+    },
+    {
+      "id": "wikimedia-precompressed-media",
+      "category": "precompressed and incompressible media",
+      "status": "blocked",
+      "blockers": [
+        "select a deterministic bundle of files totaling at least 64 MiB",
+        "verify and record the author and license for every selected file",
+        "pin each source plus the canonical bundle byte length and SHA-256"
+      ]
+    }
+  ]
+}

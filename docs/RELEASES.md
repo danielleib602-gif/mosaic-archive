@@ -72,7 +72,10 @@ build and publish it. The workflow requires all seven repository-verifiable
 gates.
 
 A stable `v1.0.0` release uses a two-stage candidate seal so evidence gathered
-after review cannot silently change the reviewed source:
+after review cannot silently change the reviewed source. The current schema-v3
+implementation can build the candidate and bind review/release evidence, but
+it intentionally cannot complete the tenth competitive gate. Stable tagging
+must wait for schema v4 to bind and recompute the exact candidate scorecard:
 
 1. Freeze the final package version, source, dependency lock, build workflow,
    and documentation on protected `main`. Call that exact commit `C`. Any later
@@ -87,7 +90,9 @@ after review cannot silently change the reviewed source:
    and all of its transitive build dependencies are resolved from `uv.lock`;
    any pre-existing candidate tag must already peel to `C`.
 3. Have the independent reviewer inspect `C` and its source bundle. Separately
-   verify the candidate checksums and attestations. Record durable HTTPS URLs,
+   verify the candidate checksums and attestations. Run Competitive Contract v1
+   on the exact attested native candidate and retain its raw scorecard and
+   runner/tool/corpus provenance. Record durable HTTPS URLs,
    reviewer/verifier identities, dates, the review-bundle SHA-256, the exact
    candidate tag, and the same full 40-character `C` in a copy of
    `docs/1.0-external-gates.json` kept outside the working tree. Fetch the
@@ -101,19 +106,16 @@ after review cannot silently change the reviewed source:
    gh release download "$CANDIDATE_TAG" \
      --pattern "mosaic-review-${C}.zip" --dir ..
    ```
-4. Set that copy's `release_tag` to `v1.0.0`, its `release_commit` to `C`, and
-   both gate commit fields to `C`. Create an annotated tag whose complete
-   message is the schema-v3 JSON:
+4. Schema v4 must set `release_tag` to `v1.0.0`, `release_commit` to `C`, bind
+   all three external gates to `C`, and bind the scorecard, contract, corpus
+   manifest, native asset, workflow, and hardware fingerprints. Schema v3 is
+   insufficient and the current `--require-ready` command therefore fails
+   closed; do not create or push the stable tag until schema v4 is implemented
+   and independently verified.
 
-   ```console
-   git fetch --force --tags origin
-   C=$(git rev-parse origin/main)
-   test "$(git rev-parse HEAD)" = "$C"
-   git tag --annotate v1.0.0 "$C" --file ../v1.0.0-evidence.json
-   uv run msc readiness --release-tag v1.0.0 --release-commit "$C" \
-     --review-bundle "../mosaic-review-${C}.zip" --require-ready --json
-   git push origin v1.0.0
-   ```
+   Automated tests retain the historical schema-v3 command shape for the two
+   older evidence bindings, but it exits with status 2 under `--require-ready`.
+   There is intentionally no stable-tag command to run until schema v4 lands.
 
 5. The stable-tag preflight peels the annotated tag and fails unless the tag
    name matches the package version and the evidence commit, reviewed commit,
@@ -147,20 +149,22 @@ artifact digests, and reviewed bundle bytes. It cannot authenticate the humans
 named in `reviewer` or `verified_by`, establish their independence, or judge the
 linked report. Until reviewer-signed evidence is pinned to a separately verified
 identity, the maintainer must verify authorship, independence, and disposition
-out of band. A 9/9 machine result proves evidence-to-source binding; by itself it
-does not prove that an independent review occurred.
+out of band. A future 10/10 machine result proves evidence-to-source binding;
+by itself it does not prove that an independent review occurred. Schema-v3
+evidence tops out at 9/10 and is not release-ready.
 
 Before tagging a pre-1.0 build, run
 `msc readiness --require-automatic --json`. The committed
-`docs/1.0-external-gates.json` remains an incomplete template; filling or
-committing it alone cannot make the repository report 9/9. Stable evidence must
-be carried by the annotated tag that points to the exact reviewed candidate.
+`docs/1.0-external-gates.json` remains an incomplete schema-v3 template;
+filling or committing it alone cannot make the repository release-ready.
+Future schema-v4 evidence must be carried by the annotated tag that points to
+the exact reviewed and competitively measured candidate.
 
 The release workflow performs full remote candidate inventory, checksum,
 manifest-provenance, artifact-provenance, and evidence checks before starting
 the native build matrix, then repeats the source, tag, bundle, and candidate
 bindings and promotes the verified candidate bytes immediately before
 publication. Branch, pull-request, candidate, and `v0.*` builds require all
-seven automatic gates. Any later stable `v*` tag requires all nine gates and the
+seven automatic gates. Any later stable `v*` tag requires all ten gates and the
 candidate seal, so a manual dispatch, filled template, fake commit, or direct
 lightweight tag cannot publish a stable release.

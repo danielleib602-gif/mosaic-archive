@@ -16,6 +16,11 @@ compressor finds a cheaper description of repeated or predictable bytes.
 
 The exact publication state, evidence, limitations, and active development
 focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+The scoped 1.0 performance target is preregistered in
+[Competitive Contract v1](docs/COMPETITIVE_CONTRACT_V1.md), and the additive
+format/compatibility direction is recorded in
+[the MSC7 decision](docs/MSC7_DECISION.md). Neither document claims that the
+current Python implementation already meets that target.
 
 ## What v0.39 does
 
@@ -131,14 +136,18 @@ uv run msc compatibility --json
 uv run msc readiness --json
 ```
 
-The ordinary readiness report remains 7/9 by design until an independently
-reviewed, attested final candidate exists. Stable release automation
-additionally passes
-`--release-tag`, `--release-commit`, and `--review-bundle`; only a schema-v3
-annotated tag targeting that exact checked-out candidate, with matching bundle
-bytes and an immutable attested candidate release, can satisfy the two external
-gates. Stable publication promotes those exact verified candidate payload
-bytes; its fresh cross-platform rebuilds are smoke checks, not replacements.
+The ordinary readiness report is 7/10 by design. Seven repository-verifiable
+gates are complete; independent review, Competitive Contract v1 dominance,
+and the first independently verified attested release remain external. The new
+tenth gate changes the checklist denominator from nine to ten; 70% is not a
+quality regression or a statistical estimate of engineering completion.
+
+Schema-v3 annotated-tag evidence can bind the reviewed source and immutable
+attested candidate, but it cannot complete the competitive gate or authorize a
+stable 1.0 release. A future schema-v4 flow must additionally bind an exact
+native binary, locked corpus manifest, raw scorecard, benchmark environment,
+and recomputed passing verdict. Until then, `--require-ready` intentionally
+fails while the seven-gate pre-1.0 release policy remains available.
 
 Exact-commit local evidence for the 1,025 MiB tier is committed at
 `.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. Exact protected-main
@@ -390,10 +399,11 @@ The v0.33 release-hardening pass applies one caller-overridable decode resource
 policy to MSC1 through MSC6 and MSR2. It caps restored bytes and frame/block
 counts before destination creation, bounds whole-buffer legacy MSC1 archives
 before ciphertext allocation, removes an unbounded MSR2 metadata-decompressor
-flush, and prevents MSC1 inspection from retaining restored bytes. The new
-`msc readiness --json` command evaluates all nine committed 1.0 roadmap gates;
-seven are complete, while independent review and the first attested release
-remain.
+flush, and prevents MSC1 inspection from retaining restored bytes. The v0.33
+`msc readiness --json` command introduced nine committed 1.0 roadmap gates.
+Competitive Contract v1 now adds a tenth external gate; seven are complete,
+while independent review, single-profile competitive dominance, and the first
+attested release remain.
 
 The v0.34 review-evidence pass builds a byte-reproducible source ZIP from an
 exact Git commit, verifies every tracked payload against its embedded manifest,

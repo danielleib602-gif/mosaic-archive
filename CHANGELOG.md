@@ -15,13 +15,15 @@ is preserved.
   replacement, additions, removals, and link/reparse-point substitution
   observable at a binding check are rejected with temporary-output cleanup.
 - Stable `v1.*` and later release tags now fail before binary construction
-  unless all nine automatic and external 1.0 readiness gates are complete.
+  unless all ten automatic and external 1.0 readiness gates are complete. The
+  competitive gate remains deliberately false until schema-v4 evidence binds
+  a passing raw scorecard to the exact native candidate.
 - The readiness CLI exposes a fail-closed `--require-ready` policy for release
   automation while preserving the seven-gate pre-1.0 policy.
-- Stable evidence is sealed into a schema-v3 annotated tag and must bind the
-  reviewed commit, attested candidate, tag target, workflow SHA, and checkout
-  before native builds start; fake, lightweight, malformed, oversized, moved,
-  or version-mismatched tags are rejected.
+- Schema-v3 annotated-tag evidence can bind the two older external gates to the
+  reviewed commit, attested candidate, tag target, workflow SHA, and checkout,
+  but cannot authorize a stable release. Fake, lightweight, malformed,
+  oversized, moved, or version-mismatched tags are rejected.
 - Stable preflight verifies the immutable candidate release's exact assets,
   checksums, workflow/source-pinned attestations, candidate tag target, and
   review-bundle digest, then repeats source and bundle checks before publishing.
@@ -69,6 +71,22 @@ is preserved.
   MSC6-fast round trip that crosses signed 32-bit offsets and restores the
   source SHA-256 exactly. The record binds the workflow run, expiring artifact,
   durable summary digest, phase timings, chunk counts, and payload peak.
+- Preregistered Competitive Contract v1, including binding/diagnostic tools,
+  exact 1-thread and 8-thread lanes, raw sample retention, fresh-cgroup-v2
+  memory peaks, portable deterministic bootstrap rules, and the
+  incompressible-overhead exception.
+- Added provisional Linux process diagnostics and an atomic POSIX corpus-lock
+  verifier. Diagnostic process results are explicitly ineligible for binding
+  evidence until an authoritative runner enforces cgroup/PID containment and
+  the frozen resource policy.
+- Canonicalized harness-owned POSIX temporary roots so macOS exercises the
+  intended corpus-lock checks despite its `/var` alias, while retaining a
+  regression that rejects caller-controlled symlink parents.
+- Accepted additive MSC7 as the conditional 1.0 default-format direction while
+  preserving explicit MSC6 writing and every MSC1-through-MSC6 decoder.
+- Added a fail-closed corpus lock plan that records unresolved immutable-source,
+  hash, license, and attribution work instead of treating public downloads as
+  approved benchmark data.
 - Added exact-commit Windows evidence for a deterministic 1,025 MiB MSC6-fast
   round trip, including phase timings, chunk counts, peak payload bytes, source
   release, archive overhead, and matching restored SHA-256.

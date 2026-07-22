@@ -1,0 +1,101 @@
+{
+  "bootstrap": {
+    "case_id_derivation": "sha256_case_identity_v1",
+    "confidence_level": 0.95,
+    "counter_encoding": "u64be_start_zero",
+    "identity_encoding": "utf8_u32be_length_prefixed_fields_v1",
+    "index_sampling": "u64be_rejection_modulo",
+    "pass_rule": "every_binding_comparator_upper_bound_lt_1",
+    "percentile_interpolation": "type_7",
+    "resamples": 10000,
+    "statistic": "paired_median_ratio",
+    "stream_algorithm": "sha256_counter_v1"
+  },
+  "candidate": {
+    "archive_format": "MSC7",
+    "configuration_id": "msc7-default-v1",
+    "profile": "adaptive-v1"
+  },
+  "comparators": {
+    "binding_tools": [
+      "7zip_raw",
+      "7zip_aes256_headers",
+      "zstd_raw",
+      "zstd_age_passphrase"
+    ],
+    "diagnostic_tools": [
+      "gzip",
+      "zip",
+      "xz",
+      "brotli",
+      "lz4"
+    ],
+    "performance_pass_scope": "all_binding_tools"
+  },
+  "contract_id": "mosaic-competitive-contract-v1",
+  "contract_digest_algorithm": "sha256_canonical_json_v1",
+  "corpus": {
+    "minimum_input_bytes": 67108864
+  },
+  "execution": {
+    "alternating_candidate_comparator_order": true,
+    "containment": "pre_exec_fresh_cgroup_v2_and_pid_namespace",
+    "cpu_tier_enforcement": "exact_cpuset_and_tool_threads",
+    "even_run_order": [
+      "candidate",
+      "7zip_raw",
+      "7zip_aes256_headers",
+      "zstd_raw",
+      "zstd_age_passphrase"
+    ],
+    "fresh_process_per_run": true,
+    "measured_runs": 11,
+    "memory_peak_source": "cgroup_v2_memory_peak_after_populated_zero",
+    "page_cache_policy": "input_prewarmed_outside_measured_cgroup_output_cache_included_v1",
+    "odd_run_order": [
+      "zstd_age_passphrase",
+      "zstd_raw",
+      "7zip_aes256_headers",
+      "7zip_raw",
+      "candidate"
+    ],
+    "pairing_rule": "shared_candidate_index_to_each_comparator_same_index",
+    "run_index_origin": "zero_based",
+    "swap_peak_scope": "excluded",
+    "threads": [
+      1,
+      8
+    ],
+    "warmup_order": [
+      "candidate",
+      "7zip_raw",
+      "7zip_aes256_headers",
+      "zstd_raw",
+      "zstd_age_passphrase"
+    ],
+    "warmup_runs": 1
+  },
+  "metrics": [
+    "encode_wall_seconds",
+    "decode_wall_seconds",
+    "encode_cgroup_v2_memory_peak_bytes",
+    "decode_cgroup_v2_memory_peak_bytes"
+  ],
+  "metric_sample_domains": {
+    "decode_cgroup_v2_memory_peak_bytes": "positive_signed_64_bit_integer",
+    "decode_wall_seconds": "positive_finite_number",
+    "encode_cgroup_v2_memory_peak_bytes": "positive_signed_64_bit_integer",
+    "encode_wall_seconds": "positive_finite_number"
+  },
+  "schema_version": 1,
+  "size": {
+    "allowance_divisor": 2000,
+    "allowance_minimum_bytes": 4096,
+    "compressible_pass_rule": "candidate_lt_smallest_comparator",
+    "deterministic_size_statistic": "archive_bytes",
+    "encrypted_distribution_samples": 11,
+    "encrypted_size_statistic": "median",
+    "incompressible_if_best_raw_ratio_gt": 0.99,
+    "incompressible_pass_rule": "candidate_lte_input_plus_allowance_and_lte_smallest_encrypted"
+  }
+}
