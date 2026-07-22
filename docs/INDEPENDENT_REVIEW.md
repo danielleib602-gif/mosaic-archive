@@ -82,15 +82,17 @@ independence, fetch or evaluate the linked report, or prove that they authored
 it. Until reviewer-signed evidence is pinned to a separately verified identity,
 these fields are maintainer assertions sealed into the release tag. Maintainers
 and consumers must verify report authorship, independence, and disposition out
-of band. A machine result of 9/9 proves evidence-to-source binding; it is not by
-itself proof that an independent review occurred.
+of band. A future machine result of 10/10 proves that all required evidence is
+bound to one source candidate; it is not by itself proof that an independent
+review occurred. Schema-v3 evidence can reach only 9/10 because it does not bind
+or recompute Competitive Contract v1 results.
 
 ## Review scope
 
 The review should cover:
 
 - MSC1 through MSC6 and MSR2 parsing, authentication, decompression, inspection,
-  and restoration paths;
+  and restoration paths, plus MSC7 once its candidate wire format exists;
 - scrypt parameter handling, key derivation, nonce separation, AEAD associated
   data, authentication-failure behavior, and secret handling;
 - restored-byte, frame/block-count, archive-size, metadata, path, allocation,
@@ -140,14 +142,16 @@ The published report must state:
 6. a clear statement about whether unresolved findings block the reviewed
    candidate from its intended experimental 1.0 use.
 
-After the report and candidate verification are public, copy
-`docs/1.0-external-gates.json` outside the working tree and fill its schema-v3
-tag, commit, review-bundle digest, candidate-tag, URL, identity, and date fields.
-Use that JSON as the complete message of the annotated stable tag; do not commit
-a post-review evidence edit to the candidate. The readiness evaluator rejects a
-bare `complete: true`, a missing or malformed bundle digest, the wrong candidate
-identity, a lightweight tag, malformed or oversized evidence, a tag/version
-mismatch, and any difference among the reviewed commit, attested candidate
-commit, tag target, workflow SHA, or checked-out source. The exact commands are
-in [RELEASES.md](RELEASES.md).
+After the report and candidate verification are public, retain the external
+evidence outside the working tree. Do not use the current schema-v3
+`docs/1.0-external-gates.json` as a stable-tag message: it can bind only the two
+older external gates, tops out at 9/10, and deliberately fails
+`--require-ready`. Future schema-v4 annotated-tag evidence must additionally
+bind the exact candidate scorecard, contract, corpus manifest, native asset,
+workflow, hardware, comparator commands, and raw samples so the readiness
+validator can recompute the competitive result. Until that implementation is
+independently verified, stop at the attested prerelease candidate and public
+report; there is intentionally no stable-tag command to run. The frozen
+candidate sequence and fail-closed requirements are in
+[RELEASES.md](RELEASES.md).
 

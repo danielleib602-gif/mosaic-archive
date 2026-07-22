@@ -1,12 +1,20 @@
 # Compatibility and upgrade policy
 
-Status: frozen for MSC 1.0 as of package v0.11.
+Status: MSC6 contract frozen; additive MSC7 direction accepted before 1.0.
 
 ## On-disk format
 
-The MSC6 writer format is frozen for the 1.0 release line. Package releases may
-improve performance, routing, diagnostics, and security without changing MSC6
-decoder semantics or existing mode identifiers.
+The MSC6 writer format and decoder semantics are frozen. Package releases may
+improve its performance, routing, diagnostics, and security without changing
+MSC6 mode identifiers or existing archive meaning. MSC6 remains explicitly
+writable and readable throughout the planned 1.x package line.
+
+The earlier plan to make MSC6 the only 1.0 writer is amended before 1.0: the
+project may add MSC7 as a new, opt-in 0.x preview and eventually make it the
+default 1.0 writer. That switch is conditional on the MSC7 format, security,
+compatibility, and competitive gates described in `MSC7_DECISION.md`; it does
+not weaken any MSC1-through-MSC6 promise. If those gates do not pass, the
+project remains pre-1.0 and MSC6 remains the default.
 
 Current readers restore MSC1 through MSC6. Every committed compatibility fixture
 must remain decodable throughout the 1.x package line. An encoder may stop

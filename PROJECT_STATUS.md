@@ -3,7 +3,8 @@
 - Package version: 0.39.0
 - Publication status: v0.39.0 source and native binaries published with
   checksums, GitHub build attestations, and an exact-source review bundle
-- Stable-format status: MSC6 is frozen for the planned 1.0 line
+- Stable-format status: MSC6 is frozen and remains supported; additive MSC7 is
+  the conditional default-format target for 1.0
 - Repository status at this snapshot: public; `v0.39.0` is published
 
 ## What is ready now
@@ -26,8 +27,10 @@
   `v0.39.0` release includes checksum-verified native binaries, keyless
   GitHub/Sigstore build provenance, and an exact-source review bundle.
 - The release workflow fails closed for `v1.*` and later stable tags until all
-  nine readiness gates are complete and schema-v3 tag evidence binds the
-  reviewed and attested candidate to the tag target and workflow checkout. It
+  ten readiness gates are complete. Schema-v3 tag evidence can bind the
+  reviewed and attested candidate to the tag target and workflow checkout, but
+  it cannot complete the competitive gate; that requires the future schema-v4
+  scorecard binding. The current release workflow
   verifies the immutable candidate release, all checksums and attestations, and
   the deterministic review-bundle digest before building or publishing stable
   assets. Native build dependencies are lockfile-pinned, and stable publication
@@ -152,15 +155,17 @@ Mosaic encoder is also slower than those tools on that corpus.
 
 ## MSC 1.0 distance
 
-`msc readiness --json` evaluates the nine committed stable-release gates.
-Seven are complete (77.777778%). The two remaining formal gates are an
-independent security review and the first independently verified attested
-binary release. The v0.33 maintainer review is documented in
+`msc readiness --json` evaluates ten committed stable-release gates. Seven are
+complete (70%). The three remaining formal gates are Competitive Contract v1
+single-profile dominance, an independent security review, and the first
+independently verified attested binary release. The v0.33 maintainer review is
+documented in
 `docs/SECURITY_REVIEW_v0.33.md`; it does not claim independence.
 The percentage reports completed checklist gates, not a statistical estimate
-of security, quality, or total engineering completion. Extended soak scope and
-other residual work are tracked separately instead of being disguised inside
-that fixed denominator. Encoder source-identity hardening is implemented
+of security, quality, or total engineering completion. Adding the explicit
+competitive criterion changes the denominator from nine to ten rather than
+pretending existing work regressed. Extended soak scope and other residual
+work remain visible separately. Encoder source-identity hardening is implemented
 across every active writer; portable filesystem operations still retain the
 explicitly documented hostile-local-process boundary.
 The v0.34 handoff adds a deterministic exact-commit review bundle and rejects
@@ -176,8 +181,9 @@ an attested prerelease candidate before external review begins.
 - This is pre-1.0 experimental software and has not received an independent
   security audit. Do not present it as a replacement for a reviewed archival or
   cryptographic product.
-- MSR2 is opt-in. MSC6 remains the default writer and the frozen 1.0-line
-  compatibility commitment.
+- MSR2 is opt-in. MSC6 remains the default writer and a frozen compatibility
+  commitment. MSC7 is a design-only additive target and cannot become the
+  default until its fixtures, security work, and competitive gate pass.
 - The GitHub workflow publishes native executables, checksums, and provenance.
   PyPI publication is not configured.
 - On 2026-07-03, GitHub refused to start private-repository jobs because of an
@@ -197,11 +203,12 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout's Python 3.13 suite runs 300 unit/integration tests: 293
-pass and seven platform- or privilege-specific cases skip on Windows.
+The current checkout's Python 3.13 suite runs 409 unit/integration tests: 390
+pass and 19 platform- or privilege-specific cases skip on Windows.
 CI measures statement and branch coverage across every package module; the
-current combined result is 87.41% against a required 80%, with no package
-module omitted from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
+current local Windows branch-inclusive result is 84.60% against a required
+80%, with no package module omitted from the gate. Ruff, strict mypy, Bandit,
+dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
 unsafe paths, invalid source identities, and resource-limit violations before
@@ -229,17 +236,21 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. freeze and publish a new exact-commit attested candidate after the current
+1. acquire and approve the six immutable aggregate corpus bundles, commit their
+   real lock, and implement the authoritative cgroup-v2/PID-contained runner;
+2. implement and optimize the additive Rust MSC7 core, native CLI, and Python
+   binding against the preregistered single-profile contract;
+3. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
    and the review handoff to that candidate rather than the older v0.39 commit;
-2. complete the independent security review and resolve or document its
+4. complete the independent security review and resolve or document its
    findings;
-3. decide whether a separate compression-only profile is worth the security
+5. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
-4. decide whether and how MSR2 should graduate from opt-in research format;
-5. add PyPI trusted publishing only if a Python-package release channel is
+6. keep MSR2 as research evidence rather than promoting its wire format;
+7. add PyPI trusted publishing only if a Python-package release channel is
    desired.
 
 The detailed milestone history and rollback rules remain in

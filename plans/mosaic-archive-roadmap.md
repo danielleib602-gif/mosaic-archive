@@ -289,17 +289,18 @@ decoders retain compatibility.
 
 Dependencies: B and C; selected D work only when proven.
 
-Status: release candidate foundation complete (7/9 gates). The public corpus,
+Status: release candidate foundation in progress (7/10 gates). The public corpus,
 cross-platform automation,
 permanent MSC1-through-MSC6 decoder fixtures, deterministic sustained mutation
 fuzzing, scheduled large-file soak coverage, seeded coverage-guided campaigns,
 the frozen compatibility policy, versioned mature-compressor results, and the
-cross-platform attested-binary release pipeline are in place; independent
-review and independent verification of an attested release candidate remain.
-The 7/9 figure is a fixed release-checklist count, not a probability of safety
-or a measure of total code maturity. Identity-bound traversal and reads now
-cover every active writer; larger sustained soak coverage remains active
-engineering work outside those two formal external gates.
+cross-platform attested-binary release pipeline are in place; additive MSC7
+Competitive Contract v1 dominance, independent review, and independent
+verification of an attested release candidate remain. The 7/10 figure is a
+release-checklist count, not a probability of safety or a measure of total code
+maturity. Identity-bound traversal and reads now
+cover every active writer; residual engineering remains tracked outside those
+three formal external gates.
 
 Tasks:
 
@@ -309,7 +310,16 @@ Tasks:
 - [x] bind encoder reads to the source identities accepted during traversal and
   reject parent/file replacement observable at binding checks across every
   writer;
-- extend sustained large-file coverage beyond the existing 256 MiB tier;
+- [x] preregister Competitive Contract v1 and the additive MSC7 compatibility
+  decision without changing MSC6;
+- implement the Rust MSC7 core, native CLI, Python binding, one-pass pipeline,
+  and permanent format/security fixtures;
+- lock all six real corpora with immutable hashes, deterministic preparation,
+  verified licenses, and attribution;
+- run the exact candidate on an eligible controlled Linux host and pass the
+  1-thread and 8-thread size, speed, decode, and cgroup-v2 memory-peak contract;
+- [x] extend sustained large-file coverage beyond 256 MiB with exact 1,025 MiB
+  and 2,049 MiB authenticated round-trip evidence;
 - complete an independent security review;
 - [x] publish a reproducible generated corpus and scheduled benchmark workflow;
 - [x] commit permanent backward-compatibility fixtures for every claimed decoder

@@ -245,7 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     readiness_parser = subparsers.add_parser(
         "readiness",
-        help="evaluate the nine committed MSC 1.0 release gates",
+        help="evaluate the ten committed MSC 1.0 release gates",
     )
     readiness_parser.add_argument("--root", type=Path, default=Path("."))
     readiness_parser.add_argument(

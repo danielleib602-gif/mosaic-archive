@@ -51,7 +51,10 @@ class CompatibilityPolicyTests(unittest.TestCase):
     def test_written_policy_records_upgrade_and_deprecation_rules(self) -> None:
         policy = Path("docs/COMPATIBILITY.md").read_text(encoding="utf-8")
 
-        self.assertIn("MSC6 writer format is frozen", policy)
+        self.assertIn("MSC6 writer format and decoder semantics are frozen", policy)
+        self.assertIn("writable and readable throughout", policy)
+        self.assertIn("add MSC7 as a new, opt-in 0.x preview", policy)
+        self.assertIn("project remains pre-1.0 and MSC6 remains the default", policy)
         self.assertIn("MSC1 through MSC6", policy)
         self.assertIn("two minor package releases", policy)
         self.assertIn("next major package version", policy)
