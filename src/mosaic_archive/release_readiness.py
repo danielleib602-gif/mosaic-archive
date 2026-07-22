@@ -40,6 +40,9 @@ class ReleaseReadiness:
 
 
 _MAX_TAG_EVIDENCE_BYTES = 64 * 1024
+_CANONICAL_RELIABILITY_WORKFLOW_SHA256 = (
+    "4a446da30b47891f720bce786503cccf412c7674aa761ed271bd5167867ebc6a"
+)
 _STABLE_TAG_PATTERN = re.compile(
     r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 )
@@ -51,6 +54,202 @@ def _contains(path: Path, *markers: str) -> bool:
     except OSError:
         return False
     return all(marker in content for marker in markers)
+
+
+def _named_workflow_step(content: str, name: str) -> str | None:
+    lines = content.splitlines()
+    header = f"      - name: {name}"
+    try:
+        start = next(index for index, line in enumerate(lines) if line == header)
+    except StopIteration:
+        return None
+    end = next(
+        (
+            index
+            for index in range(start + 1, len(lines))
+            if lines[index].startswith("      - ")
+        ),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
+def _indented_workflow_block(content: str, header: str) -> str | None:
+    lines = content.splitlines()
+    try:
+        start = next(index for index, line in enumerate(lines) if line == header)
+    except StopIteration:
+        return None
+    indentation = len(header) - len(header.lstrip())
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if len(line) - len(line.lstrip()) <= indentation:
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+def _active_workflow_text(block: str | None) -> str:
+    if block is None:
+        return ""
+    return "\n".join(
+        line.split("#", 1)[0].strip()
+        for line in block.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
+
+
+def _reliability_workflow_configured(path: Path) -> bool:
+    """Conservatively validate the active fuzz/soak workflow structure."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    # The release gate is deliberately stricter than general workflow parsing:
+    # any workflow edit must be reviewed together with this expected digest.
+    # This prevents extra, removed, or malformed YAML from bypassing the
+    # canonical trigger/job/step checks below.
+    if (
+        hashlib.sha256(content.encode("utf-8")).hexdigest()
+        != _CANONICAL_RELIABILITY_WORKFLOW_SHA256
+    ):
+        return False
+    triggers = _indented_workflow_block(content, "on:")
+    job = _indented_workflow_block(content, "  fuzz-and-soak:")
+    if triggers is None or job is None:
+        return False
+    content_lines = content.splitlines()
+    if content_lines.count("on:") != 1 or content_lines.count("  fuzz-and-soak:") != 1:
+        return False
+    expected_triggers = "\n".join(
+        (
+            "on:",
+            "pull_request:",
+            "paths:",
+            '- "src/mosaic_archive/**"',
+            '- "tests/test_reliability.py"',
+            '- "tests/test_release_readiness.py"',
+            '- ".github/workflows/reliability.yml"',
+            "workflow_dispatch:",
+            "inputs:",
+            "soak_size_mib:",
+            'description: "Deterministic high-entropy soak tier"',
+            "required: true",
+            'default: "1025"',
+            "type: choice",
+            "options:",
+            '- "256"',
+            '- "1025"',
+            '- "2049"',
+            "schedule:",
+            '- cron: "41 2 * * 0"',
+            '- cron: "19 3 1 * *"',
+        )
+    )
+    if _active_workflow_text(triggers) != expected_triggers:
+        return False
+    active_job_level_lines = [
+        line.split("#", 1)[0].rstrip()
+        for line in job.splitlines()[1:]
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and len(line) - len(line.lstrip()) == 4
+    ]
+    if active_job_level_lines != [
+        "    runs-on: ubuntu-latest",
+        "    timeout-minutes: 60",
+        "    defaults:",
+        "    steps:",
+    ]:
+        return False
+    active_job_lines = _active_workflow_text(job).splitlines()
+    if [line for line in active_job_lines if line.startswith("timeout-minutes:")] != [
+        "timeout-minutes: 60"
+    ]:
+        return False
+    if "    defaults:\n      run:\n        shell: bash" not in job:
+        return False
+    if [line for line in active_job_lines if line.startswith("shell:")] != ["shell: bash"]:
+        return False
+    if any(line.startswith("continue-on-error:") for line in active_job_lines):
+        return False
+    expected_steps = {
+        "Run deterministic parser fuzz": "\n".join(
+            (
+                "- name: Run deterministic parser fuzz",
+                "run: uv run --frozen python -m mosaic_archive.reliability "
+                "fuzz --seed 20260629 --cases 10000",
+            )
+        ),
+        "Run 256 MiB pull-request soak": "\n".join(
+            (
+                "- name: Run 256 MiB pull-request soak",
+                "if: github.event_name == 'pull_request'",
+                "run: >-",
+                "uv run --frozen python -m mosaic_archive.reliability soak",
+                '--seed 20260629 --size-mib 256 --work-dir "$RUNNER_TEMP/mosaic-soak"',
+                "| tee soak-summary.json",
+            )
+        ),
+        "Run 1,025 MiB weekly soak": "\n".join(
+            (
+                "- name: Run 1,025 MiB weekly soak",
+                "if: github.event_name == 'schedule' && github.event.schedule == '41 2 * * 0'",
+                "run: >-",
+                "uv run --frozen python -m mosaic_archive.reliability soak",
+                '--seed 20260629 --size-mib 1025 --work-dir "$RUNNER_TEMP/mosaic-soak"',
+                "| tee soak-summary.json",
+            )
+        ),
+        "Run 2,049 MiB monthly soak": "\n".join(
+            (
+                "- name: Run 2,049 MiB monthly soak",
+                "if: github.event_name == 'schedule' && github.event.schedule == '19 3 1 * *'",
+                "run: >-",
+                "uv run --frozen python -m mosaic_archive.reliability soak",
+                '--seed 20260629 --size-mib 2049 --work-dir "$RUNNER_TEMP/mosaic-soak"',
+                "| tee soak-summary.json",
+            )
+        ),
+        "Run selected manual soak": "\n".join(
+            (
+                "- name: Run selected manual soak",
+                "if: github.event_name == 'workflow_dispatch'",
+                "env:",
+                "SOAK_SIZE_MIB: ${{ inputs.soak_size_mib }}",
+                "run: |",
+                'case "$SOAK_SIZE_MIB" in',
+                "256|1025|2049) ;;",
+                '*) echo "unsupported soak tier" >&2; exit 2 ;;',
+                "esac",
+                "uv run --frozen python -m mosaic_archive.reliability soak \\",
+                '--seed 20260629 --size-mib "$SOAK_SIZE_MIB" \\',
+                '--work-dir "$RUNNER_TEMP/mosaic-soak" | tee soak-summary.json',
+            )
+        ),
+        "Upload soak summary": "\n".join(
+            (
+                "- name: Upload soak summary",
+                "if: success()",
+                "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+                "with:",
+                "name: mosaic-soak-${{ github.event_name }}-${{ github.sha }}-${{ github.run_id }}",
+                "path: soak-summary.json",
+                "if-no-files-found: error",
+                "retention-days: 30",
+            )
+        ),
+    }
+    for name, expected_step in expected_steps.items():
+        if job.splitlines().count(f"      - name: {name}") != 1:
+            return False
+        step = _active_workflow_text(_named_workflow_step(job, name))
+        if step != expected_step:
+            return False
+    return True
 
 
 def _fixture_versions(root: Path) -> set[int]:
@@ -303,10 +502,8 @@ def evaluate_release_readiness(
         ),
         ReadinessGate(
             "deterministic_mutation_and_soak_testing",
-            _contains(
-                root / ".github/workflows/reliability.yml",
-                "--cases 10000",
-                "--size-mib 256",
+            _reliability_workflow_configured(
+                root / ".github/workflows/reliability.yml"
             ),
             ".github/workflows/reliability.yml",
         ),

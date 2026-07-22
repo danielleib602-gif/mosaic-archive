@@ -1,0 +1,183 @@
+{
+  "baseline_commit": "ea6348e03f4bd5d1886b575d465c4d3969a8af93",
+  "candidate_commit": "d3b10229a48f79c86ef5f97a793710aa547273fb",
+  "configuration": {
+    "alternating_fresh_processes": true,
+    "corpus_seed": 20260629,
+    "corpus_unit_size": 65536,
+    "kdf_log_n": 14,
+    "padding_size": 256,
+    "profile": "fast",
+    "runs_per_revision_per_corpus": 11,
+    "warmups_per_revision_per_corpus": 2
+  },
+  "corpus_v1": {
+    "after": {
+      "archive_bytes": 493005,
+      "average_features": {
+        "ascii_ratio": 0.4745726256172157,
+        "byte_repetition_ratio": 0.9895059161317957,
+        "delta_smoothness_ratio": 0.13342166059041086,
+        "entropy_bits_per_byte": 6.526175783191112,
+        "random_looking_ratio": 0.5384615384615384,
+        "small_symbol_ratio": 0.04428218709635408,
+        "substring_repetition_ratio": 0.17902650775962298,
+        "zero_ratio": 0.002316925697906748
+      },
+      "encode_seconds_median": 0.3393733999982942,
+      "encode_seconds_median_absolute_deviation": 0.0029343000023800414,
+      "encode_seconds_runs": [
+        0.3380345000005036,
+        0.3393733999982942,
+        0.338528000000224,
+        0.34424569999828236,
+        0.3467737000028137,
+        0.3396394000010332,
+        0.3283028999976523,
+        0.33491890000004787,
+        0.34230770000067423,
+        0.34026779999840073,
+        0.33369040000252426
+      ],
+      "invariant_sha256": "db0d63d8c86eefb367acea46a59f6db4191d5a668cee11ef8885180a273bc213",
+      "logical_chunk_count": 16,
+      "manifest_sha256": "7a27e990b84f39c36c086d851db41f0712428fe8c64083e62c8080802726e549",
+      "mode_distribution": {
+        "DEFLATE": 6,
+        "RAW": 7
+      },
+      "original_bytes": 1050407,
+      "round_trip_verified": true,
+      "unique_chunk_count": 13
+    },
+    "archive_improvement_bytes": 0,
+    "before": {
+      "archive_bytes": 493005,
+      "average_features": {
+        "ascii_ratio": 0.4745726256172157,
+        "byte_repetition_ratio": 0.9895059161317957,
+        "delta_smoothness_ratio": 0.13342166059041086,
+        "entropy_bits_per_byte": 6.526175783191112,
+        "random_looking_ratio": 0.5384615384615384,
+        "small_symbol_ratio": 0.04428218709635408,
+        "substring_repetition_ratio": 0.17902650775962298,
+        "zero_ratio": 0.002316925697906748
+      },
+      "encode_seconds_median": 0.46432849999837345,
+      "encode_seconds_median_absolute_deviation": 0.005722599998989608,
+      "encode_seconds_runs": [
+        0.45860589999938384,
+        0.4562666000019817,
+        0.46432849999837345,
+        0.4657244999980321,
+        0.46094169999923906,
+        0.46759620000011637,
+        0.47085169999991194,
+        0.4562977999994473,
+        0.46947399999771733,
+        0.4734545000028447,
+        0.452761600001395
+      ],
+      "invariant_sha256": "db0d63d8c86eefb367acea46a59f6db4191d5a668cee11ef8885180a273bc213",
+      "logical_chunk_count": 16,
+      "manifest_sha256": "7a27e990b84f39c36c086d851db41f0712428fe8c64083e62c8080802726e549",
+      "mode_distribution": {
+        "DEFLATE": 6,
+        "RAW": 7
+      },
+      "original_bytes": 1050407,
+      "round_trip_verified": true,
+      "unique_chunk_count": 13
+    },
+    "encode_improvement_percent": 26.910926
+  },
+  "corpus_v2": {
+    "after": {
+      "archive_bytes": 632681,
+      "average_features": {
+        "ascii_ratio": 0.8848935118795225,
+        "byte_repetition_ratio": 0.5455980115325318,
+        "delta_smoothness_ratio": 0.139239296393668,
+        "entropy_bits_per_byte": 4.01829662951444,
+        "random_looking_ratio": 0.07865168539325842,
+        "small_symbol_ratio": 0.10047735959884607,
+        "substring_repetition_ratio": 0.11781480354926444,
+        "zero_ratio": 0.011571382849881247
+      },
+      "encode_seconds_median": 0.5475967000020319,
+      "encode_seconds_median_absolute_deviation": 0.007598400003189454,
+      "encode_seconds_runs": [
+        0.5592695000013919,
+        0.53315030000158,
+        0.5503478999999061,
+        0.5475967000020319,
+        0.5482872999964457,
+        0.5399982999988424,
+        0.5404884999989008,
+        0.535102799996821,
+        0.5321590999992623,
+        0.5556811999995261,
+        0.5548483999991731
+      ],
+      "invariant_sha256": "8f504cffeb82d475c4aef6e0bdbfe5034034524a659b9fe7a4fd852c017dafc1",
+      "logical_chunk_count": 92,
+      "manifest_sha256": "7edcce49d0a57e5f76a03f7085accdf64da507358ce4e8cd9816ae10d17c171b",
+      "mode_distribution": {
+        "DEFLATE": 18,
+        "RAW": 71
+      },
+      "original_bytes": 1719961,
+      "round_trip_verified": true,
+      "unique_chunk_count": 89
+    },
+    "archive_improvement_bytes": 0,
+    "before": {
+      "archive_bytes": 632681,
+      "average_features": {
+        "ascii_ratio": 0.8848935118795225,
+        "byte_repetition_ratio": 0.5455980115325318,
+        "delta_smoothness_ratio": 0.139239296393668,
+        "entropy_bits_per_byte": 4.01829662951444,
+        "random_looking_ratio": 0.07865168539325842,
+        "small_symbol_ratio": 0.10047735959884607,
+        "substring_repetition_ratio": 0.11781480354926444,
+        "zero_ratio": 0.011571382849881247
+      },
+      "encode_seconds_median": 0.7607834999980696,
+      "encode_seconds_median_absolute_deviation": 0.005915400000958471,
+      "encode_seconds_runs": [
+        0.7697693999980402,
+        0.7580932999990182,
+        0.7500666000014462,
+        0.7732375999985379,
+        0.7666988999990281,
+        0.7607834999980696,
+        0.7656547000005958,
+        0.7686687000023085,
+        0.7595201000003726,
+        0.7607434000019566,
+        0.7388514000012947
+      ],
+      "invariant_sha256": "8f504cffeb82d475c4aef6e0bdbfe5034034524a659b9fe7a4fd852c017dafc1",
+      "logical_chunk_count": 92,
+      "manifest_sha256": "7edcce49d0a57e5f76a03f7085accdf64da507358ce4e8cd9816ae10d17c171b",
+      "mode_distribution": {
+        "DEFLATE": 18,
+        "RAW": 71
+      },
+      "original_bytes": 1719961,
+      "round_trip_verified": true,
+      "unique_chunk_count": 89
+    },
+    "encode_improvement_percent": 28.022006
+  },
+  "environment": {
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python": "3.13.13"
+  },
+  "methodology": "Fresh Python processes alternate baseline and candidate order. Encode timing excludes deterministic corpus generation and decode verification.",
+  "result": "format-neutral speed optimization",
+  "schema_version": 1
+}

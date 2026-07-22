@@ -65,6 +65,13 @@ is preserved.
 
 ### Documentation
 
+- Added exact-commit Windows evidence for a deterministic 1,025 MiB MSC6-fast
+  round trip, including phase timings, chunk counts, peak payload bytes, source
+  release, archive overhead, and matching restored SHA-256.
+- Added an 11-run, alternating fresh-process scorecard for the format-neutral
+  fast-profile routing optimization. Both locked corpora retain identical
+  archive statistics and authenticated round trips while median MSC6 encode
+  time improves by 26.910926% and 28.022006%.
 - Added a locked-corpus scorecard for identity-bound one-pass encoding,
   including all 33 timing samples per revision, physical source-open counts,
   archive sizes, frame bounds, and authenticated tree round trips.
@@ -78,6 +85,19 @@ is preserved.
 
 ### Changed
 
+- Fast and research MSC6 routing no longer performs feature analysis whose
+  result those fixed candidate sets discard. Balanced routing remains
+  feature-driven, while fast/research mode choice, payload bytes, tie-breaking,
+  archive size, and public feature statistics are unchanged.
+- Sustained reliability now runs a 256 MiB pull-request tier, a 1,025 MiB
+  weekly tier crossing 1 GiB, and a 2,049 MiB monthly tier crossing signed
+  32-bit offsets. The harness preflights disk capacity, releases the source
+  after encode, bounds restored output exactly, verifies decoder sizes and
+  hashes, and publishes success-only commit-bound summaries.
+- The sustained-reliability readiness gate now binds the complete canonical
+  workflow bytes before checking its triggers and steps, so removed setup,
+  injected failing steps, changed defaults, or malformed trailing YAML fail
+  closed instead of preserving an automatic readiness credit.
 - Dedup and solid manifest construction now computes file digests, chunks,
   owners, and unique-chunk callbacks in one content pass. MSR1 and MSR2 open
   each source file once and MSC6 twice instead of three times. Thirty-three

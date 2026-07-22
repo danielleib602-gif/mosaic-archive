@@ -3,12 +3,28 @@ name: Sustained reliability
 on:
   pull_request:
     paths:
-      - "src/mosaic_archive/reliability.py"
+      - "src/mosaic_archive/**"
       - "tests/test_reliability.py"
+      - "tests/test_release_readiness.py"
       - ".github/workflows/reliability.yml"
   workflow_dispatch:
+    inputs:
+      soak_size_mib:
+        description: "Deterministic high-entropy soak tier"
+        required: true
+        default: "1025"
+        type: choice
+        options:
+          - "256"
+          - "1025"
+          - "2049"
   schedule:
     - cron: "41 2 * * 0"
+    - cron: "19 3 1 * *"
+
+concurrency:
+  group: sustained-reliability-${{ github.ref }}-${{ github.event.schedule || inputs.soak_size_mib || 'pull-request' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -16,7 +32,10 @@ permissions:
 jobs:
   fuzz-and-soak:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -24,5 +43,43 @@ jobs:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
       - run: uv sync --frozen
-      - run: uv run --frozen python -m mosaic_archive.reliability fuzz --seed 20260629 --cases 10000
-      - run: uv run --frozen python -m mosaic_archive.reliability soak --seed 20260629 --size-mib 256
+      - name: Run deterministic parser fuzz
+        run: uv run --frozen python -m mosaic_archive.reliability fuzz --seed 20260629 --cases 10000
+      - name: Run 256 MiB pull-request soak
+        if: github.event_name == 'pull_request'
+        run: >-
+          uv run --frozen python -m mosaic_archive.reliability soak
+          --seed 20260629 --size-mib 256 --work-dir "$RUNNER_TEMP/mosaic-soak"
+          | tee soak-summary.json
+      - name: Run 1,025 MiB weekly soak
+        if: github.event_name == 'schedule' && github.event.schedule == '41 2 * * 0'
+        run: >-
+          uv run --frozen python -m mosaic_archive.reliability soak
+          --seed 20260629 --size-mib 1025 --work-dir "$RUNNER_TEMP/mosaic-soak"
+          | tee soak-summary.json
+      - name: Run 2,049 MiB monthly soak
+        if: github.event_name == 'schedule' && github.event.schedule == '19 3 1 * *'
+        run: >-
+          uv run --frozen python -m mosaic_archive.reliability soak
+          --seed 20260629 --size-mib 2049 --work-dir "$RUNNER_TEMP/mosaic-soak"
+          | tee soak-summary.json
+      - name: Run selected manual soak
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SOAK_SIZE_MIB: ${{ inputs.soak_size_mib }}
+        run: |
+          case "$SOAK_SIZE_MIB" in
+            256|1025|2049) ;;
+            *) echo "unsupported soak tier" >&2; exit 2 ;;
+          esac
+          uv run --frozen python -m mosaic_archive.reliability soak \
+            --seed 20260629 --size-mib "$SOAK_SIZE_MIB" \
+            --work-dir "$RUNNER_TEMP/mosaic-soak" | tee soak-summary.json
+      - name: Upload soak summary
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mosaic-soak-${{ github.event_name }}-${{ github.sha }}-${{ github.run_id }}
+          path: soak-summary.json
+          if-no-files-found: error
+          retention-days: 30

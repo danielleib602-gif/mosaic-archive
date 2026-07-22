@@ -39,8 +39,8 @@
   or deleted. Human reviewer identity remains an explicit out-of-band trust
   boundary until evidence is signed by a pinned independent identity.
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
-  harnesses, scheduled 256 MiB soak test, and cross-platform test matrix are
-  committed.
+  harnesses, 256/1,025/2,049 MiB sustained-soak tiers, and cross-platform test
+  matrix are committed.
 - The package is MIT-licensed and contains public contribution, security,
   release, compatibility, format, benchmark, and threat-model documentation.
 
@@ -121,6 +121,14 @@ slower) and improves from 0.342857 to 0.318950 seconds on corpus v2
 (6.972763%). The 275,859-byte and 291,731-byte archives, unique-chunk counts,
 maximum frame payloads, and authenticated tree round trips remain unchanged.
 
+The fast-profile routing scorecard in
+`.ecc/benchmarks/msc-v0.40-fast-profile-analysis.json` compares 11 alternating
+fresh Windows processes per revision. Removing the unused router analysis
+improves median MSC6-fast encode time from 0.464328 to 0.339373 seconds on
+corpus v1 (26.910926%) and from 0.760783 to 0.547597 seconds on corpus v2
+(28.022006%). The 493,005-byte and 632,681-byte archives, mode distributions,
+feature statistics, chunk counts, and authenticated round trips are identical.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -150,11 +158,11 @@ independent security review and the first independently verified attested
 binary release. The v0.33 maintainer review is documented in
 `docs/SECURITY_REVIEW_v0.33.md`; it does not claim independence.
 The percentage reports completed checklist gates, not a statistical estimate
-of security, quality, or total engineering completion. Residual work such as
-larger sustained soak coverage is tracked separately instead of being
-disguised inside that fixed denominator. Encoder source-identity hardening is
-implemented across every active writer; portable filesystem operations still
-retain the explicitly documented hostile-local-process boundary.
+of security, quality, or total engineering completion. Extended soak scope and
+other residual work are tracked separately instead of being disguised inside
+that fixed denominator. Encoder source-identity hardening is implemented
+across every active writer; portable filesystem operations still retain the
+explicitly documented hostile-local-process boundary.
 The v0.34 handoff adds a deterministic exact-commit review bundle and rejects
 unstructured external evidence or a release commit that differs from the
 reviewed commit. The stable release preflight now also rejects filled templates,
@@ -189,19 +197,22 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout's Python 3.13 suite runs 290 unit/integration tests: 283
+The current checkout's Python 3.13 suite runs 300 unit/integration tests: 293
 pass and seven platform- or privilege-specific cases skip on Windows.
-Full-package coverage is 4,324 of 4,788 statements and 1,216 of 1,540 branches
-(5,540 of 6,328 combined opportunities, 87.55%); no package module is omitted
-from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
+CI measures statement and branch coverage across every package module; the
+current combined result is 87.41% against a required 80%, with no package
+module omitted from the gate. Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
 unsafe paths, invalid source identities, and resource-limit violations before
 publication.
 
 The deterministic reliability campaign executes 10,000 mutations across 14
-targets, and the local 256 MiB MSC6 soak round trip restores the exact source
-SHA-256. The v0.39 PR and `main` checks passed across Python 3.11 and 3.13 on
+targets. A local 1,025 MiB high-entropy MSC6 soak crossed 1 GiB, produced a
+1,076,869,840-byte archive from 1,074,790,400 source bytes, and restored the
+exact source SHA-256; exact-commit evidence is in
+`.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. The v0.39 PR and `main`
+checks passed across Python 3.11 and 3.13 on
 Linux and Windows, Python 3.13 on macOS, all three native-binary smoke builds,
 the quality/security job, deterministic review-bundle generation, and the
 hosted mature-compressor benchmark.
@@ -217,8 +228,8 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. extend sustained reliability coverage beyond the existing 256 MiB tier and
-   reconcile stable-large-file scope across local and hosted runs;
+1. complete and retain the hosted 2,049 MiB signed-offset-boundary soak
+   artifact; the local 1,025 MiB tier already restores exactly;
 2. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
