@@ -40,6 +40,9 @@ class ReleaseReadiness:
 
 
 _MAX_TAG_EVIDENCE_BYTES = 64 * 1024
+_CANONICAL_RELIABILITY_WORKFLOW_SHA256 = (
+    "4a446da30b47891f720bce786503cccf412c7674aa761ed271bd5167867ebc6a"
+)
 _STABLE_TAG_PATTERN = re.compile(
     r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 )
@@ -105,18 +108,61 @@ def _reliability_workflow_configured(path: Path) -> bool:
         content = path.read_text(encoding="utf-8")
     except OSError:
         return False
-    schedule = _indented_workflow_block(content, "  schedule:")
+    # The release gate is deliberately stricter than general workflow parsing:
+    # any workflow edit must be reviewed together with this expected digest.
+    # This prevents extra, removed, or malformed YAML from bypassing the
+    # canonical trigger/job/step checks below.
+    if (
+        hashlib.sha256(content.encode("utf-8")).hexdigest()
+        != _CANONICAL_RELIABILITY_WORKFLOW_SHA256
+    ):
+        return False
+    triggers = _indented_workflow_block(content, "on:")
     job = _indented_workflow_block(content, "  fuzz-and-soak:")
-    if schedule is None or job is None:
+    if triggers is None or job is None:
         return False
     content_lines = content.splitlines()
-    if content_lines.count("  schedule:") != 1 or content_lines.count("  fuzz-and-soak:") != 1:
+    if content_lines.count("on:") != 1 or content_lines.count("  fuzz-and-soak:") != 1:
         return False
-    active_schedule_lines = _active_workflow_text(schedule).splitlines()
-    if active_schedule_lines != [
-        "schedule:",
-        '- cron: "41 2 * * 0"',
-        '- cron: "19 3 1 * *"',
+    expected_triggers = "\n".join(
+        (
+            "on:",
+            "pull_request:",
+            "paths:",
+            '- "src/mosaic_archive/**"',
+            '- "tests/test_reliability.py"',
+            '- "tests/test_release_readiness.py"',
+            '- ".github/workflows/reliability.yml"',
+            "workflow_dispatch:",
+            "inputs:",
+            "soak_size_mib:",
+            'description: "Deterministic high-entropy soak tier"',
+            "required: true",
+            'default: "1025"',
+            "type: choice",
+            "options:",
+            '- "256"',
+            '- "1025"',
+            '- "2049"',
+            "schedule:",
+            '- cron: "41 2 * * 0"',
+            '- cron: "19 3 1 * *"',
+        )
+    )
+    if _active_workflow_text(triggers) != expected_triggers:
+        return False
+    active_job_level_lines = [
+        line.split("#", 1)[0].rstrip()
+        for line in job.splitlines()[1:]
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and len(line) - len(line.lstrip()) == 4
+    ]
+    if active_job_level_lines != [
+        "    runs-on: ubuntu-latest",
+        "    timeout-minutes: 60",
+        "    defaults:",
+        "    steps:",
     ]:
         return False
     active_job_lines = _active_workflow_text(job).splitlines()
@@ -130,12 +176,6 @@ def _reliability_workflow_configured(path: Path) -> bool:
         return False
     if any(line.startswith("continue-on-error:") for line in active_job_lines):
         return False
-    if any(
-        len(line) - len(line.lstrip()) == 4 and line.lstrip().startswith("if:")
-        for line in job.splitlines()
-    ):
-        return False
-
     expected_steps = {
         "Run deterministic parser fuzz": "\n".join(
             (

@@ -13,6 +13,40 @@ from mosaic_archive.reliability import run_large_file_soak, run_parser_fuzz
 
 
 class ReliabilityHarnessTests(unittest.TestCase):
+    def test_committed_1025_mib_soak_evidence_is_exact_and_scoped(self) -> None:
+        evidence = json.loads(
+            Path(".ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        result = evidence["result"]
+
+        self.assertEqual(
+            evidence["tested_commit"],
+            "cfbf3d3a4503088d650fd8c0fd354535e9eddc3e",
+        )
+        self.assertEqual(evidence["configuration"]["size_mib"], 1025)
+        self.assertEqual(result["size_bytes"], 1025 * 1024 * 1024)
+        self.assertGreater(result["archive_size"], 1024 * 1024 * 1024)
+        self.assertEqual(
+            result["archive_overhead_bytes"],
+            result["archive_size"] - result["size_bytes"],
+        )
+        self.assertEqual(
+            result["peak_payload_bytes"],
+            result["archive_size"] + result["size_bytes"],
+        )
+        self.assertGreaterEqual(
+            result["logical_chunk_count"],
+            result["unique_chunk_count"],
+        )
+        self.assertEqual(result["source_sha256"], result["restored_sha256"])
+        self.assertTrue(result["hash_verified"])
+        self.assertTrue(result["source_released_before_decode"])
+        self.assertTrue(evidence["scope"]["crosses_1_gib"])
+        self.assertFalse(evidence["scope"]["crosses_signed_32_bit_offset"])
+        self.assertFalse(evidence["scope"]["hosted_runner"])
+
     def test_parser_fuzz_is_deterministic_and_covers_all_parser_classes(self) -> None:
         first = run_parser_fuzz(seed=20260629, cases=22)
         second = run_parser_fuzz(seed=20260629, cases=22)

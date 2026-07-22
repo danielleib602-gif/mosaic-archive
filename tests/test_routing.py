@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import random
+import statistics
 import unittest
 from contextlib import ExitStack
+from pathlib import Path
 from unittest.mock import patch
 
 from mosaic_archive.features import analyze_block
@@ -111,6 +114,59 @@ class RoutedSelectionTests(unittest.TestCase):
             choose_routed_mode(data, profile="balanced")
 
         analyzer.assert_called_once_with(data)
+
+    def test_fast_profile_scorecard_is_format_neutral_and_repeated(self) -> None:
+        scorecard = json.loads(
+            Path(".ecc/benchmarks/msc-v0.40-fast-profile-analysis.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertEqual(
+            scorecard["baseline_commit"],
+            "ea6348e03f4bd5d1886b575d465c4d3969a8af93",
+        )
+        self.assertEqual(
+            scorecard["candidate_commit"],
+            "d3b10229a48f79c86ef5f97a793710aa547273fb",
+        )
+        self.assertTrue(scorecard["configuration"]["alternating_fresh_processes"])
+        self.assertEqual(
+            scorecard["configuration"]["runs_per_revision_per_corpus"],
+            11,
+        )
+        for corpus_name in ("corpus_v1", "corpus_v2"):
+            corpus = scorecard[corpus_name]
+            before = corpus["before"]
+            after = corpus["after"]
+            self.assertEqual(
+                corpus["archive_improvement_bytes"],
+                before["archive_bytes"] - after["archive_bytes"],
+            )
+            self.assertEqual(before["invariant_sha256"], after["invariant_sha256"])
+            self.assertEqual(len(before["encode_seconds_runs"]), 11)
+            self.assertEqual(len(after["encode_seconds_runs"]), 11)
+            self.assertTrue(before["round_trip_verified"])
+            self.assertTrue(after["round_trip_verified"])
+            for measurement in (before, after):
+                samples = measurement["encode_seconds_runs"]
+                median = statistics.median(samples)
+                self.assertEqual(measurement["encode_seconds_median"], median)
+                self.assertEqual(
+                    measurement["encode_seconds_median_absolute_deviation"],
+                    statistics.median(abs(sample - median) for sample in samples),
+                )
+            expected_improvement = round(
+                (
+                    before["encode_seconds_median"]
+                    - after["encode_seconds_median"]
+                )
+                / before["encode_seconds_median"]
+                * 100,
+                6,
+            )
+            self.assertEqual(corpus["encode_improvement_percent"], expected_improvement)
+            self.assertGreater(corpus["encode_improvement_percent"], 20.0)
 
     def test_rejects_unknown_profile(self) -> None:
         with self.assertRaises(ValueError):

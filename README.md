@@ -61,8 +61,9 @@ focus are tracked in [PROJECT_STATUS.md](PROJECT_STATUS.md).
   releases must keep restoring every claimed archive generation;
 - provides a deterministic mutation-fuzz harness for every public header parser,
   frame parser, and compression-mode decoder;
-- runs a bounded 10,000-case fuzz campaign and streaming 256 MiB archive
-  round trip on a weekly scheduled workflow;
+- runs a bounded 10,000-case fuzz campaign with a streaming 256 MiB
+  pull-request soak, a weekly 1,025 MiB tier crossing 1 GiB, and a monthly
+  2,049 MiB tier crossing signed 32-bit offsets;
 - seeds Atheris coverage-guided fuzzing with valid inputs for six structural
   parsers and all seven compression-mode decoders;
 - preserves evolving corpora and crash, timeout, or out-of-memory artifacts
@@ -131,12 +132,20 @@ uv run msc readiness --json
 ```
 
 The ordinary readiness report remains 7/9 by design until an independently
-reviewed, attested final candidate exists. Stable release automation additionally passes
+reviewed, attested final candidate exists. Stable release automation
+additionally passes
 `--release-tag`, `--release-commit`, and `--review-bundle`; only a schema-v3
 annotated tag targeting that exact checked-out candidate, with matching bundle
 bytes and an immutable attested candidate release, can satisfy the two external
-gates. Stable publication promotes those exact verified candidate payload bytes;
-its fresh cross-platform rebuilds are smoke checks, not replacements.
+gates. Stable publication promotes those exact verified candidate payload
+bytes; its fresh cross-platform rebuilds are smoke checks, not replacements.
+
+Exact-commit local evidence for the 1,025 MiB tier is committed at
+`.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. It records a
+1,074,790,400-byte deterministic source, a 1,076,869,840-byte MSC6 archive,
+940 unique chunks, bounded peak payload files, and an exact restored SHA-256.
+This crosses 1 GiB locally; it does not substitute for the separate hosted
+2,049 MiB signed-offset-boundary run.
 
 Decode and inspect accept caller-defined resource ceilings:
 
@@ -443,6 +452,16 @@ Windows processes per revision show corpus v1 effectively flat at 0.295302%
 slower; corpus v2 improves by 6.972763%. The 275,859-byte and 291,731-byte
 archives, unique-chunk counts, maximum frame payloads, and authenticated round
 trips are unchanged.
+
+Fast and research MSC6 routing now skips the general feature analysis that
+their fixed candidate sets never consumed; the encoder's separate public
+statistics pass remains intact. Eleven alternating fresh Windows processes per
+revision improve median fast-profile encode time from 0.464328 to 0.339373
+seconds on corpus v1 (26.910926%) and from 0.760783 to 0.547597 seconds on
+corpus v2 (28.022006%). Both archives remain exactly 493,005 and 632,681 bytes,
+with identical mode distributions, feature statistics, chunk counts, and
+verified round trips. These small-corpus timings demonstrate removed work, not
+universal throughput or compressor superiority.
 
 The v0.37 Gear chunker skips the subminimum prefix where a content boundary
 cannot legally occur. Eleven contemporaneous Windows runs per revision improve

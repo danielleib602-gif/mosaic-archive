@@ -58,12 +58,14 @@ folder destinations are never merged.
 
 File content is processed one chunk and authenticated frame at a time. The
 encrypted manifest is still held in memory and is capped at 256 MiB; entry,
-frame, chunk, padding, and KDF parameters also have explicit limits. A weekly
-job runs 10,000 deterministic mutations under a 45-minute job budget and
-round-trips a streaming 256 MiB file. Atheris additionally runs bounded
+frame, chunk, padding, and KDF parameters also have explicit limits. A
+60-minute sustained-reliability job runs 10,000 deterministic mutations plus a
+256 MiB pull-request soak, a weekly 1,025 MiB tier crossing 1 GiB, or a monthly
+2,049 MiB tier crossing signed 32-bit offsets. The local 1,025 MiB tier restores
+exactly; the hosted 2,049 MiB artifact and independent review remain required
+before a stable large-file release. Atheris additionally runs bounded
 coverage-guided campaigns from valid seeds for outer headers, frame headers,
-encrypted-manifest parsers, and all compression modes. Larger soak tiers and
-independent review are still required before a stable large-file release.
+encrypted-manifest parsers, and all compression modes.
 Decode and inspect callers can lower the shared 1 TiB restored-output
 and 1,000,000-frame ceilings. Legacy whole-buffer MSC1 input defaults to a
 separate 1 GiB archive cap.

@@ -1,0 +1,45 @@
+{
+  "configuration": {
+    "kdf_log_n": 14,
+    "profile": "fast",
+    "seed": 20260629,
+    "size_mib": 1025
+  },
+  "environment": {
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python": "3.13.13"
+  },
+  "methodology": "Exact-commit local CLI run using a temporary work directory and deterministic high-entropy source bytes; timing covers generation, encode, decode, and independent SHA-256 verification separately.",
+  "result": {
+    "archive_overhead_bytes": 2079440,
+    "archive_size": 1076869840,
+    "decode_seconds": 2.5397670999991533,
+    "encode_seconds": 392.7884450999991,
+    "format_version": 6,
+    "generation_seconds": 2.7748868000016955,
+    "hash_verified": true,
+    "logical_chunk_count": 940,
+    "peak_payload_bytes": 2151660240,
+    "restored_sha256": "f00bdc9c3f6580b8db91f92d9d9bf0e2a28ff5758b885ae0fe826d07418c0ee5",
+    "seed": 20260629,
+    "size_bytes": 1074790400,
+    "source_released_before_decode": true,
+    "source_sha256": "f00bdc9c3f6580b8db91f92d9d9bf0e2a28ff5758b885ae0fe826d07418c0ee5",
+    "unique_chunk_count": 940,
+    "verify_seconds": 0.831516999998712
+  },
+  "schema_version": 1,
+  "scope": {
+    "crosses_1_gib": true,
+    "crosses_signed_32_bit_offset": false,
+    "hosted_runner": false,
+    "limitations": [
+      "single-file high-entropy coverage does not exercise huge manifests or duplicate-cache pressure",
+      "the separately scheduled 2,049 MiB hosted tier is required to cross signed 32-bit offsets",
+      "this bounded run does not validate the 1 TiB restored-output ceiling"
+    ]
+  },
+  "tested_commit": "cfbf3d3a4503088d650fd8c0fd354535e9eddc3e"
+}
