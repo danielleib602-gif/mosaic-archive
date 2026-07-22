@@ -65,6 +65,10 @@ is preserved.
 
 ### Documentation
 
+- Added exact protected-main hosted evidence for a deterministic 2,049 MiB
+  MSC6-fast round trip that crosses signed 32-bit offsets and restores the
+  source SHA-256 exactly. The record binds the workflow run, expiring artifact,
+  durable summary digest, phase timings, chunk counts, and payload peak.
 - Added exact-commit Windows evidence for a deterministic 1,025 MiB MSC6-fast
   round trip, including phase timings, chunk counts, peak payload bytes, source
   release, archive overhead, and matching restored SHA-256.

@@ -1,0 +1,54 @@
+{
+  "artifact": {
+    "artifact_digest": "sha256:ea986912986313c404bd6290c0e1334f067533069f1cbbde126d9cd9c53e44c1",
+    "artifact_id": 8529159835,
+    "expires_at": "2026-08-21T12:20:04Z",
+    "name": "mosaic-soak-workflow_dispatch-cc03280b8abbcd128bf861114eb0cce670feb4f9-29917626770",
+    "summary_sha256": "8ce7bd09e6a4e6bb27d9f1a3bdfec9f37c4534295a168f9f486e8cf5d2dcd3bf"
+  },
+  "configuration": {
+    "kdf_log_n": 14,
+    "profile": "fast",
+    "seed": 20260629,
+    "size_mib": 2049
+  },
+  "environment": {
+    "event": "workflow_dispatch",
+    "python": "3.13",
+    "runner_label": "ubuntu-latest",
+    "workflow": ".github/workflows/reliability.yml",
+    "workflow_run_id": 29917626770,
+    "workflow_run_url": "https://github.com/danielleib602-gif/mosaic-archive/actions/runs/29917626770"
+  },
+  "methodology": "Exact protected-main GitHub-hosted workflow run using a deterministic high-entropy source; the harness preflighted disk capacity, timed generation/encode/decode/verification separately, removed the source before decode, enforced an exact restored-output limit, and uploaded the summary only after success.",
+  "result": {
+    "archive_overhead_bytes": 4034988,
+    "archive_size": 2152567212,
+    "decode_seconds": 8.040019504000156,
+    "encode_seconds": 1399.5247692819999,
+    "format_version": 6,
+    "generation_seconds": 6.808674099000001,
+    "hash_verified": true,
+    "logical_chunk_count": 1848,
+    "peak_payload_bytes": 4301099436,
+    "restored_sha256": "dcfa6c829719c1ab532c95b6baf909ca4deccd5ebcdea303dfdd73243a5790fc",
+    "seed": 20260629,
+    "size_bytes": 2148532224,
+    "source_released_before_decode": true,
+    "source_sha256": "dcfa6c829719c1ab532c95b6baf909ca4deccd5ebcdea303dfdd73243a5790fc",
+    "unique_chunk_count": 1848,
+    "verify_seconds": 1.6759906879999562
+  },
+  "schema_version": 1,
+  "scope": {
+    "crosses_1_gib": true,
+    "crosses_signed_32_bit_offset": true,
+    "hosted_runner": true,
+    "limitations": [
+      "single-file high-entropy coverage does not exercise huge manifests or duplicate-cache pressure",
+      "the retained artifact expires after 30 days; this committed exact summary is the durable record",
+      "this bounded run does not validate the 1 TiB restored-output ceiling"
+    ]
+  },
+  "tested_commit": "cc03280b8abbcd128bf861114eb0cce670feb4f9"
+}

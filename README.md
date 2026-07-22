@@ -141,11 +141,11 @@ gates. Stable publication promotes those exact verified candidate payload
 bytes; its fresh cross-platform rebuilds are smoke checks, not replacements.
 
 Exact-commit local evidence for the 1,025 MiB tier is committed at
-`.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. It records a
-1,074,790,400-byte deterministic source, a 1,076,869,840-byte MSC6 archive,
-940 unique chunks, bounded peak payload files, and an exact restored SHA-256.
-This crosses 1 GiB locally; it does not substitute for the separate hosted
-2,049 MiB signed-offset-boundary run.
+`.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. Exact protected-main
+hosted evidence for the 2,049 MiB tier is committed at
+`.ecc/benchmarks/msc-v0.40-2049mib-soak-ubuntu.json`. The hosted run processed
+2,148,532,224 source bytes, produced a 2,152,567,212-byte MSC6 archive, crossed
+signed 32-bit offsets, and restored the source SHA-256 exactly.
 
 Decode and inspect accept caller-defined resource ceilings:
 
