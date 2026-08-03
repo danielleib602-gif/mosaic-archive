@@ -121,10 +121,48 @@ Its `/proc` process-group sampler cannot prove containment, enforce the 1/8 CPU
 and tool-thread lanes, or retain every configuration and descendant executable
 identity required above. Results are marked `evidence_class="diagnostic"` and
 `binding_eligible=false`; they must never be submitted as schema-v4 evidence.
-An authoritative runner still requires inherited cgroup-v2/PID containment,
-kernel peak-memory accounting, fixed resource/output limits and policy, exact
-cpusets, sanitized public environment retention, and complete cleanup on a
-disposable constrained host.
+
+`mosaic_archive.competitive_binding_runner` is the next fail-closed foundation.
+It proves a delegated Linux x86-64 root is actually on cgroup v2, pins its
+device/inode identity, and selects the lowest exact 1- or 8-CPU lane within both
+effective cpusets and process affinity. Its backend protocol covers fresh-leaf
+configuration, exact requested/effective cpuset/PID/memory readback, unpopulated
+kernel `memory.peak`, and kill/drain/removal cleanup. The public production path
+does not mutate a leaf yet: it fails closed until the native supervisor can
+provide an opaque exclusive-root capability and keep the measured workload
+under another UID or outside a writable view of the cgroup namespace. This
+prevents a path or advisory-lock assertion from being mistaken for kernel-
+enforced exclusivity. The complete canonical `runner-policy.json`
+manifest digest is
+`c44b318a4cf2f9ee231c309c2f6fffe2f88a0abffdccc7e833ce025731d0f7c3`;
+its nested fixed resource-policy digest is
+`bd8039119e7ab17b5776fd2025531ff2cd2275ce13c912405792eecc09388e58`.
+
+That module intentionally does not launch a measured process, and every result
+remains `binding_eligible=false`. Production leaf enablement and binding
+promotion require the same native pre-exec cgroup/PID-namespace supervisor,
+complete descendant executable identity, fixed public environment, bounded
+output handling, input-prewarm evidence, round-trip/archive identities, and
+signed raw per-run records on a disposable externally constrained host.
+
+## Whole-report status
+
+`mosaic_archive.competitive_report` is a strict development-report boundary. It
+requires all 48 corpus/thread/metric cases and all 2,640 content-addressed raw
+candidate/comparator run-reference declarations, rejects producer-supplied
+verdicts, and recomputes every case and the report-wide arithmetic result. It
+also requires one syntactically exact candidate, runner policy, hardware,
+workflow, corpus-manifest, and native-binary identity across the matrix.
+
+`report-v1` does not fetch the declared URLs, verify their bytes, derive samples
+from raw records, or authenticate those provenance identities. Its exact runner
+class is therefore `development-unverified`; a true
+`scorecard_passed` means only that the submitted numeric arrays pass the frozen
+math. `raw_evidence_verified`, `binding_eligible`, and
+`release_readiness_eligible` are structurally false. It cannot complete the
+competitive readiness gate until a later evidence resolver verifies the records
+and schema-v4 binds the same immutable report to the candidate tag and
+attestations.
 
 ## Corpus lock status
 
@@ -140,3 +178,36 @@ assembled from multiple upstream archives or differently licensed media, its
 bundle must include a content-addressed member manifest and bundle-wide license
 evidence covering every member; a live upstream alias or undocumented member is
 not eligible.
+
+`acquisition-plan.json` and
+`mosaic_archive.competitive_corpus_prep` add an offline preparation boundary
+without pretending those unresolved decisions are complete. All committed
+entries remain blocked. A plan entry spelled `runnable` is parsed only as an
+`unverified_technical_copy`; its approval booleans and record hash remain
+self-asserted claims with `externally_verified=false` and `binding=false`.
+Loading or copying can never promote those claims into approval.
+
+On Linux, the implemented deterministic-copy recipe verifies one already-local,
+single-link regular file through one descriptor. Returned paths are display-only:
+the result binds parent and file device/inode identities, and callers must use
+the secure reopen APIs to retraverse without following links, revalidate those
+identities, and receive a bounded Linux memfd snapshot that is sealed against
+write/grow/shrink/further-seal changes and then hashed again after sealing.
+Inputs above the explicit 128 MiB snapshot ceiling fail closed rather than
+consuming unbounded shmem; a disk-backed immutable handoff is still required
+for larger planned corpora. In-process issued-record tracking prevents
+accidental use of copied or caller-constructed records; it is misuse hardening,
+not external authority, and every record remains non-binding.
+Publication links an anonymous temporary inode with atomic no-overwrite
+semantics and synchronizes the destination directory before reporting
+`durable`; the final name is then descriptor-relatively revalidated against the
+committed inode. A directory-sync failure is reported as
+`committed_not_durable`; the already-published inode is never blindly removed.
+If the fsynced name was removed or replaced, the boundary reports
+`committed_name_unavailable`.
+If a post-attempt failure makes publication impossible to prove either way,
+the boundary reports `commit_outcome_unknown` instead of claiming safe
+non-publication.
+The boundary never downloads, extracts, grants approval, or writes
+`corpora.lock.json`. Aggregate-bundle construction and the external
+legal/license review remain outstanding.
