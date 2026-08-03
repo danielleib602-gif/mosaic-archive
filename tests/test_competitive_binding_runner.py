@@ -558,7 +558,10 @@ class BindingHostQualificationTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "requires POSIX statfs semantics")
     def test_production_backend_rejects_ordinary_filesystem_as_cgroup_v2(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            # macOS spells its temporary root through /var, which is a symlink.
+            # Resolve the test fixture so this case reaches the filesystem-type
+            # rejection instead of correctly failing earlier on that path alias.
+            root = Path(temporary).resolve(strict=True)
             facts = BindingHostFacts(
                 os_name="Linux",
                 machine="x86_64",
