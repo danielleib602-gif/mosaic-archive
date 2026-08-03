@@ -44,6 +44,17 @@
 - The deterministic public corpus, compatibility fixtures, parser/decoder fuzz
   harnesses, 256/1,025/2,049 MiB sustained-soak tiers, and cross-platform test
   matrix are committed.
+- Competitive Contract v1 now has a strict unverified development-scorecard
+  boundary, an exact Linux cgroup-v2 mount/root qualification foundation, and an
+  offline descriptor-bound corpus-copy foundation whose approval-shaped inputs
+  remain explicit unverified claims. Production cgroup leaf creation is gated
+  until a native supervisor can enforce root/workload isolation. Display paths
+  carry no authority, secure reopen yields bounded immutable snapshots, and
+  publication is not reported durable until directory sync plus final-name
+  revalidation succeeds. These foundations are intentionally non-binding: the
+  native PID-namespace launcher, complete executable identity, externally
+  approved immutable corpus lock, real MSC7 candidate, signed raw measurements,
+  and schema-v4 tag binding remain.
 - The package is MIT-licensed and contains public contribution, security,
   release, compatibility, format, benchmark, and threat-model documentation.
 
@@ -203,12 +214,14 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout's Python 3.13 suite runs 409 unit/integration tests: 390
-pass and 19 platform- or privilege-specific cases skip on Windows.
-CI measures statement and branch coverage across every package module; the
-current local Windows branch-inclusive result is 84.60% against a required
-80%, with no package module omitted from the gate. Ruff, strict mypy, Bandit,
-dependency audit, bytecode
+The hosted Python 3.13 CI suite runs 533 unit/integration tests. On Linux, 530
+pass and 3 platform- or privilege-specific cases skip; on Windows, 483 pass
+and 50 capability-specific cases skip. CI measures statement and branch
+coverage across every package module on Linux, where the cgroup-v2 and sealed-
+memfd paths execute. The current result is 85.66% against a required 80%, with
+no package module omitted. A Windows-only coverage run is intentionally not the
+release gate because those Linux-kernel paths cannot execute there. Ruff,
+strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
 unsafe paths, invalid source identities, and resource-limit violations before
@@ -236,21 +249,26 @@ The v0.39.0 release is published and its checksums, Windows binary, exact-source
 bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
-1. acquire and approve the six immutable aggregate corpus bundles, commit their
-   real lock, and implement the authoritative cgroup-v2/PID-contained runner;
-2. implement and optimize the additive Rust MSC7 core, native CLI, and Python
+1. finish the authoritative runner with a native pre-exec PID namespace,
+   inherited cgroup placement, complete descendant executable identities,
+   bounded outputs, and signed raw-run records;
+2. acquire and externally approve all six immutable public corpus bundles,
+   finish aggregate member manifests/recipes, and commit the real lock;
+3. implement and optimize the additive Rust MSC7 core, native CLI, and Python
    binding against the preregistered single-profile contract;
-3. freeze and publish a new exact-commit attested candidate after the current
+4. run all 48 contract cases, publish all 2,640 content-addressed raw records,
+   and add schema-v4 tag binding only after the candidate actually passes;
+5. freeze and publish a new exact-commit attested candidate after the current
    unreleased hardening is merged, then rebind
    [issue #50](https://github.com/danielleib602-gif/mosaic-archive/issues/50)
    and the review handoff to that candidate rather than the older v0.39 commit;
-4. complete the independent security review and resolve or document its
+6. complete the independent security review and resolve or document its
    findings;
-5. decide whether a separate compression-only profile is worth the security
+7. decide whether a separate compression-only profile is worth the security
    and product complexity; the remaining incompressible-byte delta is the
    expected cost of encryption, authentication, and privacy padding;
-6. keep MSR2 as research evidence rather than promoting its wire format;
-7. add PyPI trusted publishing only if a Python-package release channel is
+8. keep MSR2 as research evidence rather than promoting its wire format;
+9. add PyPI trusted publishing only if a Python-package release channel is
    desired.
 
 The detailed milestone history and rollback rules remain in

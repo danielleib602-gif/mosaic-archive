@@ -840,7 +840,7 @@ def _validated_metric_samples(
     metric: str,
     samples: Sequence[int | float],
     context: str,
-) -> tuple[float, ...]:
+) -> tuple[int | float, ...]:
     if metric not in METRICS:
         raise ValueError(f"metric must be one of {METRICS!r}")
     if metric not in MEMORY_METRICS:
@@ -849,14 +849,14 @@ def _validated_metric_samples(
         raise ValueError(f"{context} cgroup memory.peak values must be a numeric sequence")
     if not samples:
         raise ValueError(f"{context} cgroup memory.peak values must not be empty")
-    result: list[float] = []
+    result: list[int | float] = []
     for value in samples:
         if type(value) is not int or not 0 < value <= MAX_CGROUP_MEMORY_PEAK_BYTES:
             raise ValueError(
                 f"{context} cgroup memory.peak values must be positive "
                 "signed 64-bit integers"
             )
-        result.append(float(value))
+        result.append(value)
     return tuple(result)
 
 
@@ -1103,12 +1103,15 @@ def _scorecard_object(value: object) -> Mapping[str, object]:
     return cast(Mapping[str, object], value)
 
 
-def _binding_metric_samples(value: object, metric: str) -> dict[str, tuple[float, ...]]:
+def _binding_metric_samples(
+    value: object,
+    metric: str,
+) -> dict[str, tuple[int | float, ...]]:
     if not isinstance(value, Mapping):
         raise ValueError("comparator_samples must be an object")
     if set(value) != set(BINDING_TOOLS):
         raise ValueError(f"metric comparator IDs must be exactly {sorted(BINDING_TOOLS)!r}")
-    result: dict[str, tuple[float, ...]] = {}
+    result: dict[str, tuple[int | float, ...]] = {}
     for comparator_id in BINDING_TOOLS:
         samples = _validated_metric_samples(
             metric,

@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "plan_id": "mosaic-competitive-acquisition-plan-v1",
+  "binding": false,
+  "corpora": [
+    {
+      "id": "silesia-mixed",
+      "status": "blocked",
+      "blocked_reason": "Every bundled member still needs an immutable source identity, license evidence, and external benchmark-use and redistribution approvals.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "aggregate_bundle",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    },
+    {
+      "id": "enwik8-text",
+      "status": "blocked",
+      "blocked_reason": "The immutable source byte identity, license evidence, and external benchmark-use and redistribution approvals are not yet recorded.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "single_file",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    },
+    {
+      "id": "linux-v6.12-v6.13-source-tree",
+      "status": "blocked",
+      "blocked_reason": "A canonical aggregate bundle and member manifest, immutable source identities, license evidence, and external approvals remain outstanding.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "aggregate_bundle",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    },
+    {
+      "id": "gharchive-utc-hour-json",
+      "status": "blocked",
+      "blocked_reason": "No immutable UTC-hour object, exact source identity, license evidence, or external benchmark-use and redistribution approval is frozen yet.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "single_file",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    },
+    {
+      "id": "geonames-allcountries",
+      "status": "blocked",
+      "blocked_reason": "A content-addressed dated snapshot, license evidence, and external benchmark-use and redistribution approval are not yet frozen.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "single_file",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    },
+    {
+      "id": "wikimedia-precompressed-media",
+      "status": "blocked",
+      "blocked_reason": "The canonical media bundle and member manifest, per-member license evidence, and external benchmark-use and redistribution approvals remain outstanding.",
+      "source_url": null,
+      "expected_source_bytes": null,
+      "expected_source_sha256": null,
+      "input_kind": "aggregate_bundle",
+      "recipe": {
+        "id": "deterministic-copy",
+        "version": 1,
+        "implementation_sha256": "5b7179dc99567c6a3065de60d4b26a8d9044c72603b1d90952a9e36a63d66ca4"
+      },
+      "member_manifest_sha256": null,
+      "license_evidence_sha256": null,
+      "benchmark_use_approved": false,
+      "redistribution_approved": false,
+      "approval_record": null
+    }
+  ]
+}

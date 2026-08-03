@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "manifest_id": "mosaic-competitive-runner-manifest-v1",
+  "manifest_digest_algorithm": "sha256_canonical_json_without_manifest_digest_v1",
+  "manifest_sha256": "c44b318a4cf2f9ee231c309c2f6fffe2f88a0abffdccc7e833ce025731d0f7c3",
+  "contract_sha256": "5f76317e4e03c2b4a5e5c9414e08edd7fd64d53e35afb3681cd6ba93e93b3d6d",
+  "authority_state": "qualification_only_until_native_pidns_exec_identity_v1",
+  "binding_eligible": false,
+  "qualification_policy": {
+    "schema_version": 1,
+    "policy_id": "mosaic-binding-runner-policy-v1",
+    "thread_tiers": [
+      1,
+      8
+    ],
+    "required_controllers": [
+      "cpuset",
+      "memory",
+      "pids"
+    ],
+    "pids_max": 512,
+    "memory_max_bytes": 68719476736,
+    "memory_swap_max_bytes": 0,
+    "output_max_bytes": 34359738368,
+    "wall_time_limit_seconds": 3600,
+    "cleanup_timeout_seconds": 30,
+    "cleanup_poll_interval_milliseconds": 10,
+    "leaf_name_prefix": "mosaic-binding-",
+    "digest_algorithm": "sha256_canonical_json_v1",
+    "policy_sha256": "bd8039119e7ab17b5776fd2025531ff2cd2275ce13c912405792eecc09388e58"
+  },
+  "implemented_qualification_controls": {
+    "host": "Linux_x86_64_cgroup_v2_v1",
+    "cpuset_selection": "lowest_allowed_logical_cpu_ids_v1",
+    "cpuset_mems": "all_parent_effective_memory_nodes_v1",
+    "fresh_leaf_per_measurement": true,
+    "exact_control_write_readback": true,
+    "effective_cpuset_verification": "after_setup_before_attach_and_after_run_v1",
+    "lease_state_machine": "single_attach_exclusive_finalize_v1",
+    "memory_peak_origin": "fresh_leaf_creation_v1",
+    "memory_peak_read": "positive_i64_after_unpopulated_v1",
+    "cleanup": "cgroup_kill_wait_unpopulated_remove_v1"
+  },
+  "required_before_binding": {
+    "native_pid_namespace_launcher": true,
+    "exclusive_delegated_cgroup_root": true,
+    "pre_exec_cgroup_placement": true,
+    "complete_descendant_exec_identity": true,
+    "fixed_public_environment_capture": true,
+    "bounded_output_capture": true,
+    "input_prewarm_evidence": true,
+    "round_trip_and_archive_identity": true,
+    "signed_raw_run_evidence": true
+  }
+}

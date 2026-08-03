@@ -328,6 +328,30 @@ Tasks:
 - [x] publish an upgrade/deprecation policy;
 - ship signed cross-platform binaries (pipeline complete; awaits reviewed tag).
 
+Active Competitive Contract sprint sequence:
+
+1. [x] Freeze the contract, portable statistics, exact case evaluator, and
+   exhaustive non-release, explicitly unverified `report-v1` boundary.
+2. [ ] Complete authoritative Linux execution. Exact cgroup-v2 qualification,
+   fixed policy, peak accounting, and fail-closed backend lifecycle are
+   implemented. Production leaf mutation remains gated until the native
+   pre-exec supervisor can mint an exclusive-root capability, isolate workload
+   UID/mount access, retain complete descendant executable identity, bound
+   stream/output capture, and sign each raw run record.
+3. [ ] Lock the six public workloads. The strict offline acquisition plan and
+   descriptor-bound deterministic-copy foundation are implemented, including
+   secure sealed-snapshot reopen through 128 MiB and durable no-replace
+   publication. A disk-backed immutable handoff is still needed for larger
+   inputs. All approval-shaped plan fields remain unverified claims; immutable
+   aggregate bundles, member manifests, license evidence, external approvals,
+   and the binding `corpora.lock.json` remain.
+4. [ ] Implement the additive Rust MSC7 core, native CLI, Python binding, and
+   permanent wire/security/compatibility fixtures, then optimize only against
+   preregistered scorecard failures.
+5. [ ] Execute the full 48-case matrix on the frozen candidate and eligible
+   host, publish all 2,640 raw run records, and bind the recomputed passing
+   report through schema-v4 tag evidence.
+
 Exit criteria: backward-compatibility fixtures are permanent, threat-model
 findings are resolved or documented, and no benchmark claim depends on a
 private corpus.

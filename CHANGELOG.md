@@ -8,6 +8,34 @@ is preserved.
 
 ### Security
 
+- Added a fail-closed Linux x86-64 cgroup-v2 qualification foundation for the
+  future binding competitive runner. It proves the filesystem is cgroup v2,
+  pins root identities, selects exact 1- and 8-CPU lanes, and strictly loads the
+  committed policy through a bounded nonblocking regular-file descriptor. The
+  Linux filesystem-identity probe rejects other kernels before loading the
+  Linux `fstatfs` ABI.
+  Leaf configuration, fresh-leaf `memory.peak`, and kill/drain/removal lifecycle
+  logic remain covered behind the backend protocol, but production leaf creation
+  now fails closed until a native supervisor supplies kernel-enforced workload
+  isolation and an exclusive delegated-root capability. All outputs remain
+  explicitly non-binding.
+- Added offline competitive-corpus preparation with exact plan validation,
+  approval-shaped fields exposed only as structurally unverified claims,
+  descriptor-bound source/output identities, secure revalidation, and durable
+  Linux anonymous-inode no-overwrite publication. Display paths never carry
+  authority, a committed output is not reported durable until its destination
+  directory is synchronized and the final name is revalidated, and supported
+  reopen operations return bounded, post-seal-hashed immutable snapshots. The
+  boundary never downloads, extracts, grants approval, or emits a binding
+  corpus lock, and all committed acquisition entries remain blocked.
+- Added a strict whole-report boundary that requires and recomputes all 48
+  Competitive Contract v1 cases plus 2,640 content-addressed raw run references.
+  Producer-supplied verdict fields are rejected. Because report-v1 does not yet
+  resolve those references or authenticate provenance, it exposes only
+  `scorecard_passed`; raw-evidence, binding, and release authority remain
+  structurally false.
+- Preserved exact integer cgroup `memory.peak` samples through whole-scorecard
+  evaluation instead of converting them to floats before the metric boundary.
 - Every active MSC1, MSC2, MSC6, MSR1, and MSR2 encoder now binds traversal
   and reads to captured root, directory, and file identities. Ancestors and the
   exact opened file handle are checked for every read, and a complete topology

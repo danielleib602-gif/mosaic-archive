@@ -39,14 +39,22 @@ collection after the group reports no populated processes.
 
 The current `competitive_runner` module is provisional diagnostic scaffolding,
 not that binding runner. Its sampled `/proc` telemetry can miss between-sample
-descendants and RSS peaks; it does not yet provide inherited cgroup-v2/PID
-containment, exact cpuset and tool-thread enforcement, kernel `memory.peak`, a
-fixed non-tunable measurement policy, complete descendant executable identity,
-or canonical environment/configuration retention. It is not a sandbox, must run
-only trusted binaries inside a disposable externally constrained host, and its
-outputs must never feed schema-v4 evidence or complete the readiness gate.
-Promotion requires pre-exec containment, resource/output limits, full cleanup,
-and signed raw per-run evidence satisfying every requirement above.
+descendants and RSS peaks. The newer `competitive_binding_runner` foundation
+proves and pins a delegated cgroup-v2 filesystem/root and selects an exact 1- or
+8-CPU lane. Its backend protocol covers fixed PID/memory controls, exact
+readback, kernel `memory.peak`, and kill/drain/removal lifecycle. Production
+leaf creation deliberately refuses to run until a native supervisor can supply
+an exclusive-root capability and isolate the measured workload by UID or mount
+namespace; a path or advisory lock alone cannot prove that invariant. The
+canonical policy is committed in
+`benchmarks/competitive-v1/runner-policy.json`.
+
+The foundation still does not launch measured processes or expose production
+leaf mutation. It lacks the native pre-exec PID namespace, complete descendant
+executable identity, canonical environment/configuration retention, bounded
+output collection, and signed raw run record needed for authority. It is not a
+sandbox and remains structurally `binding_eligible=false`. Its outputs must
+never feed schema-v4 evidence or complete the readiness gate.
 
 ## Sampling and metrics
 
@@ -128,5 +136,10 @@ hardware fingerprint, comparator versions/commands, and raw samples.
 The readiness validator must read the exact bound report and recompute its
 statistics and size outcomes for every comparator. A passing report on a
 different commit, binary, manifest, runner class, or command set is not
-transferable. The current individual-case evaluator is only a foundation and
-does not complete the report or release gate by itself.
+transferable. The strict `competitive_report` development boundary now
+recomputes all 48 submitted cases and requires declarations for all 2,640
+content-addressed raw run references. It does not yet resolve those records or
+authenticate the declared provenance, so it exposes only an arithmetic
+`scorecard_passed` result while `raw_evidence_verified`, `binding_eligible`, and
+`release_readiness_eligible` remain false. `report-v1` is not schema-v4 tag
+evidence and cannot complete the release gate by itself.

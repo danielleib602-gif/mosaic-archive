@@ -884,6 +884,34 @@ class TestSyntheticScorecardCase(unittest.TestCase):
         self.assertIs(result.size_verdict.passed, True)
         self.assertIs(result.passed, True)
 
+    def test_evaluator_preserves_exact_integer_memory_samples(self) -> None:
+        metric = "encode_cgroup_v2_memory_peak_bytes"
+        identity = _case_identity(metric=metric)
+        payload = _scorecard_payload()
+        payload["case_id"] = derive_case_id(identity)
+        payload["metric"] = metric
+        float_collision = 2**53
+        payload["candidate_samples"] = [float_collision // 2] * 11
+        payload["comparator_samples"] = {
+            # float(2**53) == float(2**53 + 1). Exact integer selection must
+            # therefore choose 7zip_raw instead of the lexical float-tie winner.
+            "7zip_raw": [float_collision] * 11,
+            "7zip_aes256_headers": [float_collision + 1] * 11,
+            "zstd_raw": [float_collision + 4] * 11,
+            "zstd_age_passphrase": [float_collision + 6] * 11,
+        }
+
+        result = evaluate_scorecard_case(payload)
+
+        self.assertEqual(float(float_collision), float(float_collision + 1))
+        self.assertEqual(result.fastest_comparator_id, "7zip_raw")
+        self.assertEqual(
+            result.metric_verdicts[0].candidate_median,
+            float(float_collision // 2),
+        )
+        self.assertTrue(all(verdict.passed for verdict in result.metric_verdicts))
+        self.assertIs(result.passed, True)
+
     def test_evaluator_does_not_accept_claimed_summary_or_pass_fields(self) -> None:
         for field, value in (
             ("passed", True),
