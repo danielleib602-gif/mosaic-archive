@@ -890,18 +890,25 @@ class TestSyntheticScorecardCase(unittest.TestCase):
         payload = _scorecard_payload()
         payload["case_id"] = derive_case_id(identity)
         payload["metric"] = metric
-        payload["candidate_samples"] = [80_000_000] * 11
+        float_collision = 2**53
+        payload["candidate_samples"] = [float_collision // 2] * 11
         payload["comparator_samples"] = {
-            "7zip_raw": [100_000_000] * 11,
-            "7zip_aes256_headers": [120_000_000] * 11,
-            "zstd_raw": [110_000_000] * 11,
-            "zstd_age_passphrase": [130_000_000] * 11,
+            # float(2**53) == float(2**53 + 1). Exact integer selection must
+            # therefore choose 7zip_raw instead of the lexical float-tie winner.
+            "7zip_raw": [float_collision] * 11,
+            "7zip_aes256_headers": [float_collision + 1] * 11,
+            "zstd_raw": [float_collision + 4] * 11,
+            "zstd_age_passphrase": [float_collision + 6] * 11,
         }
 
         result = evaluate_scorecard_case(payload)
 
+        self.assertEqual(float(float_collision), float(float_collision + 1))
         self.assertEqual(result.fastest_comparator_id, "7zip_raw")
-        self.assertEqual(result.metric_verdicts[0].candidate_median, 80_000_000.0)
+        self.assertEqual(
+            result.metric_verdicts[0].candidate_median,
+            float(float_collision // 2),
+        )
         self.assertTrue(all(verdict.passed for verdict in result.metric_verdicts))
         self.assertIs(result.passed, True)
 
