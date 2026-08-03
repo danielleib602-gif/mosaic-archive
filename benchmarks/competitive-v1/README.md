@@ -127,23 +127,27 @@ It proves a delegated Linux x86-64 root is actually on cgroup v2, pins its
 device/inode identity, and selects the lowest exact 1- or 8-CPU lane within both
 effective cpusets and process affinity. Its backend protocol covers fresh-leaf
 configuration, exact requested/effective cpuset/PID/memory readback, unpopulated
-kernel `memory.peak`, and kill/drain/removal cleanup. The public production path
-does not mutate a leaf yet: it fails closed until the native supervisor can
-provide an opaque exclusive-root capability and keep the measured workload
-under another UID or outside a writable view of the cgroup namespace. This
-prevents a path or advisory-lock assertion from being mistaken for kernel-
-enforced exclusivity. The complete canonical `runner-policy.json`
+kernel `memory.peak`, and kill/drain/removal cleanup. A Rust native supervisor
+now creates a fresh fixed-controller session and transfers one authenticated
+descriptor-only capability to the trusted coordinator. The public production
+path can configure a leaf only from that exact live, same-process capability;
+path qualification, peer death/revocation, and forked leases fail before backend
+access. It still cannot attach a measured process: that remains blocked until
+native pre-exec placement can keep the workload under another UID or outside a
+writable view of the cgroup namespace. This prevents a path or advisory-lock
+assertion from being mistaken for kernel-enforced exclusivity. The complete
+canonical `runner-policy.json`
 manifest digest is
 `c44b318a4cf2f9ee231c309c2f6fffe2f88a0abffdccc7e833ce025731d0f7c3`;
 its nested fixed resource-policy digest is
 `bd8039119e7ab17b5776fd2025531ff2cd2275ce13c912405792eecc09388e58`.
 
 That module intentionally does not launch a measured process, and every result
-remains `binding_eligible=false`. Production leaf enablement and binding
-promotion require the same native pre-exec cgroup/PID-namespace supervisor,
-complete descendant executable identity, fixed public environment, bounded
-output handling, input-prewarm evidence, round-trip/archive identities, and
-signed raw per-run records on a disposable externally constrained host.
+remains `binding_eligible=false`. Production attachment and binding promotion
+require native `clone3` cgroup/PID-namespace launch, complete descendant
+executable identity, fixed public environment, bounded output handling,
+input-prewarm evidence, round-trip/archive identities, and signed raw per-run
+records on a disposable externally constrained host.
 
 ## Whole-report status
 

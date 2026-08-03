@@ -11,6 +11,7 @@ import tempfile
 import threading
 import unittest
 from collections.abc import Callable
+from contextlib import nullcontext
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 from unittest import mock
@@ -31,6 +32,12 @@ from mosaic_archive.competitive_binding_runner import (
     BindingRunnerHostError,
     create_binding_cgroup,
     qualify_binding_host,
+    qualify_supervised_binding_host,
+)
+from mosaic_archive.competitive_binding_supervisor import (
+    DELEGATED_ROOT_POLICY_SHA256,
+    _issue_capability_for_testing,
+    _require_capability_access,
 )
 from mosaic_archive.competitive_contract import CONTRACT_SHA256
 
@@ -605,6 +612,33 @@ class BindingHostQualificationTests(unittest.TestCase):
         self.assertIs(one.binding_eligible, False)
         self.assertIs(eight.binding_eligible, False)
 
+    def test_supervised_qualification_uses_only_capability_backend_and_binds_session(
+        self,
+    ) -> None:
+        backend = FakeBindingBackend()
+        capability = _issue_capability_for_testing(
+            backend=backend,
+            root_handle=backend.root_handle,
+            root_device=31,
+            root_inode=41,
+        )
+        self.addCleanup(capability.close)
+
+        qualification = qualify_supervised_binding_host(
+            capability,
+            1,
+            facts=_facts(),
+        )
+
+        self.assertFalse(any(call[:1] == ("inspect_root",) for call in backend.calls))
+        self.assertEqual(qualification.session_id, capability.session_id)
+        self.assertEqual(qualification.root_identity, capability.root_identity)
+        self.assertEqual(qualification.policy_digest, DELEGATED_ROOT_POLICY_SHA256)
+        self.assertIs(qualification._backend, backend)
+        self.assertIs(qualification._root_handle, backend.root_handle)
+        self.assertIs(qualification._capability, capability)
+        self.assertIs(qualification.binding_eligible, False)
+
     def test_captures_facts_from_backend_when_not_supplied(self) -> None:
         backend = FakeBindingBackend(machine="AMD64")
 
@@ -770,14 +804,94 @@ class BindingCgroupCreationTests(unittest.TestCase):
         qualification = _qualification(backend)
         with self.assertRaisesRegex(
             BindingRunnerHostError,
-            "native supervisor.*exclusive delegated-root capability",
+            "exact issued delegated-root capability",
         ):
             create_binding_cgroup(
                 qualification,
+                capability=cast(Any, object()),
                 leaf_name=_LEAF_NAME,
-                backend=backend,
             )
         self.assertEqual(backend.leaves, {})
+
+    def test_path_qualification_and_test_capability_cannot_authorize_mutation(self) -> None:
+        backend = FakeBindingBackend()
+        capability = _issue_capability_for_testing(
+            backend=backend,
+            root_handle=backend.root_handle,
+        )
+        self.addCleanup(capability.close)
+
+        with self.assertRaisesRegex(BindingRunnerHostError, "native-supervisor provenance"):
+            create_binding_cgroup(
+                _qualification(backend),
+                capability=capability,
+                leaf_name=_LEAF_NAME,
+            )
+        self.assertEqual(backend.leaves, {})
+
+    def test_capability_mismatch_is_checked_before_leaf_mutation(self) -> None:
+        backend = FakeBindingBackend()
+        capability = _issue_capability_for_testing(
+            backend=backend,
+            root_handle=backend.root_handle,
+        )
+        self.addCleanup(capability.close)
+        qualification = qualify_supervised_binding_host(capability, 1, facts=_facts())
+        mismatched = dataclasses.replace(qualification, session_id="ff" * 16)
+        production_access = dataclasses.replace(
+            _require_capability_access(capability),
+            production_inherited=True,
+        )
+
+        with (
+            mock.patch.object(
+                binding_runner_module,
+                "_locked_capability_access",
+                return_value=nullcontext(production_access),
+            ),
+            self.assertRaisesRegex(BindingRunnerHostError, "does not match"),
+        ):
+            create_binding_cgroup(
+                mismatched,
+                capability=capability,
+                leaf_name=_LEAF_NAME,
+            )
+        self.assertEqual(backend.leaves, {})
+
+    def test_production_lease_revalidates_capability_before_backend_access(self) -> None:
+        backend = FakeBindingBackend()
+        capability = _issue_capability_for_testing(
+            backend=backend,
+            root_handle=backend.root_handle,
+        )
+        qualification = qualify_supervised_binding_host(capability, 1, facts=_facts())
+        production_access = dataclasses.replace(
+            _require_capability_access(capability),
+            production_inherited=True,
+        )
+        with mock.patch.object(
+            binding_runner_module,
+            "_locked_capability_access",
+            return_value=nullcontext(production_access),
+        ):
+            lease = create_binding_cgroup(
+                qualification,
+                capability=capability,
+                leaf_name=_LEAF_NAME,
+            )
+
+        capability.close()
+        calls_before = list(backend.calls)
+        with self.assertRaisesRegex(BindingRunnerHostError, "capability.*closed"):
+            lease.verify_effective_cpuset()
+        self.assertEqual(backend.calls, calls_before)
+
+        with mock.patch.object(
+            binding_runner_module,
+            "_locked_capability_access",
+            return_value=nullcontext(production_access),
+        ):
+            lease.cleanup()
 
     def test_creates_fresh_leaf_with_exact_cpuset_and_fixed_resource_limits(self) -> None:
         backend = FakeBindingBackend()
@@ -952,6 +1066,42 @@ class BindingCgroupCreationTests(unittest.TestCase):
 
 
 class BindingCgroupLeaseTests(unittest.TestCase):
+    def test_production_lease_refuses_attachment_before_backend_access(self) -> None:
+        backend = FakeBindingBackend()
+        capability = _issue_capability_for_testing(
+            backend=backend,
+            root_handle=backend.root_handle,
+        )
+        self.addCleanup(capability.close)
+        qualification = qualify_supervised_binding_host(capability, 1, facts=_facts())
+        production_access = dataclasses.replace(
+            _require_capability_access(capability),
+            production_inherited=True,
+        )
+        with mock.patch.object(
+            binding_runner_module,
+            "_locked_capability_access",
+            return_value=nullcontext(production_access),
+        ):
+            lease = create_binding_cgroup(
+                qualification,
+                capability=capability,
+                leaf_name=_LEAF_NAME,
+            )
+        calls_before = list(backend.calls)
+
+        with self.assertRaisesRegex(BindingRunnerHostError, "clone3 pre-exec"):
+            lease.attach_process(4242)
+
+        self.assertEqual(lease.attachment_authority, "native-preexec-required")
+        self.assertEqual(backend.calls, calls_before)
+        with mock.patch.object(
+            binding_runner_module,
+            "_locked_capability_access",
+            return_value=nullcontext(production_access),
+        ):
+            lease.cleanup()
+
     def test_attach_process_accepts_only_positive_exact_int_and_verifies_membership(
         self,
     ) -> None:
@@ -1227,6 +1377,41 @@ class BindingCgroupLeaseTests(unittest.TestCase):
             ):
                 operation()
 
+    @unittest.skipUnless(hasattr(os, "fork"), "requires POSIX fork")
+    def test_fork_child_cannot_mutate_a_preexisting_lease(self) -> None:
+        backend = FakeBindingBackend()
+        lease = _lease(backend)
+        read_fd, write_fd = os.pipe()
+        fork = cast(Callable[[], int], os.fork)
+        child_pid = fork()
+        if child_pid == 0:
+            os.close(read_fd)
+            calls_before = len(backend.calls)
+            try:
+                lease.kill()
+            except BaseException as error:
+                result = (
+                    f"{type(error).__name__}:{error}:{calls_before}:{len(backend.calls)}".encode()
+                )
+            else:
+                result = b"unexpected-success"
+            os.write(write_fd, result)
+            os.close(write_fd)
+            os._exit(0)
+
+        os.close(write_fd)
+        try:
+            result = os.read(read_fd, 4096).decode("utf-8")
+        finally:
+            os.close(read_fd)
+            waited_pid, status = os.waitpid(child_pid, 0)
+        self.assertEqual(waited_pid, child_pid)
+        self.assertEqual(status, 0)
+        self.assertRegex(result, r"BindingRunnerHostError:.*another process")
+        calls_before, calls_after = result.rsplit(":", 2)[-2:]
+        self.assertEqual(calls_before, calls_after)
+        lease.cleanup()
+
 
 _DELEGATED_ROOT = os.environ.get("MOSAIC_BINDING_CGROUP_ROOT")
 
@@ -1246,7 +1431,11 @@ class DelegatedLinuxBindingCgroupIntegrationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             BindingRunnerHostError,
-            "native supervisor.*exclusive delegated-root capability",
+            "exact issued delegated-root capability",
         ):
-            create_binding_cgroup(qualification, leaf_name=leaf_name)
+            create_binding_cgroup(
+                qualification,
+                capability=cast(Any, object()),
+                leaf_name=leaf_name,
+            )
         self.assertFalse((root / leaf_name).exists())

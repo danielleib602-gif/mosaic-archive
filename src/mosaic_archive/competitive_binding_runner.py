@@ -10,8 +10,10 @@ structurally non-binding.
 
 from __future__ import annotations
 
+import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
@@ -29,6 +31,12 @@ from .competitive_binding_policy import (
     _THREAD_TIERS,
     BindingRunnerPolicy,
     fixed_binding_policy,
+)
+from .competitive_binding_supervisor import (
+    DelegatedRootCapabilityError,
+    DelegatedRootIdentity,
+    ExclusiveDelegatedCgroupRoot,
+    _locked_capability_access,
 )
 
 _MAX_CPUSET_ITEMS = 65_536
@@ -111,8 +119,16 @@ class BindingHostQualification:
     selected_mems: tuple[int, ...]
     cpuset_mems: str
     binding_eligible: Literal[False] = False
+    session_id: str | None = None
+    root_identity: DelegatedRootIdentity | None = None
+    policy_digest: str | None = None
     _backend: _BindingBackend = field(repr=False, compare=False, default=None)  # type: ignore[assignment]
     _root_handle: object = field(repr=False, compare=False, default=None)
+    _capability: ExclusiveDelegatedCgroupRoot | None = field(
+        repr=False,
+        compare=False,
+        default=None,
+    )
 
     def __post_init__(self) -> None:
         if self.binding_eligible is not False:
@@ -147,6 +163,26 @@ class BindingHostQualification:
             raise ValueError("cpuset memory-node text is not canonical")
         if self._backend is None or self._root_handle is None:
             raise ValueError("qualification must retain its inspected cgroup root")
+        supervised = (
+            self.session_id,
+            self.root_identity,
+            self.policy_digest,
+            self._capability,
+        )
+        if any(value is not None for value in supervised) and not all(
+            value is not None for value in supervised
+        ):
+            raise ValueError("supervised qualification binding must be complete")
+        if self.session_id is not None:
+            if (
+                type(self.session_id) is not str
+                or re.fullmatch(r"[0-9a-f]{32}", self.session_id) is None
+            ):
+                raise ValueError("supervised qualification session ID is not canonical")
+            if not isinstance(self.root_identity, DelegatedRootIdentity):
+                raise TypeError("supervised qualification root identity is invalid")
+            if self.policy_digest != self.policy.policy_sha256:
+                raise ValueError("supervised qualification policy digest is mismatched")
 
 
 class _FilesystemBindingBackend(_DescriptorRelativeFilesystemBackend):
@@ -239,7 +275,7 @@ def qualify_binding_host(
     facts: BindingHostFacts | None = None,
     backend: object | None = None,
 ) -> BindingHostQualification:
-    """Qualify a delegated cgroup-v2 root and select an exact 1/8-thread CPU lane."""
+    """Diagnose a path-selected root without granting mutation authority."""
     _validate_requested_threads(requested_threads)
     if not isinstance(cgroup_root, Path):
         raise TypeError("cgroup root must be a Path")
@@ -249,6 +285,72 @@ def qualify_binding_host(
         _BindingBackend,
         _FilesystemBindingBackend() if backend is None else backend,
     )
+    root_handle = _backend_call(
+        "cgroup v2 delegated-root inspection failed",
+        lambda: selected_backend.inspect_root(cgroup_root),
+    )
+    return _qualify_pinned_root(
+        cgroup_root=cgroup_root,
+        requested_threads=requested_threads,
+        facts=facts,
+        backend=selected_backend,
+        root_handle=root_handle,
+    )
+
+
+def qualify_supervised_binding_host(
+    capability: ExclusiveDelegatedCgroupRoot,
+    requested_threads: int,
+    *,
+    facts: BindingHostFacts | None = None,
+) -> BindingHostQualification:
+    """Qualify only the inherited descriptor/root authenticated by a supervisor."""
+    _validate_requested_threads(requested_threads)
+    try:
+        with _locked_capability_access(capability) as access:
+            display_root = getattr(access.backend, "display_path", None)
+            if not isinstance(display_root, Path):
+                candidate = getattr(access.backend, "root_path", None)
+                display_root = (
+                    candidate
+                    if isinstance(candidate, Path)
+                    else (
+                        Path("/pinned-cgroup") if os.name == "posix" else Path("C:/pinned-cgroup")
+                    )
+                )
+            if not display_root.is_absolute():
+                raise BindingRunnerHostError(
+                    "delegated-root diagnostic display path is not absolute"
+                )
+            return _qualify_pinned_root(
+                cgroup_root=display_root,
+                requested_threads=requested_threads,
+                facts=facts,
+                backend=access.backend,
+                root_handle=access.root_handle,
+                capability=capability,
+                session_id=access.session_id,
+                root_identity=access.root_identity,
+                policy_digest=access.policy_digest,
+            )
+    except DelegatedRootCapabilityError as error:
+        raise BindingRunnerHostError(f"invalid delegated-root capability: {error}") from error
+
+
+def _qualify_pinned_root(
+    *,
+    cgroup_root: Path,
+    requested_threads: int,
+    facts: BindingHostFacts | None,
+    backend: _BindingBackend,
+    root_handle: object,
+    capability: ExclusiveDelegatedCgroupRoot | None = None,
+    session_id: str | None = None,
+    root_identity: DelegatedRootIdentity | None = None,
+    policy_digest: str | None = None,
+) -> BindingHostQualification:
+    """Inspect a selected root; ``cgroup_root`` is diagnostic text only here."""
+    selected_backend = backend
     if facts is None:
         os_name = _backend_call("failed to inspect host OS", selected_backend.system)
         machine = _backend_call("failed to inspect host machine", selected_backend.machine)
@@ -272,10 +374,6 @@ def qualify_binding_host(
             f"host affinity cannot supply the exact {requested_threads}-thread tier"
         )
 
-    root_handle = _backend_call(
-        "cgroup v2 delegated-root inspection failed",
-        lambda: selected_backend.inspect_root(cgroup_root),
-    )
     root_values: dict[str, str] = {}
     for filename in (
         "cgroup.controllers",
@@ -330,8 +428,12 @@ def qualify_binding_host(
         selected_mems=selected_mems,
         cpuset_mems=_format_id_set(selected_mems),
         binding_eligible=False,
+        session_id=session_id,
+        root_identity=root_identity,
+        policy_digest=policy_digest,
         _backend=selected_backend,
         _root_handle=root_handle,
+        _capability=capability,
     )
 
 
@@ -395,10 +497,13 @@ class BindingCgroupLease:
     """A fresh cgroup leaf with fail-closed lifecycle and memory-peak operations."""
 
     __slots__ = (
+        "_attachment_authority",
         "_backend",
         "_closed",
+        "_issuing_pid",
         "_leaf_handle",
         "_lock",
+        "_production_capability",
         "_root_handle",
         "_state",
         "leaf_name",
@@ -413,12 +518,32 @@ class BindingCgroupLease:
         backend: _BindingBackend,
         root_handle: object,
         leaf_handle: object,
+        attachment_authority: Literal["native-preexec-required", "test-only-direct-attach"],
+        production_capability: ExclusiveDelegatedCgroupRoot | None = None,
     ) -> None:
+        if qualification._backend is not backend or qualification._root_handle is not root_handle:
+            raise ValueError("cgroup lease must retain its exact qualified backend and root")
+        if attachment_authority == "native-preexec-required":
+            if (
+                type(production_capability) is not ExclusiveDelegatedCgroupRoot
+                or qualification._capability is not production_capability
+            ):
+                raise ValueError(
+                    "a production cgroup lease requires its exact qualifying capability"
+                )
+        elif attachment_authority == "test-only-direct-attach":
+            if production_capability is not None:
+                raise ValueError("a test-only cgroup lease cannot retain production authority")
+        else:
+            raise ValueError("cgroup lease attachment authority is invalid")
         self.qualification = qualification
         self.leaf_name = leaf_name
         self._backend = backend
         self._root_handle = root_handle
         self._leaf_handle = leaf_handle
+        self._attachment_authority = attachment_authority
+        self._production_capability = production_capability
+        self._issuing_pid = os.getpid()
         self._closed = False
         self._lock = RLock()
         self._state = "ready"
@@ -427,9 +552,45 @@ class BindingCgroupLease:
     def binding_eligible(self) -> Literal[False]:
         return False
 
+    @property
+    def attachment_authority(
+        self,
+    ) -> Literal["native-preexec-required", "test-only-direct-attach"]:
+        return self._attachment_authority
+
     def _require_open(self) -> None:
         if self._closed:
             raise BindingRunnerHostError("cgroup lease is closed")
+
+    def _require_issuing_process(self) -> None:
+        if self._issuing_pid != os.getpid():
+            raise BindingRunnerHostError("cgroup lease belongs to another process")
+
+    @contextmanager
+    def _locked_backend_authority(self) -> Iterator[None]:
+        """Hold supervisor authority across every production backend operation."""
+        self._require_issuing_process()
+        capability = self._production_capability
+        if capability is None:
+            yield
+            return
+        try:
+            with _locked_capability_access(capability) as access:
+                if (
+                    not access.production_inherited
+                    or access.backend is not self._backend
+                    or access.root_handle is not self._root_handle
+                    or self.qualification._capability is not capability
+                    or self.qualification.session_id != access.session_id
+                    or self.qualification.root_identity != access.root_identity
+                    or self.qualification.policy_digest != access.policy_digest
+                ):
+                    raise BindingRunnerHostError(
+                        "cgroup lease authority no longer matches its delegated-root session"
+                    )
+                yield
+        except DelegatedRootCapabilityError as error:
+            raise BindingRunnerHostError(f"invalid delegated-root capability: {error}") from error
 
     def _require_state(self, expected: str, operation: str) -> None:
         if self._state != expected:
@@ -461,113 +622,136 @@ class BindingCgroupLease:
         return populated == 1
 
     def attach_process(self, pid: int) -> None:
-        if type(pid) is not int or pid <= 0:
-            raise ValueError("process ID must be a positive exact integer")
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
-            self._require_state("ready", "attach a process")
-            self.verify_effective_cpuset()
-            self._state = "attachment-uncertain"
-            value = str(pid)
-            _write_exact(self._backend, self._leaf_handle, "cgroup.procs", value)
-            observed = self._read_leaf("cgroup.procs")
-            members: set[int] = set()
-            for line in observed.splitlines():
-                if _POSITIVE_INTEGER_RE.fullmatch(line) is None:
-                    raise BindingRunnerHostError("cgroup.procs membership readback is malformed")
-                members.add(int(line))
-            if pid not in members:
+            if self._attachment_authority == "native-preexec-required":
                 raise BindingRunnerHostError(
-                    f"cgroup.procs membership readback does not contain process {pid}"
+                    "production process attachment requires native clone3 pre-exec placement"
                 )
-            self._state = "attached"
+            with self._locked_backend_authority():
+                if type(pid) is not int or pid <= 0:
+                    raise ValueError("process ID must be a positive exact integer")
+                self._require_state("ready", "attach a process")
+                self.verify_effective_cpuset()
+                self._state = "attachment-uncertain"
+                value = str(pid)
+                _write_exact(self._backend, self._leaf_handle, "cgroup.procs", value)
+                observed = self._read_leaf("cgroup.procs")
+                members: set[int] = set()
+                for line in observed.splitlines():
+                    if _POSITIVE_INTEGER_RE.fullmatch(line) is None:
+                        raise BindingRunnerHostError(
+                            "cgroup.procs membership readback is malformed"
+                        )
+                    members.add(int(line))
+                if pid not in members:
+                    raise BindingRunnerHostError(
+                        f"cgroup.procs membership readback does not contain process {pid}"
+                    )
+                self._state = "attached"
 
     def verify_effective_cpuset(self) -> None:
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
-            _verify_effective_id_set(
-                self._backend,
-                self._leaf_handle,
-                filename="cpuset.cpus.effective",
-                expected=self.qualification.selected_cpus,
-                context="child CPU",
-            )
-            _verify_effective_id_set(
-                self._backend,
-                self._leaf_handle,
-                filename="cpuset.mems.effective",
-                expected=self.qualification.selected_mems,
-                context="child memory-node",
-            )
+            with self._locked_backend_authority():
+                _verify_effective_id_set(
+                    self._backend,
+                    self._leaf_handle,
+                    filename="cpuset.cpus.effective",
+                    expected=self.qualification.selected_cpus,
+                    context="child CPU",
+                )
+                _verify_effective_id_set(
+                    self._backend,
+                    self._leaf_handle,
+                    filename="cpuset.mems.effective",
+                    expected=self.qualification.selected_mems,
+                    context="child memory-node",
+                )
 
     def read_memory_peak_bytes(self) -> int:
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
-            self._require_state("attached", "finalize memory.peak")
-            self._state = "finalizing"
-            self.await_unpopulated()
-            self.verify_effective_cpuset()
-            if self._is_populated():
-                raise BindingRunnerHostError("cgroup became populated before memory.peak capture")
-            value = _control_scalar(self._read_leaf("memory.peak"), "memory.peak")
-            if self._is_populated():
-                raise BindingRunnerHostError("cgroup became populated during memory.peak capture")
-            self.verify_effective_cpuset()
-            if _POSITIVE_INTEGER_RE.fullmatch(value) is None:
-                raise BindingRunnerHostError("memory.peak is not a canonical positive integer")
-            result = int(value)
-            if result > _MAX_SIGNED_64:
-                raise BindingRunnerHostError("memory.peak exceeds the signed 64-bit bound")
-            self._state = "measured"
-            return result
+            with self._locked_backend_authority():
+                self._require_state("attached", "finalize memory.peak")
+                self._state = "finalizing"
+                self.await_unpopulated()
+                self.verify_effective_cpuset()
+                if self._is_populated():
+                    raise BindingRunnerHostError(
+                        "cgroup became populated before memory.peak capture"
+                    )
+                value = _control_scalar(self._read_leaf("memory.peak"), "memory.peak")
+                if self._is_populated():
+                    raise BindingRunnerHostError(
+                        "cgroup became populated during memory.peak capture"
+                    )
+                self.verify_effective_cpuset()
+                if _POSITIVE_INTEGER_RE.fullmatch(value) is None:
+                    raise BindingRunnerHostError("memory.peak is not a canonical positive integer")
+                result = int(value)
+                if result > _MAX_SIGNED_64:
+                    raise BindingRunnerHostError("memory.peak exceeds the signed 64-bit bound")
+                self._state = "measured"
+                return result
 
     def await_unpopulated(self) -> None:
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
-            policy = self.qualification.policy
-            deadline = (
-                _backend_call(
-                    "failed to read cleanup clock",
-                    self._backend.monotonic,
-                )
-                + policy.cleanup_timeout_seconds
-            )
-            poll_seconds = policy.cleanup_poll_interval_milliseconds / 1000
-            while self._is_populated():
-                now = _backend_call(
-                    "failed to read cleanup clock",
-                    self._backend.monotonic,
-                )
-                if now >= deadline:
-                    raise BindingRunnerHostError(
-                        "cgroup cleanup timed out while the leaf remained populated"
+            with self._locked_backend_authority():
+                policy = self.qualification.policy
+                deadline = (
+                    _backend_call(
+                        "failed to read cleanup clock",
+                        self._backend.monotonic,
                     )
-                _backend_call(
-                    "cgroup cleanup polling failed",
-                    lambda: self._backend.sleep(poll_seconds),
+                    + policy.cleanup_timeout_seconds
                 )
+                poll_seconds = policy.cleanup_poll_interval_milliseconds / 1000
+                while self._is_populated():
+                    now = _backend_call(
+                        "failed to read cleanup clock",
+                        self._backend.monotonic,
+                    )
+                    if now >= deadline:
+                        raise BindingRunnerHostError(
+                            "cgroup cleanup timed out while the leaf remained populated"
+                        )
+                    _backend_call(
+                        "cgroup cleanup polling failed",
+                        lambda: self._backend.sleep(poll_seconds),
+                    )
 
     def kill(self) -> None:
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
-            self._state = "termination-requested"
-            _write_exact(self._backend, self._leaf_handle, "cgroup.kill", "1")
+            with self._locked_backend_authority():
+                self._state = "termination-requested"
+                _write_exact(self._backend, self._leaf_handle, "cgroup.kill", "1")
 
     def cleanup(self) -> None:
         with self._lock:
+            self._require_issuing_process()
             if self._closed:
                 return
-            if self._is_populated():
-                self.kill()
-            self.await_unpopulated()
-            _backend_call(
-                "failed to remove cgroup leaf",
-                lambda: self._backend.remove_leaf(self._root_handle, self._leaf_handle),
-            )
-            self._closed = True
+            with self._locked_backend_authority():
+                if self._is_populated():
+                    self.kill()
+                self.await_unpopulated()
+                _backend_call(
+                    "failed to remove cgroup leaf",
+                    lambda: self._backend.remove_leaf(self._root_handle, self._leaf_handle),
+                )
+                self._closed = True
 
     def __enter__(self) -> BindingCgroupLease:
         with self._lock:
+            self._require_issuing_process()
             self._require_open()
             return self
 
@@ -593,21 +777,38 @@ class BindingCgroupLease:
 def create_binding_cgroup(
     qualification: BindingHostQualification,
     *,
+    capability: ExclusiveDelegatedCgroupRoot,
     leaf_name: str,
-    backend: object | None = None,
 ) -> BindingCgroupLease:
-    """Refuse production mutation until the native isolation capability exists."""
+    """Create a leaf only from the exact live capability that qualified its root."""
     if not isinstance(qualification, BindingHostQualification):
         raise TypeError("qualification must be BindingHostQualification")
-    selected_backend = qualification._backend
-    if backend is not None and backend is not selected_backend:
-        raise ValueError("cgroup creation must use the backend that inspected the root")
-    _validate_leaf_name(leaf_name, qualification.policy)
-    raise BindingRunnerHostError(
-        "production cgroup creation is disabled until the native supervisor "
-        "supplies an exclusive delegated-root capability with workload UID "
-        "or mount-namespace isolation"
-    )
+    try:
+        with _locked_capability_access(capability) as access:
+            if not access.production_inherited:
+                raise BindingRunnerHostError(
+                    "production cgroup creation requires inherited native-supervisor provenance"
+                )
+            if (
+                qualification._capability is not capability
+                or qualification._backend is not access.backend
+                or qualification._root_handle is not access.root_handle
+                or qualification.session_id != access.session_id
+                or qualification.root_identity != access.root_identity
+                or qualification.policy_digest != access.policy_digest
+                or qualification.policy.policy_sha256 != access.policy_digest
+            ):
+                raise BindingRunnerHostError(
+                    "qualification does not match the exact delegated-root capability session"
+                )
+            return _create_configured_binding_cgroup(
+                qualification,
+                leaf_name=leaf_name,
+                attachment_authority="native-preexec-required",
+                production_capability=capability,
+            )
+    except DelegatedRootCapabilityError as error:
+        raise BindingRunnerHostError(f"invalid delegated-root capability: {error}") from error
 
 
 def _create_binding_cgroup_for_testing(
@@ -622,6 +823,22 @@ def _create_binding_cgroup_for_testing(
     selected_backend = qualification._backend
     if backend is not selected_backend:
         raise ValueError("cgroup creation must use the backend that inspected the root")
+    return _create_configured_binding_cgroup(
+        qualification,
+        leaf_name=leaf_name,
+        attachment_authority="test-only-direct-attach",
+    )
+
+
+def _create_configured_binding_cgroup(
+    qualification: BindingHostQualification,
+    *,
+    leaf_name: str,
+    attachment_authority: Literal["native-preexec-required", "test-only-direct-attach"],
+    production_capability: ExclusiveDelegatedCgroupRoot | None = None,
+) -> BindingCgroupLease:
+    """Shared fail-closed leaf setup after the caller establishes authority."""
+    selected_backend = qualification._backend
     _validate_leaf_name(leaf_name, qualification.policy)
     leaf_handle = _backend_call(
         "fresh cgroup leaf creation failed",
@@ -676,4 +893,6 @@ def _create_binding_cgroup_for_testing(
         backend=selected_backend,
         root_handle=qualification._root_handle,
         leaf_handle=leaf_handle,
+        attachment_authority=attachment_authority,
+        production_capability=production_capability,
     )

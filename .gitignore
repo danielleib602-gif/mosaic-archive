@@ -7,5 +7,6 @@ __pycache__/
 .coverage
 dist/
 build/
+target/
 .ci-corpus/
 *.msc

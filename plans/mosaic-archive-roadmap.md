@@ -333,11 +333,14 @@ Active Competitive Contract sprint sequence:
 1. [x] Freeze the contract, portable statistics, exact case evaluator, and
    exhaustive non-release, explicitly unverified `report-v1` boundary.
 2. [ ] Complete authoritative Linux execution. Exact cgroup-v2 qualification,
-   fixed policy, peak accounting, and fail-closed backend lifecycle are
-   implemented. Production leaf mutation remains gated until the native
-   pre-exec supervisor can mint an exclusive-root capability, isolate workload
-   UID/mount access, retain complete descendant executable identity, bound
-   stream/output capture, and sign each raw run record.
+   fixed policy, peak accounting, fail-closed backend lifecycle, and the native
+   exclusive-root/session capability are implemented. The supervisor delegates
+   exactly the fixed controllers, serializes revocation before cleanup, and is
+   exercised through its exact fixed-FD handoff and Python leaf lifecycle against
+   a real delegated cgroup in Linux CI. Production process attachment remains
+   gated until native race-free `clone3` pre-exec placement, PID-namespace
+   reaping, isolated workload UID/mount access, complete descendant executable
+   identity, bounded stream/output capture, and signed raw records.
 3. [ ] Lock the six public workloads. The strict offline acquisition plan and
    descriptor-bound deterministic-copy foundation are implemented, including
    secure sealed-snapshot reopen through 128 MiB and durable no-replace
