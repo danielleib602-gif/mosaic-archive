@@ -11,7 +11,9 @@ is preserved.
 - Added a fail-closed Linux x86-64 cgroup-v2 qualification foundation for the
   future binding competitive runner. It proves the filesystem is cgroup v2,
   pins root identities, selects exact 1- and 8-CPU lanes, and strictly loads the
-  committed policy through a bounded nonblocking regular-file descriptor.
+  committed policy through a bounded nonblocking regular-file descriptor. The
+  Linux filesystem-identity probe rejects other kernels before loading the
+  Linux `fstatfs` ABI.
   Leaf configuration, fresh-leaf `memory.peak`, and kill/drain/removal lifecycle
   logic remain covered behind the backend protocol, but production leaf creation
   now fails closed until a native supervisor supplies kernel-enforced workload

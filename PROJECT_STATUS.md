@@ -214,14 +214,14 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current checkout's Python 3.13 suite runs 532 unit/integration tests. On
-Linux, 529 pass and 3 platform- or privilege-specific cases skip; on Windows,
-474 pass and 58 Linux-kernel-specific cases skip. CI measures statement and
-branch coverage across every package module. The CI-equivalent Linux result is
-85.65% against a required 80%; the Windows-only result is 78.86% because the
-cgroup-v2 and sealed-memfd paths do not execute there. No package module is
-omitted from either measurement. Ruff, strict mypy, Bandit, dependency audit,
-bytecode
+The hosted Python 3.13 CI suite runs 533 unit/integration tests. On Linux, 530
+pass and 3 platform- or privilege-specific cases skip; on Windows, 483 pass
+and 50 capability-specific cases skip. CI measures statement and branch
+coverage across every package module on Linux, where the cgroup-v2 and sealed-
+memfd paths execute. The current result is 85.66% against a required 80%, with
+no package module omitted. A Windows-only coverage run is intentionally not the
+release gate because those Linux-kernel paths cannot execute there. Ruff,
+strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
 unsafe paths, invalid source identities, and resource-limit violations before
