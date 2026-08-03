@@ -555,7 +555,16 @@ class BindingRunnerPolicyTests(unittest.TestCase):
 
 
 class BindingHostQualificationTests(unittest.TestCase):
-    @unittest.skipUnless(os.name == "posix", "requires POSIX statfs semantics")
+    def test_filesystem_magic_rejects_non_linux_before_libc_call(self) -> None:
+        with (
+            mock.patch.object(binding_io_module.sys, "platform", "darwin"),
+            mock.patch.object(binding_io_module.ctypes, "CDLL") as load_library,
+            self.assertRaisesRegex(OSError, "requires Linux"),
+        ):
+            binding_io_module._filesystem_magic(0)
+        load_library.assert_not_called()
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux fstatfs semantics")
     def test_production_backend_rejects_ordinary_filesystem_as_cgroup_v2(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             # macOS spells its temporary root through /var, which is a symlink.

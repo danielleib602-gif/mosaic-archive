@@ -10,6 +10,7 @@ import ctypes
 import os
 import platform
 import re
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -166,6 +167,8 @@ def _secure_open_absolute_directory(path: Path) -> int:
 
 def _filesystem_magic(descriptor: int) -> int:
     """Read Linux ``statfs.f_type`` for an already-open directory descriptor."""
+    if not sys.platform.startswith("linux"):
+        raise OSError("descriptor-based cgroup filesystem identity requires Linux")
     try:
         library = ctypes.CDLL(None, use_errno=True)
         fstatfs = library.fstatfs
