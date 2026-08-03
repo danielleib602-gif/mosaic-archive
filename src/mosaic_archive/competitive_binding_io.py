@@ -10,17 +10,21 @@ import ctypes
 import os
 import platform
 import re
+import stat
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NoReturn, Protocol, cast
+from threading import RLock
+from typing import NoReturn, Protocol, TypeVar, cast
 
 _MAX_CONTROL_BYTES = 64 * 1024
 _MAX_LEAF_NAME_BYTES = 255
 _LEAF_NAME_RE = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
 _CGROUP2_SUPER_MAGIC = 0x63677270
 _STATFS_BUFFER_BYTES = 512
+_T = TypeVar("_T")
 
 
 class _FailureCombiner(Protocol):
@@ -201,7 +205,8 @@ def _read_control_file(directory_fd: int, filename: str) -> str:
     _validate_control_filename(filename)
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(filename, flags, dir_fd=directory_fd)
-    try:
+
+    def read_value() -> str:
         chunks: list[bytes] = []
         total = 0
         while True:
@@ -216,8 +221,12 @@ def _read_control_file(directory_fd: int, filename: str) -> str:
             return b"".join(chunks).decode("ascii")
         except UnicodeDecodeError as error:
             raise OSError("cgroup control file is not ASCII") from error
-    finally:
-        os.close(descriptor)
+
+    return _run_and_close(
+        descriptor,
+        read_value,
+        context="cgroup control read and file-descriptor cleanup both failed",
+    )
 
 
 def _write_control_file(directory_fd: int, filename: str, value: str) -> int:
@@ -228,10 +237,26 @@ def _write_control_file(directory_fd: int, filename: str, value: str) -> int:
         raise OSError("cgroup control value is not ASCII") from error
     flags = os.O_WRONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(filename, flags, dir_fd=directory_fd)
+    return _run_and_close(
+        descriptor,
+        lambda: os.write(descriptor, encoded),
+        context="cgroup control write and file-descriptor cleanup both failed",
+    )
+
+
+def _run_and_close(
+    descriptor: int,
+    operation: Callable[[], _T],
+    *,
+    context: str,
+) -> _T:
+    """Run one fd operation and transfer ownership to exactly one close attempt."""
     try:
-        return os.write(descriptor, encoded)
-    finally:
-        os.close(descriptor)
+        result = operation()
+    except BaseException as primary_error:
+        _close_after_failure(descriptor, primary_error, context=context)
+    os.close(descriptor)
+    return result
 
 
 class _DescriptorRelativeFilesystemBackend:
@@ -414,3 +439,236 @@ class _DescriptorRelativeFilesystemBackend:
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
+
+
+@dataclass(frozen=True, slots=True)
+class _PinnedRootHandle:
+    backend_token: object
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True, slots=True)
+class _PinnedLeafHandle:
+    root: _PinnedRootHandle
+    name: str
+    device: int
+    inode: int
+
+
+class _PinnedDescriptorCgroupBackend:
+    """Cgroup backend anchored solely by an owned duplicate of an inherited fd."""
+
+    __slots__ = (
+        "_closed",
+        "_descriptor",
+        "_lock",
+        "_raise_combined_failures",
+        "_root_handle",
+        "_token",
+    )
+
+    def __init__(
+        self,
+        received_descriptor: int,
+        *,
+        expected_device: int,
+        expected_inode: int,
+        raise_combined_failures: _FailureCombiner,
+    ) -> None:
+        if type(received_descriptor) is not int or received_descriptor < 0:
+            raise ValueError("received cgroup root descriptor must be a non-negative integer")
+        if type(expected_device) is not int or expected_device <= 0:
+            raise ValueError("expected cgroup root device must be positive")
+        if type(expected_inode) is not int or expected_inode <= 0:
+            raise ValueError("expected cgroup root inode must be positive")
+
+        duplicate = os.dup(received_descriptor)
+        try:
+            os.set_inheritable(duplicate, False)
+            status = os.fstat(duplicate)
+            if not stat.S_ISDIR(status.st_mode):
+                raise OSError("inherited cgroup root descriptor is not a directory")
+            if status.st_ino == 0:
+                raise OSError("inherited cgroup root does not expose a stable inode")
+            if _filesystem_magic(duplicate) != _CGROUP2_SUPER_MAGIC:
+                raise OSError("inherited root is not on a cgroup-v2 filesystem")
+            if (status.st_dev, status.st_ino) != (expected_device, expected_inode):
+                raise OSError("inherited cgroup root identity changed while it was duplicated")
+        except BaseException as setup_error:
+            _close_after_failure(
+                duplicate,
+                setup_error,
+                context="pinned cgroup root setup and descriptor cleanup both failed",
+            )
+
+        self._descriptor: int | None = duplicate
+        self._closed = False
+        self._lock = RLock()
+        self._raise_combined_failures = raise_combined_failures
+        self._token = object()
+        self._root_handle = _PinnedRootHandle(
+            backend_token=self._token,
+            device=expected_device,
+            inode=expected_inode,
+        )
+
+    @property
+    def root_handle(self) -> _PinnedRootHandle:
+        return self._root_handle
+
+    @property
+    def display_path(self) -> Path:
+        with self._lock:
+            descriptor = self._require_root(self._root_handle)
+            # This is diagnostic text only. No operation in this backend opens it.
+            return Path(f"/proc/self/fd/{descriptor}")
+
+    @property
+    def is_open(self) -> bool:
+        with self._lock:
+            return not self._closed
+
+    def system(self) -> str:
+        return platform.system()
+
+    def machine(self) -> str:
+        return platform.machine()
+
+    def allowed_cpu_affinity(self) -> tuple[int, ...]:
+        if not hasattr(os, "sched_getaffinity"):
+            raise OSError("host does not expose sched_getaffinity")
+        return tuple(sorted(os.sched_getaffinity(0)))
+
+    def inspect_root(self, root: Path) -> object:
+        del root
+        raise OSError("a pinned delegated root cannot be selected by pathname")
+
+    def _require_root(self, root: object) -> int:
+        if root is not self._root_handle:
+            raise OSError("invalid pinned cgroup root handle")
+        if self._closed or self._descriptor is None:
+            raise OSError("pinned cgroup root backend is closed")
+        descriptor = self._descriptor
+        status = os.fstat(descriptor)
+        if not stat.S_ISDIR(status.st_mode) or status.st_ino == 0:
+            raise OSError("pinned cgroup root descriptor is no longer a stable directory")
+        if _filesystem_magic(descriptor) != _CGROUP2_SUPER_MAGIC:
+            raise OSError("pinned root is no longer on a cgroup-v2 filesystem")
+        if (status.st_dev, status.st_ino) != (root.device, root.inode):
+            raise OSError("pinned cgroup root identity changed")
+        return descriptor
+
+    def read_root(self, root: object, filename: str) -> str:
+        with self._lock:
+            descriptor = self._require_root(root)
+            return _read_control_file(descriptor, filename)
+
+    def validate_root(self, root: object) -> None:
+        with self._lock:
+            self._require_root(root)
+
+    def create_leaf(self, root: object, name: str) -> _PinnedLeafHandle:
+        with self._lock:
+            root_fd = self._require_root(root)
+            assert isinstance(root, _PinnedRootHandle)
+            created = False
+            try:
+                os.mkdir(name, mode=0o700, dir_fd=root_fd)
+                created = True
+                leaf_fd = os.open(name, _directory_open_flags(), dir_fd=root_fd)
+
+                def inspect_leaf() -> _PinnedLeafHandle:
+                    status = os.fstat(leaf_fd)
+                    if not stat.S_ISDIR(status.st_mode) or status.st_ino == 0:
+                        raise OSError("new cgroup leaf is not a stable directory")
+                    if _filesystem_magic(leaf_fd) != _CGROUP2_SUPER_MAGIC:
+                        raise OSError("new cgroup leaf is not on a cgroup-v2 filesystem")
+                    return _PinnedLeafHandle(root, name, status.st_dev, status.st_ino)
+
+                return _run_and_close(
+                    leaf_fd,
+                    inspect_leaf,
+                    context="cgroup leaf inspection and descriptor cleanup both failed",
+                )
+            except BaseException as setup_error:
+                if created:
+                    try:
+                        self._require_root(root)
+                        os.rmdir(name, dir_fd=root_fd)
+                    except BaseException as cleanup_error:
+                        self._raise_combined_failures(
+                            "cgroup leaf creation and cleanup both failed",
+                            primary_error=setup_error,
+                            cleanup_error=cleanup_error,
+                        )
+                raise
+
+    def _open_leaf(self, leaf: object) -> int:
+        if not isinstance(leaf, _PinnedLeafHandle) or leaf.root is not self._root_handle:
+            raise OSError("invalid pinned cgroup leaf handle")
+        root_fd = self._require_root(leaf.root)
+        descriptor = os.open(leaf.name, _directory_open_flags(), dir_fd=root_fd)
+        try:
+            status = os.fstat(descriptor)
+            if not stat.S_ISDIR(status.st_mode) or status.st_ino == 0:
+                raise OSError("pinned cgroup leaf is no longer a stable directory")
+            if _filesystem_magic(descriptor) != _CGROUP2_SUPER_MAGIC:
+                raise OSError("pinned cgroup leaf is no longer on cgroup-v2")
+            if (status.st_dev, status.st_ino) != (leaf.device, leaf.inode):
+                raise OSError("pinned cgroup leaf identity changed")
+        except BaseException as inspect_error:
+            _close_after_failure(
+                descriptor,
+                inspect_error,
+                context="cgroup leaf revalidation and descriptor cleanup both failed",
+            )
+        return descriptor
+
+    def read_leaf(self, leaf: object, filename: str) -> str:
+        with self._lock:
+            descriptor = self._open_leaf(leaf)
+            return _run_and_close(
+                descriptor,
+                lambda: _read_control_file(descriptor, filename),
+                context="cgroup leaf read and descriptor cleanup both failed",
+            )
+
+    def write_leaf(self, leaf: object, filename: str, value: str) -> int:
+        with self._lock:
+            descriptor = self._open_leaf(leaf)
+            return _run_and_close(
+                descriptor,
+                lambda: _write_control_file(descriptor, filename, value),
+                context="cgroup leaf write and descriptor cleanup both failed",
+            )
+
+    def remove_leaf(self, root: object, leaf: object) -> None:
+        with self._lock:
+            root_fd = self._require_root(root)
+            if not isinstance(leaf, _PinnedLeafHandle) or leaf.root is not root:
+                raise OSError("invalid pinned cgroup leaf handle")
+            descriptor = self._open_leaf(leaf)
+            _run_and_close(
+                descriptor,
+                lambda: None,
+                context="cgroup leaf validation and descriptor cleanup both failed",
+            )
+            self._require_root(root)
+            os.rmdir(leaf.name, dir_fd=root_fd)
+
+    def monotonic(self) -> float:
+        return time.monotonic()
+
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
+
+    def close(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+            descriptor = self._descriptor
+            self._descriptor = None
+            self._closed = True
+            assert descriptor is not None
+            os.close(descriptor)

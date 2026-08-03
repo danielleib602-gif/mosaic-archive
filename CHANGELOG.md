@@ -14,11 +14,21 @@ is preserved.
   committed policy through a bounded nonblocking regular-file descriptor. The
   Linux filesystem-identity probe rejects other kernels before loading the
   Linux `fstatfs` ABI.
-  Leaf configuration, fresh-leaf `memory.peak`, and kill/drain/removal lifecycle
-  logic remain covered behind the backend protocol, but production leaf creation
-  now fails closed until a native supervisor supplies kernel-enforced workload
-  isolation and an exclusive delegated-root capability. All outputs remain
-  explicitly non-binding.
+  A pinned Rust 1.96 native supervisor now creates an unpredictable session
+  subtree, delegates exactly `cpuset`, `memory`, and `pids`, and transfers its
+  descriptor through an authenticated `SOCK_SEQPACKET` protocol. The Python
+  coordinator can create and configure fresh leaves only while holding the exact
+  live, process-bound capability; path qualification, stale peers, forked leases,
+  and extra controller authority fail before mutation. Receiver readiness closes
+  the `SO_PASSCRED` queueing race, inheritance is one-shot and serialized with
+  `fork()`, signal revocation is serialized before native cleanup, and rejected
+  rights-bearing packets cannot leak descriptors. Linux CI
+  exercises both the direct cgroup lifecycle and the complete fixed-FD native
+  launch, READY/handoff, Python leaf lifecycle, EOF barrier, and supervisor exit.
+  The handshake and CI job are bounded, and post-handoff cleanup requires proven
+  full peer closure. Production workload attachment still fails closed pending
+  race-free native `clone3` placement, and all outputs remain explicitly
+  non-binding.
 - Added offline competitive-corpus preparation with exact plan validation,
   approval-shaped fields exposed only as structurally unverified claims,
   descriptor-bound source/output identities, secure revalidation, and durable

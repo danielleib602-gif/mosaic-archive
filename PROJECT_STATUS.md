@@ -45,16 +45,19 @@
   harnesses, 256/1,025/2,049 MiB sustained-soak tiers, and cross-platform test
   matrix are committed.
 - Competitive Contract v1 now has a strict unverified development-scorecard
-  boundary, an exact Linux cgroup-v2 mount/root qualification foundation, and an
-  offline descriptor-bound corpus-copy foundation whose approval-shaped inputs
-  remain explicit unverified claims. Production cgroup leaf creation is gated
-  until a native supervisor can enforce root/workload isolation. Display paths
-  carry no authority, secure reopen yields bounded immutable snapshots, and
-  publication is not reported durable until directory sync plus final-name
-  revalidation succeeds. These foundations are intentionally non-binding: the
-  native PID-namespace launcher, complete executable identity, externally
-  approved immutable corpus lock, real MSC7 candidate, signed raw measurements,
-  and schema-v4 tag binding remain.
+  boundary, exact Linux cgroup-v2 mount/root qualification, and a Rust native
+  supervisor that creates an unpredictable fixed-controller session and hands
+  its descriptor to Python as an authenticated, live, process-bound capability.
+  That capability can configure fresh leaves; path-only qualification, stale
+  peers, forked leases, and production post-spawn attachment fail closed. The
+  offline descriptor-bound corpus-copy foundation still treats approval-shaped
+  inputs as unverified claims. Display paths carry no authority, secure reopen
+  yields bounded immutable snapshots, and publication is not reported durable
+  until directory sync plus final-name revalidation succeeds. These foundations
+  are intentionally non-binding: native `clone3` PID-namespace/pre-exec launch,
+  complete executable identity, externally approved immutable corpus locking,
+  the real MSC7 candidate, signed raw measurements, and schema-v4 tag binding
+  remain.
 - The package is MIT-licensed and contains public contribution, security,
   release, compatibility, format, benchmark, and threat-model documentation.
 
@@ -214,14 +217,16 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The hosted Python 3.13 CI suite runs 533 unit/integration tests. On Linux, 530
-pass and 3 platform- or privilege-specific cases skip; on Windows, 483 pass
-and 50 capability-specific cases skip. CI measures statement and branch
+The Python 3.13 suite runs 558 unit/integration tests. On Linux, 555 pass and 3
+platform- or privilege-specific cases skip; on Windows, 488 pass and 70
+Linux-capability-specific cases skip. CI measures statement and branch
 coverage across every package module on Linux, where the cgroup-v2 and sealed-
-memfd paths execute. The current result is 85.66% against a required 80%, with
+memfd paths execute. The current result is 84.79% against a required 80%, with
 no package module omitted. A Windows-only coverage run is intentionally not the
-release gate because those Linux-kernel paths cannot execute there. Ruff,
-strict mypy, Bandit, dependency audit, bytecode
+release gate because those Linux-kernel paths cannot execute there. The native
+Rust suite adds 16 normal Linux tests plus one real delegated-cgroup lifecycle
+case run explicitly by CI; Windows exercises the seven portable Rust tests.
+Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
 unsafe paths, invalid source identities, and resource-limit violations before
@@ -250,8 +255,12 @@ bundle, and GitHub attestation have been verified as documented in
 `docs/RELEASE_VERIFICATION_v0.39.md`. The next priorities are:
 
 1. finish the authoritative runner with a native pre-exec PID namespace,
-   inherited cgroup placement, complete descendant executable identities,
-   bounded outputs, and signed raw-run records;
+   race-free `clone3(CLONE_INTO_CGROUP)` placement, isolated workload identity,
+   complete descendant executable identities, bounded outputs, and signed
+   raw-run records; the exclusive delegated-root/session capability slice is
+   complete. Before expanding it, split the audited native supervisor into
+   protocol, cgroup, lifecycle, and test modules so the next security review
+   does not depend on one multi-responsibility source file;
 2. acquire and externally approve all six immutable public corpus bundles,
    finish aggregate member manifests/recipes, and commit the real lock;
 3. implement and optimize the additive Rust MSC7 core, native CLI, and Python

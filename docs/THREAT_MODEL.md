@@ -84,6 +84,23 @@ final check, make transient changes between `stat`, `scandir`, `open`, and
 timestamps. Those attacks are outside the uncompromised-local-machine
 assumption above.
 
+The experimental competitive runner uses a narrower Linux trust boundary. A
+native supervisor and trusted Python coordinator share one dedicated service
+identity and PID/user namespaces; measured tools will not share that identity.
+The supervisor accepts only an inherited cgroup-v2 descriptor, delegates exactly
+the fixed controller set, and hands off a fresh session descriptor only after an
+`SO_PASSCRED` readiness exchange. Python mutation requires the exact live,
+process-bound capability. Signal revocation waits for coordinator EOF before
+native cleanup, preventing ordinary shutdown from racing in-flight mutations.
+Malformed traffic and half-close do not satisfy that barrier; if full peer
+closure cannot be proven, cleanup is suppressed and the session remains visible
+for recovery. Fixed-control inheritance is one-shot per socket identity and is
+serialized with `fork()`, preventing an accidental duplicate receiver from
+closing live authority outside its capability lock. This does not handle
+`SIGKILL`, prove future measured-process containment, or make current diagnostic
+results binding; stale-root reconciliation and native pre-exec `clone3`
+placement remain required.
+
 The final `os.replace` is an atomic namespace switch, but Mosaic does not fsync
 the containing directory and therefore does not promise power-loss durability.
 

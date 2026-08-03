@@ -150,16 +150,20 @@ and recomputed passing verdict. Until then, `--require-ready` intentionally
 fails while the seven-gate pre-1.0 release policy remains available.
 
 The current competitive sprint has added three fail-closed foundations without
-changing that 7/10 result: exact Linux cgroup-v2 mount/root qualification with
-production leaf creation gated on a future native isolation capability, offline
-descriptor-bound corpus-copy preparation with structurally unverified approval
-claims and durable no-replace publication, and an exhaustive 48-case,
-2,640-reference development scorecard boundary. Display paths and raw
-references are non-authoritative, provenance remains explicitly unverified, and
-all authority flags stay false. These foundations remain non-binding until the
-native PID-namespace launcher, externally approved immutable corpus lock, real
-MSC7 native candidate, verified signed measurements, and schema-v4 tag binding
-are complete.
+changing that 7/10 result: exact Linux cgroup-v2 qualification plus a native
+supervisor that mints a live, process-bound, descriptor-only root capability;
+offline descriptor-bound corpus-copy preparation with structurally unverified
+approval claims and durable no-replace publication; and an exhaustive 48-case,
+2,640-reference development scorecard boundary. The capability path can create
+and configure fresh leaves, while path-only callers, stale supervisors, forked
+leases, and post-spawn production attachment fail before mutation. Linux CI now
+proves the complete fixed-FD supervisor handoff and real leaf cleanup under the
+same production capability path. Display paths and raw references are
+non-authoritative, provenance remains explicitly unverified, and all authority
+flags stay false. These foundations remain
+non-binding until native `clone3` PID-namespace/pre-exec placement, externally
+approved immutable corpus locking, a real MSC7 native candidate, verified signed
+measurements, and schema-v4 tag binding are complete.
 
 Exact-commit local evidence for the 1,025 MiB tier is committed at
 `.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. Exact protected-main
