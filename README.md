@@ -22,6 +22,17 @@ format/compatibility direction is recorded in
 [the MSC7 decision](docs/MSC7_DECISION.md). Neither document claims that the
 current Python implementation already meets that target.
 
+The current unreleased performance sprint makes two concrete advances without
+changing the stable default writer. Experimental MSR2 shrinks the expanded
+public corpus from 291,731 to 290,451 bytes while improving local Windows median
+encode/decode time by 23.72%/7.90%; every public category size is non-regressing.
+The new native [M7R0 compression-core preview](docs/MSC7_CORE_PREVIEW.md)
+round-trips a deterministic 64 MiB diagnostic to 5,145,673 bytes and scales
+from 42.0 MiB/s on one worker to 145.3 MiB/s on eight. These are scoped,
+exact-commit measurements, not a claim of universal superiority or a stable
+MSC7 archive. Raw samples are committed in
+`.ecc/benchmarks/msc-v0.41-low-bit-zstd-native-core.json`.
+
 ## What v0.39 does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
@@ -73,8 +84,9 @@ current Python implementation already meets that target.
   parsers and all seven compression-mode decoders;
 - preserves evolving corpora and crash, timeout, or out-of-memory artifacts
   from bounded pull-request and weekly fuzz campaigns;
-- freezes MSC6 as the 1.0 writer format and commits to decoding MSC1 through
-  MSC6 throughout the 1.x package line;
+- freezes MSC6 as an explicit stable writer/decoder compatibility option and
+  commits to decoding MSC1 through MSC6 throughout the 1.x package line; the
+  additive MSC7 direction remains conditional on its 1.0 gates;
 - exposes the format, upgrade, and deprecation contract as human-readable text
   and machine-readable CLI output;
 - publishes reproducible, versioned JSON and Markdown results against ZIP,

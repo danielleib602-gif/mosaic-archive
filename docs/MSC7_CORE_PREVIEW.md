@@ -67,6 +67,18 @@ standard-input aliases are rejected before publication.
 Decode limit options are `--max-output-bytes`, `--max-encoded-bytes`,
 `--max-segments`, `--max-records`, and `--max-expansion-ratio`.
 
+## Current diagnostic
+
+At implementation commit `c50698e1f8bbf7f482fad31e117783443ef0daa4`, a
+deterministic 64 MiB standard-lane input encodes to 5,145,673 bytes (ratio
+0.0766765). Three in-memory runs per tier produce median encode throughput of
+42.049 MiB/s with one worker and 145.347 MiB/s with eight; median decode
+throughput across the six runs is 184.374 MiB/s. Both thread tiers emit the
+same archive SHA-256, and the restored input hash matches exactly. This
+convenience-command result excludes disk publication time and is not binding
+competitive evidence. Raw timings and hashes are in
+`.ecc/benchmarks/msc-v0.41-low-bit-zstd-native-core.json`.
+
 ## Deliberate gaps
 
 The preview has no AEAD framing, KDF, Python binding, stable codec identifiers,
