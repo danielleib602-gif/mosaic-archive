@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
+import importlib
 import json
 import os
 import re
 import secrets
+import subprocess
 import sys
 import tempfile
 import threading
@@ -16,6 +18,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, cast
 from unittest import mock
 
+import mosaic_archive.competitive_binding_cgroup as binding_cgroup_module
 import mosaic_archive.competitive_binding_io as binding_io_module
 import mosaic_archive.competitive_binding_runner as binding_runner_module
 from mosaic_archive.competitive_binding_policy import (
@@ -256,6 +259,77 @@ def _policy_payload(policy: BindingRunnerPolicy) -> dict[str, object]:
         "cleanup_poll_interval_milliseconds": policy.cleanup_poll_interval_milliseconds,
         "leaf_name_prefix": policy.leaf_name_prefix,
     }
+
+
+class BindingRunnerModuleSplitTests(unittest.TestCase):
+    def test_runner_facade_reexports_exact_implementation_symbols(self) -> None:
+        common = importlib.import_module("mosaic_archive.competitive_binding_common")
+        qualification = importlib.import_module("mosaic_archive.competitive_binding_qualification")
+        cgroup = importlib.import_module("mosaic_archive.competitive_binding_cgroup")
+
+        for facade_name, implementation, implementation_name in (
+            ("BindingRunnerHostError", common, "BindingRunnerHostError"),
+            ("BindingRunnerCleanupError", common, "BindingRunnerCleanupError"),
+            ("BindingHostFacts", qualification, "BindingHostFacts"),
+            ("BindingHostQualification", qualification, "BindingHostQualification"),
+            ("qualify_binding_host", qualification, "qualify_binding_host"),
+            (
+                "qualify_supervised_binding_host",
+                qualification,
+                "qualify_supervised_binding_host",
+            ),
+            ("BindingCgroupLease", cgroup, "BindingCgroupLease"),
+            ("create_binding_cgroup", cgroup, "create_binding_cgroup"),
+            (
+                "_create_binding_cgroup_for_testing",
+                cgroup,
+                "_create_binding_cgroup_for_testing",
+            ),
+        ):
+            with self.subTest(symbol=facade_name):
+                self.assertIs(
+                    getattr(binding_runner_module, facade_name),
+                    getattr(implementation, implementation_name),
+                )
+
+    def test_binding_modules_import_cleanly_in_dependency_orders(self) -> None:
+        source_root = str(_REPOSITORY_ROOT / "src")
+        environment = os.environ.copy()
+        existing_pythonpath = environment.get("PYTHONPATH")
+        environment["PYTHONPATH"] = (
+            source_root
+            if not existing_pythonpath
+            else source_root + os.pathsep + existing_pythonpath
+        )
+        import_orders = (
+            ("mosaic_archive.competitive_binding_runner",),
+            (
+                "mosaic_archive.competitive_binding_qualification",
+                "mosaic_archive.competitive_binding_cgroup",
+                "mosaic_archive.competitive_binding_runner",
+            ),
+            (
+                "mosaic_archive.competitive_binding_cgroup",
+                "mosaic_archive.competitive_binding_runner",
+            ),
+        )
+
+        for modules in import_orders:
+            with self.subTest(modules=modules):
+                statement = "; ".join(f"import {module}" for module in modules)
+                completed = subprocess.run(
+                    [sys.executable, "-c", statement],
+                    cwd=_REPOSITORY_ROOT,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(
+                    completed.returncode,
+                    0,
+                    completed.stderr or completed.stdout,
+                )
 
 
 class DescriptorBindingIoTests(unittest.TestCase):
@@ -845,7 +919,7 @@ class BindingCgroupCreationTests(unittest.TestCase):
 
         with (
             mock.patch.object(
-                binding_runner_module,
+                binding_cgroup_module,
                 "_locked_capability_access",
                 return_value=nullcontext(production_access),
             ),
@@ -870,7 +944,7 @@ class BindingCgroupCreationTests(unittest.TestCase):
             production_inherited=True,
         )
         with mock.patch.object(
-            binding_runner_module,
+            binding_cgroup_module,
             "_locked_capability_access",
             return_value=nullcontext(production_access),
         ):
@@ -887,7 +961,7 @@ class BindingCgroupCreationTests(unittest.TestCase):
         self.assertEqual(backend.calls, calls_before)
 
         with mock.patch.object(
-            binding_runner_module,
+            binding_cgroup_module,
             "_locked_capability_access",
             return_value=nullcontext(production_access),
         ):
@@ -1079,7 +1153,7 @@ class BindingCgroupLeaseTests(unittest.TestCase):
             production_inherited=True,
         )
         with mock.patch.object(
-            binding_runner_module,
+            binding_cgroup_module,
             "_locked_capability_access",
             return_value=nullcontext(production_access),
         ):
@@ -1096,7 +1170,7 @@ class BindingCgroupLeaseTests(unittest.TestCase):
         self.assertEqual(lease.attachment_authority, "native-preexec-required")
         self.assertEqual(backend.calls, calls_before)
         with mock.patch.object(
-            binding_runner_module,
+            binding_cgroup_module,
             "_locked_capability_access",
             return_value=nullcontext(production_access),
         ):

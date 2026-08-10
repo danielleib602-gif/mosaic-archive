@@ -165,6 +165,15 @@ non-binding until native `clone3` PID-namespace/pre-exec placement, externally
 approved immutable corpus locking, a real MSC7 native candidate, verified signed
 measurements, and schema-v4 tag binding are complete.
 
+The native supervisor and Python binding runner are now split into focused
+control-protocol, cgroup, qualification, lifecycle, and test modules while
+preserving the established import and binary entry points. An internal opt-in
+ABI probe now exercises exact atomic `clone3` placement, namespace PID 1, and
+pidfd-only bounded reaping against an already-open empty leaf. It never executes
+a workload and always reports `binding_eligible=false`. The fixed fail-closed
+design for the next executable self-test and later measured-workload boundary is
+recorded in `docs/NATIVE_LAUNCHER_DESIGN.md`.
+
 Exact-commit local evidence for the 1,025 MiB tier is committed at
 `.ecc/benchmarks/msc-v0.40-1025mib-soak-windows.json`. Exact protected-main
 hosted evidence for the 2,049 MiB tier is committed at
