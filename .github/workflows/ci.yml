@@ -84,15 +84,30 @@ jobs:
           set -euo pipefail
           cgroup_root=/sys/fs/cgroup
           parent="$cgroup_root/mosaic-native-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          abi_leaf="$parent/mosaic-binding-abi-probe"
+          negative_stderr=""
           [[ "$parent" =~ ^/sys/fs/cgroup/mosaic-native-ci-[0-9]+-[0-9]+$ ]] || {
             echo "refusing unsafe cgroup path: $parent" >&2
+            exit 1
+          }
+          [[ "$abi_leaf" == "$parent/mosaic-binding-abi-probe" ]] || {
+            echo "refusing unsafe ABI-probe cgroup path: $abi_leaf" >&2
             exit 1
           }
 
           cleanup() {
             local failed=0
             local session
+            if [[ -n "$negative_stderr" ]]; then
+              rm -f -- "$negative_stderr" || failed=1
+            fi
             if [[ -d "$parent" ]]; then
+              if [[ -d "$abi_leaf" ]]; then
+                if [[ -e "$abi_leaf/cgroup.kill" ]]; then
+                  printf '1' | sudo tee "$abi_leaf/cgroup.kill" >/dev/null || failed=1
+                fi
+                sudo rmdir -- "$abi_leaf" || failed=1
+              fi
               if [[ -e "$parent/cgroup.kill" ]]; then
                 printf '1' | sudo tee "$parent/cgroup.kill" >/dev/null || failed=1
               fi
@@ -138,6 +153,46 @@ jobs:
           PYTHONPATH=src uv run --frozen python tools/run_native_cgroup_integration.py
           test_status=$?
           set -e
+          if (( test_status == 0 )); then
+            supervisor_binary="$PWD/target/release/mosaic-binding-supervisor"
+            expected_probe_output='clone3 ABI probe passed (PID namespace and initial cgroup placement only); binding_eligible=false'
+            sudo mkdir -- "$abi_leaf"
+            probe_output="$(
+              sudo bash -c 'exec 3<"$1"; exec "$2" --internal-clone3-abi-probe' \
+                bash "$abi_leaf" "$supervisor_binary"
+            )"
+            printf '%s\n' "$probe_output"
+            [[ "$probe_output" == "$expected_probe_output" ]] || {
+              echo "unexpected clone3 ABI-probe success output" >&2
+              exit 1
+            }
+            sudo rmdir -- "$abi_leaf"
+
+            negative_stderr="$(mktemp -- "$RUNNER_TEMP/mosaic-clone3-negative.XXXXXX")"
+            set +e
+            negative_stdout="$(
+              sudo bash -c 'exec 3<&-; exec "$1" --internal-clone3-abi-probe' \
+                bash "$supervisor_binary" 2>"$negative_stderr"
+            )"
+            negative_status=$?
+            set -e
+            (( negative_status == 1 )) || {
+              echo "clone3 ABI probe returned an unexpected closed-FD status: $negative_status" >&2
+              exit 1
+            }
+            [[ -z "$negative_stdout" ]] || {
+              echo "clone3 ABI-probe failure unexpectedly wrote to stdout" >&2
+              exit 1
+            }
+            expected_negative_error='clone3 ABI probe failed; binding_eligible=false; cannot inspect clone3 ABI probe cgroup leaf FD 3: Bad file descriptor (os error 9)'
+            negative_error="$(<"$negative_stderr")"
+            [[ "$negative_error" == "$expected_negative_error" ]] || {
+              echo "unexpected clone3 ABI-probe closed-FD diagnostic: $negative_error" >&2
+              exit 1
+            }
+            rm -f -- "$negative_stderr"
+            negative_stderr=""
+          fi
           trap - EXIT
           cleanup_status=0
           cleanup || cleanup_status=$?

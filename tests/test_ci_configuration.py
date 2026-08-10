@@ -69,6 +69,24 @@ class CiConfigurationTests(unittest.TestCase):
             "PYTHONPATH=src uv run --frozen python tools/run_native_cgroup_integration.py",
             "MOSAIC_NATIVE_CGROUP_PARENT",
             "mosaic-native-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}",
+            "mosaic-binding-abi-probe",
+            "--internal-clone3-abi-probe",
+            (
+                "expected_probe_output='clone3 ABI probe passed "
+                "(PID namespace and initial cgroup placement only); binding_eligible=false'"
+            ),
+            '[[ "$probe_output" == "$expected_probe_output" ]]',
+            'exec 3<&-; exec "$1" --internal-clone3-abi-probe',
+            'bash "$supervisor_binary" 2>"$negative_stderr"',
+            "(( negative_status == 1 ))",
+            '[[ -z "$negative_stdout" ]]',
+            (
+                "expected_negative_error='clone3 ABI probe failed; binding_eligible=false; "
+                "cannot inspect clone3 ABI probe cgroup leaf FD 3: Bad file descriptor "
+                "(os error 9)'"
+            ),
+            'negative_error="$(<"$negative_stderr")"',
+            '[[ "$negative_error" == "$expected_negative_error" ]]',
             "cargo +1.96.0 build --workspace --release --locked",
         ):
             self.assertIn(required, workflow)

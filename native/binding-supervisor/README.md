@@ -9,8 +9,17 @@ controllers, waits for the coordinator's `SO_PASSCRED` ready byte, transfers the
 session descriptor in the one-shot `MSCBIND1` handoff, and remains responsible
 for cleanup.
 
-This slice is deliberately non-authoritative. It does not launch or attach a
-workload, does not use `clone3`, and cannot make a measurement binding-eligible.
+The normal supervisor mode is deliberately non-authoritative. It does not
+launch or attach a workload and cannot make a measurement binding-eligible.
+
+An explicitly opt-in `--internal-clone3-abi-probe` diagnostic is the sole
+exception to the normal supervisor mode. It accepts no path or command and
+consumes an already-open empty cgroup-v2 leaf on FD 3. The probe uses the exact
+`CLONE_INTO_CGROUP | CLONE_NEWPID | CLONE_PIDFD` flags, confirms namespace PID 1
+and exact initial leaf placement, releases over a fixed control channel, and
+signals/reaps only through the pidfd under fixed timeouts. It does not execute a
+workload, create or remove the leaf, alter `MSCBIND1`, or produce
+binding-eligible evidence.
 
 Normal shutdown is control-channel EOF. `SIGTERM`, `SIGINT`, or `SIGHUP`
 received through `signalfd` first sends a revocation byte and waits for peer EOF,

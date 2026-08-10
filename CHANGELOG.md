@@ -27,8 +27,13 @@ is preserved.
   launch, READY/handoff, Python leaf lifecycle, EOF barrier, and supervisor exit.
   The handshake and CI job are bounded, and post-handoff cleanup requires proven
   full peer closure. Production workload attachment still fails closed pending
-  race-free native `clone3` placement, and all outputs remain explicitly
-  non-binding.
+  the complete native launcher. A separate internal diagnostic now probes the
+  exact `clone3(CLONE_INTO_CGROUP | CLONE_NEWPID | CLONE_PIDFD)` ABI against an
+  inherited empty leaf, verifies namespace PID 1 and exact initial placement,
+  and uses only bounded pidfd signaling/reaping. It does not execute a workload
+  and always remains explicitly non-binding. Native session cleanup also caps
+  direct-directory enumeration at 1,024 non-dot entries and leaves an oversized
+  session visible for recovery instead of allocating without a bound.
 - Added offline competitive-corpus preparation with exact plan validation,
   approval-shaped fields exposed only as structurally unverified claims,
   descriptor-bound source/output identities, secure revalidation, and durable
@@ -105,6 +110,10 @@ is preserved.
 
 ### Documentation
 
+- Fixed the fail-closed native launcher design: atomic cgroup placement, PID 1
+  reaping, pidfd-only lifecycle control, bounded output, fixed descriptors,
+  explicit host-ineligibility errors, and a separately versioned future
+  protocol. Current and self-test results remain non-binding.
 - Added exact protected-main hosted evidence for a deterministic 2,049 MiB
   MSC6-fast round trip that crosses signed 32-bit offsets and restores the
   source SHA-256 exactly. The record binds the workflow run, expiring artifact,
@@ -145,6 +154,11 @@ is preserved.
 
 ### Changed
 
+- Split the Linux supervisor into private cgroup, control-protocol, and test
+  modules and split the Python binding runner into common, qualification, and
+  cgroup-lifecycle implementations behind its existing compatibility import.
+  Public call signatures, class identities through the façade, protocol bytes,
+  and native test names are preserved.
 - Fast and research MSC6 routing no longer performs feature analysis whose
   result those fixed candidate sets discard. Balanced routing remains
   feature-driven, while fast/research mode choice, payload bytes, tie-breaking,

@@ -217,15 +217,16 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The Python 3.13 suite runs 558 unit/integration tests. On Linux, 555 pass and 3
-platform- or privilege-specific cases skip; on Windows, 488 pass and 70
+The Python 3.13 suite runs 560 unit/integration tests. On Linux, 557 pass and 3
+platform- or privilege-specific cases skip; on Windows, 490 pass and 70
 Linux-capability-specific cases skip. CI measures statement and branch
 coverage across every package module on Linux, where the cgroup-v2 and sealed-
-memfd paths execute. The current result is 84.79% against a required 80%, with
-no package module omitted. A Windows-only coverage run is intentionally not the
-release gate because those Linux-kernel paths cannot execute there. The native
-Rust suite adds 16 normal Linux tests plus one real delegated-cgroup lifecycle
-case run explicitly by CI; Windows exercises the seven portable Rust tests.
+memfd paths execute. The last protected-main result is 84.79% against a required
+80%, with no package module omitted. A Windows-only coverage run is
+intentionally not the release gate because those Linux-kernel paths cannot
+execute there. The native Rust suite adds 22 normal Linux tests plus two opt-in
+real-cgroup cases run explicitly by CI; Windows exercises the seven portable
+Rust tests.
 Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
@@ -258,9 +259,12 @@ bundle, and GitHub attestation have been verified as documented in
    race-free `clone3(CLONE_INTO_CGROUP)` placement, isolated workload identity,
    complete descendant executable identities, bounded outputs, and signed
    raw-run records; the exclusive delegated-root/session capability slice is
-   complete. Before expanding it, split the audited native supervisor into
-   protocol, cgroup, lifecycle, and test modules so the next security review
-   does not depend on one multi-responsibility source file;
+   complete. The native supervisor and Python runner have now been split into
+   focused protocol, cgroup, qualification, lifecycle, and test modules. An
+   internal non-binding ABI probe now proves the exact `clone3` flag layout,
+   namespace PID 1, initial leaf placement, and pidfd-only bounded reaping. The
+   next executable slice is the fixed-payload namespace-reaper self-test
+   specified in `docs/NATIVE_LAUNCHER_DESIGN.md`;
 2. acquire and externally approve all six immutable public corpus bundles,
    finish aggregate member manifests/recipes, and commit the real lock;
 3. implement and optimize the additive Rust MSC7 core, native CLI, and Python

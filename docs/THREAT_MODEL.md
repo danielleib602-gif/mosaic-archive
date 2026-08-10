@@ -101,6 +101,13 @@ closing live authority outside its capability lock. This does not handle
 results binding; stale-root reconciliation and native pre-exec `clone3`
 placement remain required.
 
+The opt-in internal clone3 ABI probe consumes an already-open empty leaf and
+proves only exact initial cgroup placement, namespace PID 1, and pidfd-bound
+bounded reaping. It accepts no path or workload command, does not create or
+remove the caller-owned leaf, and always remains non-binding. The future
+executable self-test and arbitrary-tool launcher require the additional mount,
+identity, reaper, output, and evidence controls documented separately.
+
 The final `os.replace` is an atomic namespace switch, but Mosaic does not fsync
 the containing directory and therefore does not promise power-loss durability.
 

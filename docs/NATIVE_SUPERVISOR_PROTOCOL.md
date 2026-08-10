@@ -128,6 +128,12 @@ Windows, but only the Linux gate can establish cgroup syscall behavior.
 
 ## Remaining authoritative-runner work
 
+The fixed design and phased verification boundary for this work is recorded in
+`NATIVE_LAUNCHER_DESIGN.md`. It does not alter `MSCBIND1` or grant binding
+authority to the current supervisor. The internal clone3 ABI probe covers only
+the exact flag layout, namespace PID 1, initial placement in an inherited empty
+leaf, and bounded pidfd reaping; it does not execute a payload.
+
 The next native stage must use a single-threaded, immediate-exec
 `clone3(CLONE_INTO_CGROUP | CLONE_NEWPID | CLONE_PIDFD)` path. It must also
 isolate the cgroup mount, run a PID-namespace reaper, capture all descendant
