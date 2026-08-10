@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import lzma
 import struct
+import sys
 from dataclasses import dataclass
-from typing import BinaryIO, Final
+from typing import BinaryIO, Final, Protocol, cast
+
+if sys.version_info >= (3, 14):
+    from compression import zstd
+else:
+    from backports import zstd
 
 from mosaic_archive.crypto import AEAD_TAG_LENGTH, decrypt, encrypt
 from mosaic_archive.exceptions import ArchiveFormatError
@@ -16,6 +22,10 @@ from mosaic_archive.stream_format import frame_nonce
 SOLID_LANE_STANDARD: Final = 0
 SOLID_LANE_DELTA4: Final = 1
 SOLID_LANE_HIGH_ENTROPY: Final = 2
+SOLID_CODEC_LZMA2: Final = 0
+SOLID_CODEC_RAW: Final = 1
+SOLID_CODEC_ZSTD: Final = 2
+_ZSTD_MAX_WINDOW_LOG: Final = 23
 _VALID_LANES: Final = {
     SOLID_LANE_STANDARD,
     SOLID_LANE_DELTA4,
@@ -41,9 +51,53 @@ _STANDARD_ENCODER_FILTERS: Final = (
         "depth": 12,
     },
 )
-_RAW_LZMA2_DECODER_FILTERS: Final = (
-    {"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},
-)
+_RAW_LZMA2_DECODER_FILTERS: Final = ({"id": lzma.FILTER_LZMA2, "preset": SOLID_LZMA_PRESET},)
+
+
+def solid_lane_framed_size(
+    payload_size: int,
+    *,
+    frame_payload_size: int,
+    padding_size: int,
+) -> int:
+    """Return exact on-disk bytes for a nonempty precompressed lane payload."""
+    if payload_size < 0:
+        raise ValueError("solid lane payload size cannot be negative")
+    if payload_size == 0:
+        return 0
+    if not 1024 <= frame_payload_size <= 16 * 1024 * 1024:
+        raise ValueError("solid frame payload size must be between 1 KiB and 16 MiB")
+    if not 256 <= padding_size <= frame_payload_size:
+        raise ValueError("solid frame padding size is invalid")
+
+    def frame_size(size: int) -> int:
+        padded_size = ((8 + size + padding_size - 1) // padding_size) * padding_size
+        return _FRAME_HEADER.size + padded_size + AEAD_TAG_LENGTH
+
+    full_frames, remainder = divmod(payload_size, frame_payload_size)
+    size = full_frames * frame_size(frame_payload_size)
+    if remainder:
+        size += frame_size(remainder)
+    return size
+
+
+class _IncrementalCompressor(Protocol):
+    def compress(self, data: bytes) -> bytes: ...
+
+    def flush(self) -> bytes: ...
+
+
+class _IncrementalDecompressor(Protocol):
+    @property
+    def eof(self) -> bool: ...
+
+    @property
+    def needs_input(self) -> bool: ...
+
+    @property
+    def unused_data(self) -> bytes: ...
+
+    def decompress(self, data: bytes, max_length: int = -1) -> bytes: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +132,15 @@ def _validate_options(
         raise ValueError("solid frame padding size is invalid")
 
 
-def _compressor(lane: int, raw_lzma2: bool) -> lzma.LZMACompressor:
+def _compressor(
+    lane: int,
+    raw_lzma2: bool,
+    codec: int | None,
+) -> _IncrementalCompressor:
+    if codec == SOLID_CODEC_ZSTD:
+        return cast(_IncrementalCompressor, zstd.ZstdCompressor(level=1))
+    if codec not in {None, SOLID_CODEC_LZMA2}:
+        raise ValueError(f"unknown or non-compressing solid codec: {codec}")
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMACompressor(
             format=lzma.FORMAT_RAW,
@@ -92,7 +154,22 @@ def _compressor(lane: int, raw_lzma2: bool) -> lzma.LZMACompressor:
     return lzma.LZMACompressor(format=lzma.FORMAT_XZ, preset=SOLID_LZMA_PRESET)
 
 
-def _decompressor(lane: int, raw_lzma2: bool) -> lzma.LZMADecompressor:
+def _decompressor(
+    lane: int,
+    raw_lzma2: bool,
+    codec: int | None,
+) -> _IncrementalDecompressor:
+    if codec == SOLID_CODEC_ZSTD:
+        return cast(
+            _IncrementalDecompressor,
+            zstd.ZstdDecompressor(
+                options={
+                    zstd.DecompressionParameter.window_log_max: _ZSTD_MAX_WINDOW_LOG,
+                }
+            ),
+        )
+    if codec not in {None, SOLID_CODEC_LZMA2}:
+        raise ValueError(f"unknown or non-decompressing solid codec: {codec}")
     if lane == SOLID_LANE_DELTA4:
         return lzma.LZMADecompressor(
             format=lzma.FORMAT_RAW,
@@ -112,11 +189,12 @@ def compress_solid_lane(
     *,
     lane: int,
     raw_lzma2: bool = False,
+    codec: int | None = None,
 ) -> int:
     """Compress one continuous lane once into a disk- or memory-backed spool."""
     if lane not in _VALID_LANES:
         raise ValueError(f"unknown solid lane: {lane}")
-    compressor = _compressor(lane, raw_lzma2)
+    compressor = _compressor(lane, raw_lzma2, codec)
     compressed_size = 0
     while block := source.read(_IO_BLOCK_SIZE):
         output = compressor.compress(block)
@@ -204,12 +282,13 @@ def write_solid_lane_frames(
     frame_payload_size: int = 1024 * 1024,
     padding_size: int = 1024,
     raw_lzma2: bool = False,
+    codec: int | None = None,
 ) -> SolidFrameWriteStats:
     """Compress one continuous lane and emit bounded authenticated frames."""
     _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
     if not 0 <= start_index <= 0xFFFFFFFF:
         raise ValueError("solid frame start index is outside the uint32 range")
-    compressor = _compressor(lane, raw_lzma2)
+    compressor = _compressor(lane, raw_lzma2, codec)
     pending = bytearray()
     index = start_index
     compressed_size = padded_size = maximum = 0
@@ -279,16 +358,22 @@ def read_solid_lane_frames(
     padding_size: int = 1024,
     raw_lzma2: bool = False,
     passthrough: bool = False,
+    codec: int | None = None,
 ) -> SolidFrameReadStats:
     """Authenticate and incrementally decompress one continuous lane."""
     _validate_options(lane, nonce_prefix, frame_payload_size, padding_size)
     if frame_count <= 0 or expected_size < 0:
         raise ArchiveFormatError("solid frame count or decoded size is invalid")
-    decoder = None if passthrough else _decompressor(lane, raw_lzma2)
+    if passthrough:
+        if codec not in {None, SOLID_CODEC_RAW}:
+            raise ValueError("solid passthrough requires the raw codec")
+        decoder = None
+    else:
+        if codec == SOLID_CODEC_RAW:
+            raise ValueError("the raw solid codec requires passthrough")
+        decoder = _decompressor(lane, raw_lzma2, codec)
     decoded_size = 0
-    maximum_padded = (
-        (8 + frame_payload_size + padding_size - 1) // padding_size
-    ) * padding_size
+    maximum_padded = ((8 + frame_payload_size + padding_size - 1) // padding_size) * padding_size
 
     for offset in range(frame_count):
         index = start_index + offset
@@ -333,10 +418,13 @@ def read_solid_lane_frames(
         assert decoder is not None
         while True:
             remaining = expected_size - decoded_size
-            output = decoder.decompress(
-                input_data,
-                max_length=min(_OUTPUT_BLOCK_SIZE, remaining + 1),
-            )
+            try:
+                output = decoder.decompress(
+                    input_data,
+                    max_length=min(_OUTPUT_BLOCK_SIZE, remaining + 1),
+                )
+            except (lzma.LZMAError, zstd.ZstdError) as error:
+                raise ArchiveFormatError("solid frame compressed payload is malformed") from error
             input_data = b""
             if len(output) > remaining:
                 raise ArchiveFormatError("solid frame stream exceeds its declared size")

@@ -14,6 +14,7 @@ from mosaic_archive.exceptions import (
     AuthenticationError,
 )
 from mosaic_archive.solid_frames import (
+    SOLID_CODEC_ZSTD,
     SOLID_LANE_DELTA4,
     SOLID_LANE_HIGH_ENTROPY,
     SOLID_LANE_STANDARD,
@@ -25,6 +26,99 @@ from mosaic_archive.solid_frames import (
 
 
 class AuthenticatedSolidFrameTests(unittest.TestCase):
+    def test_zstd_lane_round_trips_across_bounded_frames(self) -> None:
+        data = (b"zstd solid lane content\n" * 8192) + random.Random(86).randbytes(8192)
+        compressed = io.BytesIO()
+        compressed_size = compress_solid_lane(
+            io.BytesIO(data),
+            compressed,
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            codec=SOLID_CODEC_ZSTD,
+        )
+        archive = io.BytesIO()
+        compressed.seek(0)
+        written = write_precompressed_solid_lane_frames(
+            compressed,
+            archive,
+            compressed_size=compressed_size,
+            key=bytes(range(32)),
+            nonce_prefix=b"MSR2",
+            associated_data=b"zstd frame test",
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            start_index=0,
+            frame_payload_size=4096,
+            padding_size=512,
+        )
+        restored = io.BytesIO()
+        archive.seek(0)
+        read_solid_lane_frames(
+            archive,
+            restored,
+            key=bytes(range(32)),
+            nonce_prefix=b"MSR2",
+            associated_data=b"zstd frame test",
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            start_index=0,
+            frame_count=written.frame_count,
+            expected_size=len(data),
+            frame_payload_size=4096,
+            padding_size=512,
+            codec=SOLID_CODEC_ZSTD,
+        )
+
+        self.assertEqual(restored.getvalue(), data)
+        self.assertLessEqual(written.max_frame_payload, 4096)
+
+    def test_zstd_codec_cannot_be_silently_treated_as_raw(self) -> None:
+        with self.assertRaisesRegex(ValueError, "passthrough requires the raw codec"):
+            read_solid_lane_frames(
+                io.BytesIO(),
+                io.BytesIO(),
+                key=bytes(range(32)),
+                nonce_prefix=b"MSR2",
+                associated_data=b"codec mismatch",
+                lane=SOLID_LANE_HIGH_ENTROPY,
+                start_index=0,
+                frame_count=1,
+                expected_size=1,
+                frame_payload_size=4096,
+                padding_size=512,
+                passthrough=True,
+                codec=SOLID_CODEC_ZSTD,
+            )
+
+    def test_authenticated_malformed_zstd_uses_archive_error(self) -> None:
+        malformed = b"authenticated but not a zstd stream"
+        archive = io.BytesIO()
+        written = write_precompressed_solid_lane_frames(
+            io.BytesIO(malformed),
+            archive,
+            compressed_size=len(malformed),
+            key=bytes(range(32)),
+            nonce_prefix=b"MSR2",
+            associated_data=b"malformed zstd",
+            lane=SOLID_LANE_HIGH_ENTROPY,
+            start_index=0,
+            frame_payload_size=4096,
+            padding_size=512,
+        )
+        archive.seek(0)
+        with self.assertRaisesRegex(ArchiveFormatError, "compressed payload is malformed"):
+            read_solid_lane_frames(
+                archive,
+                io.BytesIO(),
+                key=bytes(range(32)),
+                nonce_prefix=b"MSR2",
+                associated_data=b"malformed zstd",
+                lane=SOLID_LANE_HIGH_ENTROPY,
+                start_index=0,
+                frame_count=written.frame_count,
+                expected_size=1024,
+                frame_payload_size=4096,
+                padding_size=512,
+                codec=SOLID_CODEC_ZSTD,
+            )
+
     def test_v0_38_decoder_filters_restore_v0_39_lane_streams(self) -> None:
         standard = b"standard lane content " * 4096
         delta = b"".join(struct.pack("<i", index * 3) for index in range(32_768))
@@ -68,9 +162,7 @@ class AuthenticatedSolidFrameTests(unittest.TestCase):
         self,
     ) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.39-lane-match-search.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.39-lane-match-search.json").read_text(encoding="utf-8")
         )
 
         for corpus in ("corpus_v1", "corpus_v2"):

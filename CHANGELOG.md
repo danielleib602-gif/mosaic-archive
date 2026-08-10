@@ -154,6 +154,19 @@ is preserved.
 
 ### Changed
 
+- Experimental MSR2 now uses exact low-bit Gear state, eliminating wide Python
+  integer work without changing a chunk boundary, and uses zstd level 1 for the
+  high-entropy lane with complete framed-storage RAW fallback. On the locked
+  expanded corpus, 11 fresh-process runs shrink the archive from 291,731 to
+  290,451 bytes, improve median encode time by 23.723347%, improve median decode
+  time by 7.895225%, and preserve all 13 public category sizes.
+- Added the non-stable native `M7R0` compression-core preview: exact Gear CDC,
+  bounded SHA-256-confirmed deduplication, deterministic adaptive LZMA2,
+  delta4+zstd, zstd, and RAW routing, ordered 1/8-thread output, strict total
+  decode ceilings, and atomic alias-safe file publication. A deterministic
+  64 MiB diagnostic produces identical 5,145,673-byte output at one and eight
+  threads and reaches median encode throughput of 42.049 and 145.347 MiB/s.
+  It is deliberately neither encrypted nor a stable MSC7 format.
 - Split the Linux supervisor into private cgroup, control-protocol, and test
   modules and split the Python binding runner into common, qualification, and
   cgroup-lifecycle implementations behind its existing compatibility import.
