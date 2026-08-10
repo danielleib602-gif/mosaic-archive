@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
   "backports.zstd>=1.6,<2; python_version < '3.14'",
-  "cryptography>=46.0,<50",
+  "cryptography>=46.0,<51",
 ]
 
 [project.urls]
