@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import cache
 from typing import BinaryIO
 
-_MASK_64 = (1 << 64) - 1
 _WINDOW_SIZE = 64
 _READ_SIZE = 64 * 1024
 
@@ -15,16 +15,26 @@ _READ_SIZE = 64 * 1024
 def _build_table() -> tuple[int, ...]:
     return tuple(
         int.from_bytes(
-            hashlib.sha256(
-                b"Mosaic-Gear-v1/" + bytes((7, value))
-            ).digest()[:8],
+            hashlib.sha256(b"Mosaic-Gear-v1/" + bytes((7, value))).digest()[:8],
             "big",
         )
         for value in range(256)
     )
 
 
-_GEAR_TABLE = _build_table()
+_DEFAULT_GEAR_TABLE = _build_table()
+_GEAR_TABLE = _DEFAULT_GEAR_TABLE
+
+
+@cache
+def _default_masked_table(boundary_mask: int) -> tuple[int, ...]:
+    return tuple(value & boundary_mask for value in _DEFAULT_GEAR_TABLE)
+
+
+def _masked_table(boundary_mask: int) -> tuple[int, ...]:
+    if _GEAR_TABLE is _DEFAULT_GEAR_TABLE:
+        return _default_masked_table(boundary_mask)
+    return tuple(_GEAR_TABLE[index] & boundary_mask for index in range(256))
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +71,7 @@ def iter_content_defined_chunks(
     chunk_size = 0
     emitted_size = 0
     fingerprint = 0
-    table = _GEAR_TABLE
+    table: tuple[int, ...] | None = None
     minimum_size = config.min_size
     maximum_size = config.max_size
 
@@ -83,13 +93,17 @@ def iter_content_defined_chunks(
                 input_size,
                 position + maximum_size - chunk_size,
             )
+            if table is None:
+                table = _masked_table(boundary_mask)
             boundary_offset: int | None = None
-            for offset, byte in enumerate(
-                input_block[position:scan_end],
-                start=position,
-            ):
-                fingerprint = ((fingerprint << 1) ^ table[byte]) & _MASK_64
-                if fingerprint & boundary_mask == 0:
+            for offset in range(position, scan_end):
+                byte = input_block[offset]
+                # Only the low log2(avg_size) bits can affect a boundary, and
+                # later low bits depend exclusively on those same low bits.
+                # Keeping the exact boundary state modulo avg_size avoids
+                # carrying a wider 64-bit Python integer through every byte.
+                fingerprint = ((fingerprint << 1) ^ table[byte]) & boundary_mask
+                if fingerprint == 0:
                     boundary_offset = offset
                     break
             if boundary_offset is None:

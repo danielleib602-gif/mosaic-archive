@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import ClassVar
 from unittest.mock import patch
 
+import mosaic_archive.cdc as cdc
 from mosaic_archive.cdc import ChunkingConfig, iter_content_defined_chunks
 
 
@@ -24,9 +25,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
         self,
     ) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.38-bounded-gear-scan.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.38-bounded-gear-scan.json").read_text(encoding="utf-8")
         )
 
         for corpus in ("corpus_v1", "corpus_v2"):
@@ -48,9 +47,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
 
     def test_v0_37_scorecard_preserves_bytes_and_improves_both_corpora(self) -> None:
         scorecard = json.loads(
-            Path(".ecc/benchmarks/msc-v0.37-segmented-gear.json").read_text(
-                encoding="utf-8"
-            )
+            Path(".ecc/benchmarks/msc-v0.37-segmented-gear.json").read_text(encoding="utf-8")
         )
 
         for corpus in ("corpus_v1", "corpus_v2"):
@@ -65,7 +62,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
             )
             self.assertGreater(result["encode_improvement_percent"], 3)
 
-    def test_boundary_signal_uses_one_gear_lookup_per_probe(self) -> None:
+    def test_boundary_signal_masks_the_gear_table_once_per_stream(self) -> None:
         class CountingTable:
             def __init__(self) -> None:
                 self.lookups = 0
@@ -82,7 +79,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
             chunks = list(iter_content_defined_chunks(io.BytesIO(data), config))
 
         self.assertEqual(b"".join(chunks), data)
-        self.assertEqual(table.lookups, 16)
+        self.assertEqual(table.lookups, 256)
 
     def test_chunk_storage_avoids_per_byte_buffer_appends(self) -> None:
         class CountingBytearray(bytearray):
@@ -151,13 +148,14 @@ class ContentDefinedChunkingTests(unittest.TestCase):
 
         self.assertEqual(chunks, [data])
 
-    def test_gear_scan_slices_stop_at_the_mandatory_maximum_boundary(self) -> None:
+    def test_gear_scan_does_not_allocate_per_scan_slices(self) -> None:
         class TrackingBytes(bytes):
-            scan_slices: ClassVar[list[slice]] = []
+            scan_indices: ClassVar[list[int]] = []
 
             def __getitem__(self, key):
                 if isinstance(key, slice):
-                    type(self).scan_slices.append(key)
+                    raise AssertionError("gear scan allocated a byte slice")
+                type(self).scan_indices.append(key)
                 return super().__getitem__(key)
 
         class OneBlockStream:
@@ -175,15 +173,35 @@ class ContentDefinedChunkingTests(unittest.TestCase):
             chunks = list(iter_content_defined_chunks(OneBlockStream(data), config))
 
         self.assertEqual(b"".join(chunks), data)
-        self.assertTrue(TrackingBytes.scan_slices)
-        self.assertTrue(
-            all(
-                item.start is not None
-                and item.stop is not None
-                and item.stop - item.start <= config.max_size - config.min_size + 1
-                for item in TrackingBytes.scan_slices
-            )
-        )
+        self.assertTrue(TrackingBytes.scan_indices)
+        self.assertTrue(all(0 <= index < len(data) for index in TrackingBytes.scan_indices))
+
+    def test_low_bit_state_matches_the_full_width_reference(self) -> None:
+        rng = random.Random(20260810)
+        for config in (
+            ChunkingConfig(min_size=64, avg_size=128, max_size=512),
+            ChunkingConfig(min_size=512, avg_size=2048, max_size=8192),
+            ChunkingConfig(),
+        ):
+            data = rng.randbytes(config.max_size * 5 + 137)
+            expected: list[bytes] = []
+            start = 0
+            fingerprint = 0
+            for position, byte in enumerate(data):
+                size = position - start + 1
+                if size >= config.min_size:
+                    fingerprint = ((fingerprint << 1) ^ cdc._GEAR_TABLE[byte]) & ((1 << 64) - 1)
+                if size == config.max_size or (
+                    size >= config.min_size and fingerprint & (config.avg_size - 1) == 0
+                ):
+                    expected.append(data[start : position + 1])
+                    start = position + 1
+                    fingerprint = 0
+            if start < len(data):
+                expected.append(data[start:])
+
+            actual = list(iter_content_defined_chunks(io.BytesIO(data), config))
+            self.assertEqual(actual, expected)
 
     def test_hot_loop_does_not_call_a_generic_rotation_helper(self) -> None:
         data = random.Random(28).randbytes(32 * 1024)
@@ -239,9 +257,7 @@ class ContentDefinedChunkingTests(unittest.TestCase):
             (256, 1024, 32 * 1024 * 1024),
         )
         for minimum, average, maximum in invalid:
-            with self.subTest(config=(minimum, average, maximum)), self.assertRaises(
-                ValueError
-            ):
+            with self.subTest(config=(minimum, average, maximum)), self.assertRaises(ValueError):
                 ChunkingConfig(minimum, average, maximum)
 
 

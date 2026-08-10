@@ -1,0 +1,26 @@
+[package]
+name = "mosaic-msc7-core"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Non-stable native MSC7 compression-core laboratory preview"
+
+[dependencies]
+lzma-rust2 = { version = "=0.18.1", default-features = false, features = ["std", "encoder", "optimization"] }
+rayon = "=1.12.0"
+same-file = "=1.0.6"
+sha2 = "=0.11.0"
+tempfile = "=3.27.0"
+zstd = { version = "=0.13.3", default-features = false }
+
+[[bin]]
+name = "mosaic-msc7-lab"
+path = "src/main.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"

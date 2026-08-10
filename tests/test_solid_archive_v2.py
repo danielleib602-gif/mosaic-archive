@@ -21,7 +21,12 @@ from mosaic_archive.solid_archive_v2 import (
     decode_solid_archive_v2,
     encode_solid_archive_v2,
 )
-from mosaic_archive.solid_frames import SOLID_LANE_HIGH_ENTROPY, compress_solid_lane
+from mosaic_archive.solid_frames import (
+    SOLID_CODEC_RAW,
+    SOLID_CODEC_ZSTD,
+    SOLID_LANE_HIGH_ENTROPY,
+    compress_solid_lane,
+)
 
 
 def _tree_digest(root: Path) -> bytes:
@@ -63,17 +68,23 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             self.assertEqual(chunker.call_count, 1)
             self.assertEqual(encoded.chunking_passes, 1)
 
-    def test_high_entropy_lane_bypasses_futile_lzma_compression(self) -> None:
+    def test_high_entropy_lane_uses_exact_raw_fallback_after_zstd_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source, archive, restored = root / "random.bin", root / "random.msr", root / "out"
             data = random.Random(92).randbytes(256 * 1024)
             source.write_bytes(data)
 
-            with patch(
-                "mosaic_archive.solid_archive_v2.compress_solid_lane",
-                wraps=compress_solid_lane,
-            ) as compressor:
+            with (
+                patch(
+                    "mosaic_archive.solid_archive_v2.compress_solid_lane",
+                    wraps=compress_solid_lane,
+                ) as compressor,
+                patch(
+                    "mosaic_archive.solid_archive_v2._compact_metadata",
+                    wraps=_compact_metadata,
+                ) as compact_metadata,
+            ):
                 encoded = encode_solid_archive_v2(
                     source,
                     archive,
@@ -84,12 +95,52 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             decoded = decode_solid_archive_v2(archive, restored, "secret")
 
             compressed_lanes = {call.kwargs["lane"] for call in compressor.call_args_list}
-            self.assertNotIn(SOLID_LANE_HIGH_ENTROPY, compressed_lanes)
+            self.assertIn(SOLID_LANE_HIGH_ENTROPY, compressed_lanes)
+            self.assertEqual(compressor.call_args.kwargs["codec"], SOLID_CODEC_ZSTD)
+            self.assertEqual(compact_metadata.call_args.args[3][2], SOLID_CODEC_RAW)
             self.assertEqual(encoded.routing_trial_compressions, 0)
-            self.assertEqual(encoded.routing_reuse_probes, 1)
+            self.assertEqual(encoded.routing_reuse_probes, 0)
             self.assertTrue(decoded.hash_verified)
             self.assertEqual(restored.read_bytes(), data)
             self.assertLessEqual(encoded.maximum_frame_payload, len(data))
+
+    def test_raw_fallback_compares_complete_framed_storage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source, archive, restored = root / "source.bin", root / "archive.msr", root / "out"
+            data = random.Random(93).randbytes(4096)
+            source.write_bytes(data)
+
+            def one_byte_smaller(lane_source, compressed_output, **_options):
+                candidate = lane_source.read()[:-1]
+                compressed_output.write(candidate)
+                return len(candidate)
+
+            with (
+                patch(
+                    "mosaic_archive.solid_archive_v2.choose_solid_lane",
+                    return_value=SOLID_LANE_HIGH_ENTROPY,
+                ),
+                patch(
+                    "mosaic_archive.solid_archive_v2.compress_solid_lane",
+                    side_effect=one_byte_smaller,
+                ),
+                patch(
+                    "mosaic_archive.solid_archive_v2._compact_metadata",
+                    wraps=_compact_metadata,
+                ) as compact_metadata,
+            ):
+                encode_solid_archive_v2(
+                    source,
+                    archive,
+                    "secret",
+                    padding_size=256,
+                    kdf_log_n=14,
+                )
+
+            decode_solid_archive_v2(archive, restored, "secret")
+            self.assertEqual(compact_metadata.call_args.args[3][2], SOLID_CODEC_RAW)
+            self.assertEqual(restored.read_bytes(), data)
 
     def test_metadata_envelope_retains_legacy_payloads_and_rejects_malformed_data(
         self,
@@ -323,10 +374,10 @@ class StreamingSolidArchiveTests(unittest.TestCase):
             )
 
             self.assertEqual(archive.read_bytes()[:4], b"MSR2")
-            self.assertEqual(encoded.archive_size, 275859)
+            self.assertEqual(encoded.archive_size, 274579)
             self.assertEqual(encoded.compression_passes, 1)
             self.assertEqual(encoded.routing_trial_compressions, 0)
-            self.assertEqual(encoded.routing_reuse_probes, 1)
+            self.assertEqual(encoded.routing_reuse_probes, 0)
             self.assertLess(encoded.archive_size, seven_zip_size)
             self.assertLessEqual(encoded.maximum_frame_payload, 1024 * 1024)
             self.assertTrue(decoded.hash_verified)
@@ -351,7 +402,7 @@ class StreamingSolidArchiveTests(unittest.TestCase):
                 "correct horse battery staple",
             )
 
-            self.assertEqual(encoded.archive_size, 291731)
+            self.assertEqual(encoded.archive_size, 290451)
             self.assertEqual(encoded.unique_chunk_count, 89)
             self.assertEqual(encoded.routing_trial_compressions, 0)
             self.assertTrue(decoded.hash_verified)

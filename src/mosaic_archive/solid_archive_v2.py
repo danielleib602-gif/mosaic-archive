@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import mmap
 import os
 import shutil
 import struct
@@ -37,8 +36,12 @@ from mosaic_archive.resource_limits import (
     DEFAULT_MAX_OUTPUT_SIZE,
 )
 from mosaic_archive.solid_frames import (
+    SOLID_CODEC_LZMA2,
+    SOLID_CODEC_RAW,
+    SOLID_CODEC_ZSTD,
     compress_solid_lane,
     read_solid_lane_frames,
+    solid_lane_framed_size,
     write_precompressed_solid_lane_frames,
 )
 from mosaic_archive.solid_research import choose_solid_lane
@@ -63,11 +66,14 @@ _RAW_LZMA2_CODEC: Final = 1
 _COMPACT_METADATA_MAGIC_V1: Final = b"MC21"
 _COMPACT_METADATA_MAGIC: Final = b"MC22"
 _MAX_COMPACT_UINT: Final = (1 << 64) - 1
-_LANE_CODEC_LZMA2: Final = 0
-_LANE_CODEC_RAW: Final = 1
-_REUSE_PROBE_COUNT: Final = 32
-_REUSE_PROBE_SIZE: Final = 64
-_MAX_REUSE_PROBE_LANE_SIZE: Final = 64 * 1024 * 1024
+_LANE_CODEC_LZMA2: Final = SOLID_CODEC_LZMA2
+_LANE_CODEC_RAW: Final = SOLID_CODEC_RAW
+_LANE_CODEC_ZSTD: Final = SOLID_CODEC_ZSTD
+_VALID_CODECS_BY_LANE: Final = (
+    {_LANE_CODEC_LZMA2, _LANE_CODEC_RAW},
+    {_LANE_CODEC_LZMA2, _LANE_CODEC_RAW},
+    {_LANE_CODEC_LZMA2, _LANE_CODEC_RAW, _LANE_CODEC_ZSTD},
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,8 +220,8 @@ def _compact_metadata(
     for frame_count in frame_counts:
         output.extend(_encode_compact_uint(frame_count))
     if lane_codecs is not None:
-        for codec in lane_codecs:
-            if codec not in {_LANE_CODEC_LZMA2, _LANE_CODEC_RAW}:
+        for lane, codec in enumerate(lane_codecs):
+            if codec not in _VALID_CODECS_BY_LANE[lane]:
                 raise RuntimeError("internal MSR2 lane codec is invalid")
             output.extend(_encode_compact_uint(codec))
     previous_mtime_ns = 0
@@ -289,31 +295,6 @@ def _decode_metadata_envelope(payload: bytes) -> tuple[bytes, bool]:
     return decoded, True
 
 
-def _high_entropy_lane_has_distant_reuse(path: Path, raw_size: int) -> bool:
-    """Find exact distant reuse without trial-compressing the assembled lane."""
-    if raw_size <= 0:
-        return False
-    if raw_size > _MAX_REUSE_PROBE_LANE_SIZE:
-        return True
-    if raw_size < _REUSE_PROBE_SIZE * 2:
-        return False
-    with (
-        path.open("rb") as source,
-        mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ) as data,
-    ):
-        last_start = raw_size - _REUSE_PROBE_SIZE
-        for sample_index in range(_REUSE_PROBE_COUNT):
-            position = (
-                (sample_index + 1) * last_start // (_REUSE_PROBE_COUNT + 1)
-            )
-            sample = data[position : position + _REUSE_PROBE_SIZE]
-            if data.find(sample, 0, max(0, position - _REUSE_PROBE_SIZE + 1)) >= 0:
-                return True
-            if data.find(sample, position + _REUSE_PROBE_SIZE) >= 0:
-                return True
-    return False
-
-
 def encode_solid_archive_v2(
     input_path: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
@@ -344,11 +325,7 @@ def encode_solid_archive_v2(
         or not 256 <= padding_size <= frame_payload_size
     ):
         raise ValueError("solid frame padding size is invalid")
-    if (
-        not isinstance(kdf_log_n, int)
-        or isinstance(kdf_log_n, bool)
-        or not 14 <= kdf_log_n <= 18
-    ):
+    if not isinstance(kdf_log_n, int) or isinstance(kdf_log_n, bool) or not 14 <= kdf_log_n <= 18:
         raise ValueError("scrypt cost is outside supported limits")
 
     source_session = SourceSession(source)
@@ -362,7 +339,8 @@ def encode_solid_archive_v2(
     temporary_name: str | None = None
 
     with tempfile.TemporaryDirectory(
-        dir=destination.parent, prefix=f".{destination.name}.lanes."
+        dir=destination.parent,
+        prefix=f".{destination.name}.lanes.",
     ) as lane_dir:
         lane_paths = tuple(Path(lane_dir) / f"lane-{lane}" for lane in range(_LANE_COUNT))
         lane_streams = tuple(path.open("w+b") for path in lane_paths)
@@ -396,53 +374,69 @@ def encode_solid_archive_v2(
         salt, nonce_prefix = os.urandom(SALT_LENGTH), os.urandom(4)
         key = derive_key(password, salt, log_n=kdf_log_n, r=8, p=1)
         compressed_paths = tuple(
-            Path(lane_dir) / f"lane-{lane}.lzma2" for lane in range(_LANE_COUNT)
+            Path(lane_dir) / f"lane-{lane}.candidate" for lane in range(_LANE_COUNT)
         )
-        high_entropy_codec = (
-            _LANE_CODEC_LZMA2
-            if _high_entropy_lane_has_distant_reuse(
-                lane_paths[2],
-                raw_sizes[2],
-            )
-            else _LANE_CODEC_RAW
-        )
-        lane_codecs = (
+        preferred_codecs = (
             _LANE_CODEC_LZMA2,
             _LANE_CODEC_LZMA2,
-            high_entropy_codec,
+            _LANE_CODEC_ZSTD,
         )
-        routing_probe_count = int(raw_sizes[2] > 0)
-        compressed_sizes: list[int] = []
-        payload_paths: list[Path] = []
-        frame_count_values: list[int] = []
-        for lane, (raw_path, compressed_path) in enumerate(
-            zip(lane_paths, compressed_paths, strict=True)
-        ):
+
+        def compress_candidate(lane: int) -> tuple[int, int, Path, int]:
+            raw_path = lane_paths[lane]
+            compressed_path = compressed_paths[lane]
             if raw_sizes[lane] == 0:
                 compressed_path.touch()
-                compressed_sizes.append(0)
-                payload_paths.append(compressed_path)
-                frame_count_values.append(0)
-                continue
-            if lane_codecs[lane] == _LANE_CODEC_RAW:
-                compressed_size = raw_sizes[lane]
-                payload_paths.append(raw_path)
-            else:
-                with raw_path.open("rb") as lane_source, compressed_path.open(
-                    "wb"
-                ) as compressed_output:
-                    compressed_size = compress_solid_lane(
-                        lane_source,
-                        compressed_output,
-                        lane=lane,
-                        raw_lzma2=True,
-                    )
-                payload_paths.append(compressed_path)
-            compressed_sizes.append(compressed_size)
-            frame_count_values.append(
-                (compressed_size + frame_payload_size - 1) // frame_payload_size
+                return _LANE_CODEC_LZMA2, 0, compressed_path, 0
+            with (
+                raw_path.open("rb") as lane_source,
+                compressed_path.open("wb") as compressed_output,
+            ):
+                compressed_size = compress_solid_lane(
+                    lane_source,
+                    compressed_output,
+                    lane=lane,
+                    raw_lzma2=True,
+                    codec=preferred_codecs[lane],
+                )
+            candidate_storage = solid_lane_framed_size(
+                compressed_size,
+                frame_payload_size=frame_payload_size,
+                padding_size=padding_size,
             )
-        frame_counts = cast(tuple[int, int, int], tuple(frame_count_values))
+            raw_storage = solid_lane_framed_size(
+                raw_sizes[lane],
+                frame_payload_size=frame_payload_size,
+                padding_size=padding_size,
+            )
+            # Codec IDs are both one-byte varints. Frame-count varint threshold effects
+            # remain metadata-local; the fallback comparison covers all lane frame bytes.
+            if candidate_storage >= raw_storage:
+                compressed_size = raw_sizes[lane]
+                codec = _LANE_CODEC_RAW
+                payload_path = raw_path
+                compressed_path.unlink()
+            else:
+                codec = preferred_codecs[lane]
+                payload_path = compressed_path
+            return (
+                codec,
+                compressed_size,
+                payload_path,
+                (compressed_size + frame_payload_size - 1) // frame_payload_size,
+            )
+
+        compression_results = [compress_candidate(lane) for lane in range(_LANE_COUNT)]
+        lane_codecs = cast(
+            tuple[int, int, int],
+            tuple(result[0] for result in compression_results),
+        )
+        compressed_sizes = tuple(result[1] for result in compression_results)
+        payload_paths = tuple(result[2] for result in compression_results)
+        frame_counts = cast(
+            tuple[int, int, int],
+            tuple(result[3] for result in compression_results),
+        )
         metadata = _encode_metadata_envelope(
             _compact_metadata(manifest, assignments, frame_counts, lane_codecs)
         )
@@ -524,7 +518,7 @@ def encode_solid_archive_v2(
         1,
         1,
         0,
-        routing_probe_count,
+        0,
         time.perf_counter() - started,
     )
 
@@ -637,16 +631,12 @@ def _parse_compact_metadata(
     )
     kind = KIND_FOLDER if root_descriptor & 1 else KIND_FILE
     root_length = root_descriptor >> 1
-    root_bytes, position = _take_compact_bytes(
-        payload, position, root_length, "root name"
-    )
+    root_bytes, position = _take_compact_bytes(payload, position, root_length, "root name")
     try:
         root_name = root_bytes.decode("utf-8")
     except UnicodeDecodeError as error:
         raise ArchiveFormatError("MSR2 compact root name is invalid") from error
-    entry_count, position = _decode_compact_uint(
-        payload, position, 1_000_000, "entry count"
-    )
+    entry_count, position = _decode_compact_uint(payload, position, 1_000_000, "entry count")
     chunk_count, position = _decode_compact_uint(
         payload, position, MAX_CHUNK_RECORDS, "chunk count"
     )
@@ -665,9 +655,11 @@ def _parse_compact_metadata(
             codec, position = _decode_compact_uint(
                 payload,
                 position,
-                _LANE_CODEC_RAW,
+                _LANE_CODEC_ZSTD,
                 f"lane {lane} codec",
             )
+            if codec not in _VALID_CODECS_BY_LANE[lane]:
+                raise ArchiveFormatError(f"MSR2 compact lane {lane} codec is invalid")
             lane_codec_values.append(codec)
     else:
         lane_codec_values.extend([_LANE_CODEC_LZMA2] * _LANE_COUNT)
@@ -689,41 +681,29 @@ def _parse_compact_metadata(
         try:
             relative_path = path_bytes.decode("utf-8")
         except UnicodeDecodeError as error:
-            raise ArchiveFormatError(
-                f"MSR2 compact entry {index} path is invalid"
-            ) from error
-        mode, position = _decode_compact_uint(
-            payload, position, 0o777, f"entry {index} mode"
-        )
+            raise ArchiveFormatError(f"MSR2 compact entry {index} path is invalid") from error
+        mode, position = _decode_compact_uint(payload, position, 0o777, f"entry {index} mode")
         mtime_delta, position = _decode_compact_sint(
             payload, position, f"entry {index} modification time"
         )
         mtime_ns = previous_mtime_ns + mtime_delta
         if not -(1 << 63) <= mtime_ns < 1 << 63:
-            raise ArchiveFormatError(
-                f"MSR2 compact entry {index} modification time is invalid"
-            )
+            raise ArchiveFormatError(f"MSR2 compact entry {index} modification time is invalid")
         previous_mtime_ns = mtime_ns
         if entry_type == ENTRY_FILE:
             count, position = _decode_compact_uint(
                 payload, position, chunk_count, f"entry {index} chunk count"
             )
-            digest, position = _take_compact_bytes(
-                payload, position, 32, f"entry {index} digest"
-            )
+            digest, position = _take_compact_bytes(payload, position, 32, f"entry {index} digest")
         else:
             count = 0
             digest = ZERO_HASH
-        entry_specs.append(
-            (entry_type, relative_path, mode, mtime_ns, count, digest)
-        )
+        entry_specs.append((entry_type, relative_path, mode, mtime_ns, count, digest))
 
     chunks: list[ChunkRecord] = []
     compact_unique_count = 0
     for index in range(chunk_count):
-        tag_bytes, position = _take_compact_bytes(
-            payload, position, 1, f"chunk {index} tag"
-        )
+        tag_bytes, position = _take_compact_bytes(payload, position, 1, f"chunk {index} tag")
         tag = tag_bytes[0]
         if tag == 0:
             size, position = _decode_compact_uint(
@@ -731,9 +711,7 @@ def _parse_compact_metadata(
             )
             if size == 0:
                 raise ArchiveFormatError(f"MSR2 compact chunk {index} size is invalid")
-            digest, position = _take_compact_bytes(
-                payload, position, 32, f"chunk {index} digest"
-            )
+            digest, position = _take_compact_bytes(payload, position, 32, f"chunk {index} digest")
             chunks.append(ChunkRecord(digest, size, index))
             compact_unique_count += 1
         elif tag == 1:
@@ -752,9 +730,7 @@ def _parse_compact_metadata(
         raise ArchiveFormatError("MSR2 compact unique chunk count is inconsistent")
 
     packed_size = (unique_count + 3) // 4
-    packed, position = _take_compact_bytes(
-        payload, position, packed_size, "lane assignments"
-    )
+    packed, position = _take_compact_bytes(payload, position, packed_size, "lane assignments")
     if position != len(payload):
         raise ArchiveFormatError("MSR2 compact metadata contains trailing bytes")
     if unique_count % 4 and packed and packed[-1] >> ((unique_count % 4) * 2):
@@ -818,15 +794,11 @@ def _parse_compact_metadata(
     )
     raw_sizes = [0, 0, 0]
     unique_records = [
-        chunk
-        for index, chunk in enumerate(manifest.chunks)
-        if chunk.source_index == index
+        chunk for index, chunk in enumerate(manifest.chunks) if chunk.source_index == index
     ]
     for chunk, lane in zip(unique_records, assignments, strict=True):
         raw_sizes[lane] += chunk.size
-    for raw_size, frame_count in zip(
-        raw_sizes, frame_count_values, strict=True
-    ):
+    for raw_size, frame_count in zip(raw_sizes, frame_count_values, strict=True):
         if (raw_size == 0) != (frame_count == 0):
             raise ArchiveFormatError("MSR2 compact lane frame count is inconsistent")
     return (
@@ -893,9 +865,7 @@ def _parse_metadata(
     )
     manifest = parse_dedup_manifest(manifest_payload, compatibility_header)
     unique_records = [
-        record
-        for index, record in enumerate(manifest.chunks)
-        if record.source_index == index
+        record for index, record in enumerate(manifest.chunks) if record.source_index == index
     ]
     if len(unique_records) != unique_count:
         raise ArchiveFormatError("MSR2 unique chunk count is inconsistent")
@@ -1059,6 +1029,7 @@ def decode_solid_archive_v2(
                         padding_size=header.padding_size,
                         raw_lzma2=raw_lzma2,
                         passthrough=lane_codecs[lane] == _LANE_CODEC_RAW,
+                        codec=lane_codecs[lane],
                     )
                 index = stats.next_index
             if stream.read(1):
@@ -1077,9 +1048,7 @@ def decode_solid_archive_v2(
                     for (source_index, record), lane in zip(
                         unique_records, assignments, strict=True
                     ):
-                        chunk = _read_exact(
-                            lane_inputs[lane], record.size, "decoded solid lane"
-                        )
+                        chunk = _read_exact(lane_inputs[lane], record.size, "decoded solid lane")
                         if hashlib.sha256(chunk).digest() != record.digest:
                             raise IntegrityError("MSR2 unique chunk digest failed")
                         offset = canonical.tell()
