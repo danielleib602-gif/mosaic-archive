@@ -10,6 +10,28 @@ from tools.run_native_cgroup_integration import _validated_parent, _wait_for_sup
 
 
 class CiConfigurationTests(unittest.TestCase):
+    def test_dependabot_updates_the_root_rust_workspace_weekly(self) -> None:
+        configuration = Path(".github/dependabot.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            "  - package-ecosystem: cargo\n"
+            "    directory: /\n"
+            "    schedule:\n"
+            "      interval: weekly\n",
+            configuration,
+        )
+
+    def test_ci_runs_a_pinned_rustsec_audit_with_read_only_permissions(self) -> None:
+        workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+        for required in (
+            "permissions:\n  contents: read",
+            "rustsec-audit:",
+            "name: RustSec dependency audit",
+            "timeout-minutes: 10",
+            "cargo +1.96.0 install cargo-audit --version 0.22.2 --locked",
+            "cargo +1.96.0 audit --deny warnings --file Cargo.lock",
+        ):
+            self.assertIn(required, workflow)
+
     def test_ci_uses_pinned_actions_and_read_only_permissions(self) -> None:
         workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("permissions:\n  contents: read", workflow)
