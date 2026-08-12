@@ -8,11 +8,15 @@ publish = false
 description = "Non-stable native MSC7 compression-core laboratory preview"
 
 [dependencies]
+chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }
+getrandom = "=0.4.3"
 lzma-rust2 = { version = "=0.18.1", default-features = false, features = ["std", "encoder", "optimization"] }
 rayon = "=1.12.0"
 same-file = "=1.0.6"
+scrypt = { version = "=0.12.0", default-features = false }
 sha2 = "=0.11.0"
 tempfile = "=3.27.0"
+zeroize = { version = "=1.9.0", default-features = false, features = ["alloc"] }
 zstd = { version = "=0.13.3", default-features = false }
 
 [[bin]]

@@ -226,3 +226,16 @@ jobs:
       - run: cargo +1.96.0 clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo +1.96.0 test --workspace --locked
       - run: cargo +1.96.0 build --workspace --release --locked
+
+  native-core-macos:
+    name: native macOS core
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt,clippy
+      - run: cargo +1.96.0 fmt --all --check
+      - run: cargo +1.96.0 clippy -p mosaic-msc7-core --all-targets --locked -- -D warnings
+      - run: cargo +1.96.0 test -p mosaic-msc7-core --locked
+      - run: cargo +1.96.0 build -p mosaic-msc7-core --release --locked

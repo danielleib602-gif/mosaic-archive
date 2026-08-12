@@ -2,8 +2,8 @@ use std::convert::TryInto;
 
 use mosaic_msc7_core::{
     AUTHENTICATED_MAGIC, AuthenticatedDecodeOptions, AuthenticatedEncodeOptions,
-    AuthenticatedStats, DecodeOptions, EncodeOptions, Error, Result, decode_authenticated,
-    encode_authenticated,
+    AuthenticatedStats, DecodeOptions, EncodeOptions, Error, MIN_AUTHENTICATED_ARCHIVE_BYTES,
+    Result, decode_authenticated, encode_authenticated,
 };
 
 const PASSWORD: &[u8] = b"correct horse battery staple";
@@ -234,4 +234,77 @@ fn authenticated_decode_enforces_outer_and_inner_resource_ceilings() -> Result<(
         "the inner decoded-output ceiling must still be enforced"
     );
     Ok(())
+}
+
+#[test]
+fn invalid_options_fail_before_authenticated_io() {
+    let mut archive = Vec::new();
+    let encode_error = encode_authenticated(
+        b"must not be consumed".as_slice(),
+        &mut archive,
+        PASSWORD,
+        AuthenticatedEncodeOptions {
+            core: EncodeOptions {
+                threads: 0,
+                ..EncodeOptions::default()
+            },
+            kdf_log_n: FAST_TEST_KDF_LOG_N,
+        },
+    )
+    .expect_err("invalid inner encode options must fail");
+    assert!(matches!(encode_error, Error::InvalidOptions(_)));
+    assert!(archive.is_empty(), "no authenticated header may be written");
+
+    let decode_error = decode_authenticated(
+        b"not read".as_slice(),
+        Vec::new(),
+        PASSWORD,
+        AuthenticatedDecodeOptions {
+            core: DecodeOptions {
+                max_output_bytes: 0,
+                ..DecodeOptions::default()
+            },
+            ..AuthenticatedDecodeOptions::default()
+        },
+    )
+    .expect_err("invalid inner decode options must fail");
+    assert!(matches!(decode_error, Error::InvalidOptions(_)));
+
+    let outer_limit_error = decode_authenticated(
+        b"not read".as_slice(),
+        Vec::new(),
+        PASSWORD,
+        AuthenticatedDecodeOptions {
+            max_archive_bytes: MIN_AUTHENTICATED_ARCHIVE_BYTES - 1,
+            ..AuthenticatedDecodeOptions::default()
+        },
+    )
+    .expect_err("an impossible outer ceiling must fail before input or KDF work");
+    assert!(matches!(outer_limit_error, Error::InvalidOptions(_)));
+}
+
+#[test]
+fn excessive_header_kdf_cost_is_rejected_by_policy_before_derivation() {
+    let mut header = [0_u8; AUTHENTICATED_HEADER_SIZE];
+    header[..4].copy_from_slice(&AUTHENTICATED_MAGIC);
+    header[4] = 0;
+    header[5] = 3;
+    header[6] = 1;
+    header[7] = 1;
+    header[12..16].copy_from_slice(&(AUTHENTICATED_HEADER_SIZE as u32).to_be_bytes());
+    header[16..20].copy_from_slice(&1024_u32.to_be_bytes());
+    header[20..24].copy_from_slice(&(2_u32 * 1024 * 1024).to_be_bytes());
+    header[44] = 18;
+    header[45] = 8;
+    header[46] = 1;
+
+    let error = decode_authenticated(
+        header.as_slice(),
+        Vec::new(),
+        PASSWORD,
+        AuthenticatedDecodeOptions::default(),
+    )
+    .expect_err("the default KDF policy must reject logN 18 before derivation");
+    assert!(matches!(error, Error::InvalidFormat(_)));
+    assert!(error.to_string().contains("KDF cost exceeds"));
 }

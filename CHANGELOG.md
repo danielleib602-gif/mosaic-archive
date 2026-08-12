@@ -8,6 +8,27 @@ is preserved.
 
 ### Security
 
+- Added the explicitly non-stable native `M7A0` authenticated preview around
+  the exact `M7R0` core stream. A fresh 16-byte salt feeds scrypt with fixed
+  `r=8`, `p=1` and writer `log2(N)` 14–18 (default 17). Decode rejects an
+  archive exponent above 17 by default, with an explicit caller ceiling through
+  18 enforced before scrypt. A fresh four-byte nonce prefix and monotonic
+  64-bit record indices feed ChaCha20-Poly1305. Exact headers are associated
+  data, data records carry at most 2,097,144 inner bytes plus an
+  eight-byte private prefix and 1 KiB-quantized padding, and the mandatory
+  authenticated footer binds the inner digest, exact totals, and every
+  data-record ciphertext through a
+  domain-separated transcript. Wrong passwords and tag failures share one
+  generic error. Outer and inner resource ceilings, mandatory physical EOF,
+  password/key zeroization, and alias-safe atomic CLI file publication are
+  enforced. The generic Rust writer API still requires callers to stage output
+  before publication because it cannot roll back a failed `Write`.
+- Aligned each full authenticated data record by reserving its eight-byte
+  private prefix inside the declared 2 MiB plaintext ceiling. A deterministic
+  64 MiB incompressible diagnostic falls from the earlier 67,159,168-byte
+  outer result to 67,127,424 bytes, saving 31,744 bytes. The remaining archive
+  overhead over the source is 18,560 bytes (0.027656%). This is a local
+  non-binding size diagnostic, not timing or competitive evidence.
 - Added a fail-closed Linux x86-64 cgroup-v2 qualification foundation for the
   future binding competitive runner. It proves the filesystem is cgroup v2,
   pins root identities, selects exact 1- and 8-CPU lanes, and strictly loads the
@@ -110,6 +131,10 @@ is preserved.
 
 ### Documentation
 
+- Documented the `M7A0` construction, resource bounds, password-environment
+  interface, atomic file CLI, direct-library publication caveat, and explicit
+  single-stream/non-stable/non-binding boundary without changing MSC6's default
+  or the 7/10 readiness result.
 - Fixed the fail-closed native launcher design: atomic cgroup placement, PID 1
   reaping, pidfd-only lifecycle control, bounded output, fixed descriptors,
   explicit host-ineligibility errors, and a separately versioned future
@@ -167,6 +192,9 @@ is preserved.
   64 MiB diagnostic produces identical 5,145,673-byte output at one and eight
   threads and reaches median encode throughput of 42.049 and 145.347 MiB/s.
   It is deliberately neither encrypted nor a stable MSC7 format.
+- Added a dedicated pinned-Rust macOS CI gate that format-checks, runs strict
+  Clippy and all `mosaic-msc7-core` tests, and produces a release build. It does
+  not package or publish the non-stable laboratory binary.
 - Split the Linux supervisor into private cgroup, control-protocol, and test
   modules and split the Python binding runner into common, qualification, and
   cgroup-lifecycle implementations behind its existing compatibility import.

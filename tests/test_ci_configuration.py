@@ -114,6 +114,14 @@ class CiConfigurationTests(unittest.TestCase):
             self.assertIn(required, workflow)
         self.assertIn("name: native Windows supervisor", workflow)
         self.assertIn("runs-on: windows-latest", workflow)
+        for required in (
+            "name: native macOS core",
+            "runs-on: macos-latest",
+            "cargo +1.96.0 clippy -p mosaic-msc7-core --all-targets --locked -- -D warnings",
+            "cargo +1.96.0 test -p mosaic-msc7-core --locked",
+            "cargo +1.96.0 build -p mosaic-msc7-core --release --locked",
+        ):
+            self.assertIn(required, workflow)
 
     def test_native_cgroup_helper_accepts_only_the_fixed_direct_ci_namespace(self) -> None:
         self.assertEqual(

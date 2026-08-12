@@ -22,15 +22,20 @@ format/compatibility direction is recorded in
 [the MSC7 decision](docs/MSC7_DECISION.md). Neither document claims that the
 current Python implementation already meets that target.
 
-The current unreleased performance sprint makes two concrete advances without
-changing the stable default writer. Experimental MSR2 shrinks the expanded
-public corpus from 291,731 to 290,451 bytes while improving local Windows median
-encode/decode time by 23.72%/7.90%; every public category size is non-regressing.
+The current unreleased native/performance sprint makes three concrete advances
+without changing the stable default writer. Experimental MSR2 shrinks the
+expanded public corpus from 291,731 to 290,451 bytes while improving local
+Windows median encode/decode time by 23.72%/7.90%; every public category size is
+non-regressing.
 The new native [M7R0 compression-core preview](docs/MSC7_CORE_PREVIEW.md)
 round-trips a deterministic 64 MiB diagnostic to 5,145,673 bytes and scales
 from 42.0 MiB/s on one worker to 145.3 MiB/s on eight. These are scoped,
 exact-commit measurements, not a claim of universal superiority or a stable
-MSC7 archive. Raw samples are committed in
+MSC7 archive. The separate [M7A0 authenticated preview](docs/MSC7_AUTH_PREVIEW.md)
+now wraps the exact native core stream in bounded scrypt and
+ChaCha20-Poly1305 records with a mandatory authenticated transcript footer and
+atomic CLI file publication. It is a single-stream, non-stable engineering
+slice with no new benchmark claim. Raw `M7R0` samples are committed in
 `.ecc/benchmarks/msc-v0.41-low-bit-zstd-native-core.json`.
 
 ## What v0.39 does
@@ -147,6 +152,29 @@ uv run python -m mosaic_archive.coverage_fuzzing fuzz-corpus
 uv run msc compatibility --json
 uv run msc readiness --json
 ```
+
+### Native authenticated preview
+
+The developer-only `mosaic-msc7-lab` binary exposes `M7A0` through separate
+commands; it is not wired into the supported Python `msc` format dispatch. Set
+a temporary environment variable and clear it after use:
+
+```console
+$env:MOSAIC_M7A0_PASSWORD = "use-a-long-unique-passphrase"
+cargo run --release -p mosaic-msc7-core --bin mosaic-msc7-lab -- encode-auth --password-env MOSAIC_M7A0_PASSWORD input.bin output.m7a
+cargo run --release -p mosaic-msc7-core --bin mosaic-msc7-lab -- inspect-auth --password-env MOSAIC_M7A0_PASSWORD output.m7a
+cargo run --release -p mosaic-msc7-core --bin mosaic-msc7-lab -- decode-auth --password-env MOSAIC_M7A0_PASSWORD output.m7a restored.bin
+Remove-Item Env:MOSAIC_M7A0_PASSWORD
+```
+
+Authenticated encode/decode require a real output file. The CLI stages and
+atomically publishes that file only after success. `inspect-auth` fully decodes
+and authenticates to a sink; `benchmark-auth` is a memory-buffered diagnostic,
+not binding performance evidence. Decode rejects archive KDF costs above
+`log2(N)=17` by default; `--max-kdf-log-n` can select a policy from 14 through
+18.
+See the [authenticated-preview specification and
+caveats](docs/MSC7_AUTH_PREVIEW.md).
 
 The ordinary readiness report is 7/10 by design. Seven repository-verifiable
 gates are complete; independent review, Competitive Contract v1 dominance,
@@ -545,6 +573,9 @@ its 275,859-byte result. MC21 and fixed-width MSR2 metadata remain readable.
   size;
 - the simple codecs prioritize clarity and correctness over mature-compressor
   performance;
+- `M7A0` is a native, non-stable single-stream preview with no Python/PyO3
+  integration, file-tree metadata, permanent compatibility fixture, release
+  packaging, independent review, or Competitive Contract claim;
 - the package is still pre-1.0, while MSC6 decoder semantics and existing mode
   identifiers are frozen for the 1.0 format line.
 

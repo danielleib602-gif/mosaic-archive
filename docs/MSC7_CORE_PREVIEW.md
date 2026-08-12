@@ -3,7 +3,11 @@
 `M7R0` is a laboratory envelope for exercising the native MSC7 compression
 pipeline. It is intentionally non-stable, not encrypted, not authenticated,
 not binding evidence, and not part of the MSC1–MSC6 compatibility contract.
-The stable writer and the default CLI remain unchanged.
+The stable writer and the default Python CLI remain unchanged.
+
+The separate [authenticated native preview](MSC7_AUTH_PREVIEW.md) now streams
+the exact `M7R0` bytes through the non-stable `M7A0` envelope. That addition
+does not change `M7R0` bytes or turn this inner envelope into an authenticator.
 
 ## Pipeline
 
@@ -81,7 +85,8 @@ competitive evidence. Raw timings and hashes are in
 
 ## Deliberate gaps
 
-The preview has no AEAD framing, KDF, Python binding, stable codec identifiers,
-permanent compatibility fixtures, cross-platform attestation, or release
-claim. Those belong to the later MSC7 format-freeze and qualification work,
-not this compression-core experiment.
+`M7R0` itself has no AEAD framing or KDF. `M7A0` supplies a non-stable
+authenticated outer composition, but neither preview has a Python binding,
+file-tree metadata, stable codec identifiers, permanent compatibility fixtures,
+cross-platform attestation, or a release claim. Those belong to the later MSC7
+format-freeze and qualification work, not this compression-core experiment.

@@ -23,6 +23,17 @@
 - The opt-in `--format solid` path writes the experimental MSR2 container with
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
+- The standalone native laboratory now has an explicit authenticated
+  single-stream vertical slice. `M7A0` wraps the exact `M7R0` core stream in
+  bounded scrypt and ChaCha20-Poly1305 records and a mandatory transcript
+  footer. `encode-auth` and `decode-auth` use alias-safe sibling temporary
+  output and atomic publication; `inspect-auth` verifies the complete archive
+  to a sink. This is a non-stable native preview, not the supported Python CLI
+  or an MSC7 fixture.
+- The current CI configuration gives `mosaic-msc7-core` a dedicated macOS job
+  for pinned-toolchain format, strict Clippy, test, and release-build checks.
+  This is a configured hosted gate, not a claim that the current unmerged tree
+  has already passed that job or that the laboratory binary is release-packaged.
 - Linux, Windows, and macOS binary builds are smoke-tested in CI. The
   `v0.39.0` release includes checksum-verified native binaries, keyless
   GitHub/Sigstore build provenance, and an exact-source review bundle.
@@ -165,6 +176,24 @@ worker and 145.347 MiB/s with eight, while decode reaches 184.374 MiB/s. This
 is in-memory laboratory evidence, not authenticated MSC7, end-to-end disk
 throughput, or a Competitive Contract result.
 
+This native slice adds the separate non-stable `M7A0` outer envelope. It
+derives a 32-byte key with scrypt (writer `log2(N)` 14–18, default 17, `r=8`,
+`p=1`); decode caps the accepted exponent at 17 by default and accepts an
+explicit caller policy from 14 through 18. It authenticates at most 2,097,144 inner
+bytes per ChaCha20-Poly1305 record, pads short plaintext records to 1 KiB, and
+requires a final authenticated transcript, inner-stream digest, exact totals,
+and physical EOF. This sprint has no new committed performance measurement:
+`M7A0` is functional security engineering, not a stable MSC7 archive or binding
+competitive result.
+
+On a local deterministic 67,108,864-byte incompressible diagnostic, the inner
+`M7R0` stream is 67,123,984 bytes and the aligned `M7A0` archive is 67,127,424
+bytes. Full 2,097,144-byte inner payloads eliminate redundant full-record
+padding and save 31,744 bytes versus the earlier 67,159,168-byte outer result.
+The remaining 18,560-byte overhead over the source is 0.027656%, below the
+diagnostic `ceil(input/2000)` threshold. This is local non-binding size
+evidence; no M7A0 timing or competitive result is claimed.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -215,9 +244,11 @@ an attested prerelease candidate before external review begins.
   security audit. Do not present it as a replacement for a reviewed archival or
   cryptographic product.
 - MSR2 is opt-in. MSC6 remains the default writer and a frozen compatibility
-  commitment. The `M7R0` native core exercises the proposed compression
-  pipeline but is not an MSC7 archive. MSC7 cannot become the default until its
-  authenticated format, fixtures, security work, and competitive gate pass.
+  commitment. `M7R0` exercises the proposed compression pipeline and `M7A0`
+  proves an authenticated single-stream composition, but neither is an MSC7
+  archive or compatibility fixture. MSC7 cannot become the default until its
+  file/tree format, Python surface, fixtures, security work, and competitive
+  gate pass.
 - The GitHub workflow publishes native executables, checksums, and provenance.
   PyPI publication is not configured.
 - On 2026-07-03, GitHub refused to start private-repository jobs because of an
@@ -237,17 +268,19 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current tree collects 565 Python unit/integration tests. Local Windows runs
-pass 495 and skip 70 Linux-capability-specific cases. The last protected-main
-Linux snapshot before this five-test sprint passed 557 and skipped 3; hosted PR
-CI is the authority for the new Linux count. CI measures statement and branch
+The current tree collects 567 Python unit/integration tests. Local Windows runs
+pass 497 and skip 70 Linux-capability-specific cases. The last protected-main
+Linux snapshot passed 557 and skipped 3; hosted PR CI remains the authority for
+the next Linux count. CI measures statement and branch
 coverage across every package module on Linux, where the cgroup-v2 and sealed-
 memfd paths execute. The last protected-main result is 84.79% against a required
 80%, with no package module omitted. A Windows-only coverage run is
 intentionally not the release gate because those Linux-kernel paths cannot
-execute there. The native Rust suite now adds 16 portable compression-core
-tests to the binding supervisor: Windows exercises 23 normal Rust tests, while
-Linux retains its additional supervisor and two opt-in real-cgroup paths.
+execute there. The native Rust workspace now has 38 portable compression-core,
+authenticated-envelope, and laboratory-CLI tests plus 7 binding-supervisor
+tests; all 45 pass locally on Windows. Linux retains its additional opt-in
+real-cgroup paths. The configured macOS native-core job and hosted Linux CI
+remain authoritative for those platforms.
 Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
 deterministic review bundle rejects payload tampering, compressed members,
@@ -288,9 +321,9 @@ bundle, and GitHub attestation have been verified as documented in
    specified in `docs/NATIVE_LAUNCHER_DESIGN.md`;
 2. acquire and externally approve all six immutable public corpus bundles,
    finish aggregate member manifests/recipes, and commit the real lock;
-3. promote the working `M7R0` native compression core into an authenticated
+3. extend the authenticated single-stream `M7A0` vertical slice into the
    additive MSC7 file/tree format, freeze qualified codec identifiers and
-   fixtures, and add the Python binding against the preregistered single-profile
+   fixtures, and add the PyO3 binding against the preregistered single-profile
    contract;
 4. run all 48 contract cases, publish all 2,640 content-addressed raw records,
    and add schema-v4 tag binding only after the candidate actually passes;
