@@ -41,6 +41,64 @@ does not eliminate it. Do not use this alpha in an interactive compression
 oracle where an attacker can influence plaintext and observe repeated archive
 lengths.
 
+## Native M7A0 preview boundary
+
+The non-stable `M7A0` native preview applies the same primitive families to one
+byte stream, but is not yet the MSC7 security contract. Scrypt derives a
+32-byte key from a fresh random 16-byte salt using writer-selected `log2(N)` 14
+through 18 (default 17), fixed `r=8`, and fixed `p=1`. Decode separately caps
+the accepted `log2(N)` at 17 by default; a caller may explicitly select a
+ceiling through 18. ChaCha20-Poly1305 protects each bounded record with a nonce
+made from a fresh random four-byte prefix and its monotonic big-endian 64-bit
+record index. The exact public and record headers are associated data.
+
+Each data record contains at most 2,097,144 bytes of the inner `M7R0` stream.
+Its eight-byte private prefix makes a full plaintext record exactly 2 MiB;
+shorter records receive random padding to a 1 KiB quantum. A mandatory
+authenticated footer binds the complete inner-stream hash, byte/record totals,
+and a domain-separated transcript over the public header and every data record
+header plus ciphertext.
+The decoder authenticates a complete outer record before exposing its inner
+bytes and requires the footer plus physical end-of-file before accepting the
+archive. Wrong passwords and tag failures share one generic authentication
+error. Header fields and the caller's KDF ceiling are validated before KDF
+work. Record headers, counts, ciphertext sizes, and the outer byte ceiling are
+validated before record-payload allocation.
+
+The outer decoder adds caller-adjustable archive-byte and authenticated-record
+ceilings to every existing inner output, encoded-byte, segment, record, and
+expansion limit. These controls bound accepted work; they do not stop offline
+password guessing, hide archive existence or rough padded length, or protect a
+compromised endpoint. Raising the decode KDF ceiling above 17 explicitly allows
+an archive-controlled scrypt cost up to the selected cap. `M7R0` hashes alone
+remain non-authenticating corruption checks.
+
+Authenticated native CLI passwords are accepted only through a named
+environment variable; literal command-line passwords are rejected. This avoids
+placing the password in ordinary command arguments, but the environment remains
+available to sufficiently privileged local software and must be cleared by the
+caller. Password copies and the derived key use zeroizing storage.
+
+For authenticated encode/decode file output, the native CLI uses an alias-safe
+sibling temporary file, synchronizes it, and atomically publishes only after
+success; Unix also synchronizes the parent directory. Wrong-password and late
+validation failures preserve an existing destination. The direct Rust library
+accepts a generic `Write` and cannot retract bytes already written. A caller
+using `encode_authenticated` or `decode_authenticated` must stage output and
+publish it only after success; otherwise a late footer, transcript,
+trailing-data, input, or output failure can leave partial bytes in that writer.
+Authenticated inner segments may reach a direct caller's writer before the
+outer footer and physical EOF are verified; only the file CLI supplies the
+transactional publication boundary.
+If the Unix parent-directory synchronization fails after atomic rename, the CLI
+reports an error even though the complete destination may already be visible;
+its crash durability is then uncertain. Only failures before publication are
+guaranteed to preserve the prior destination.
+
+`M7A0` is currently single-stream only. It has no file-tree path/metadata
+surface, stable magic or codec IDs, Python/PyO3 API, permanent fixture,
+competitive evidence, independent audit, or release claim.
+
 ## Paths, parser, and resource limits
 
 The decoder bounds public chunk/padding sizes and KDF parameters, rejects
@@ -159,7 +217,9 @@ temporary disk-backed cache capped indirectly by authenticated unique content.
 
 ## Security status
 
-The Python `cryptography` package supplies the cryptographic primitives.
-Mosaic's format composition and implementation have not received an independent
-security audit. Treat v0.39 as a research and learning tool, not as the sole
+The stable Python formats use primitives from the `cryptography` package. The
+native `M7A0` preview uses the RustCrypto `scrypt` and `chacha20poly1305` crates
+plus the operating-system random source. Mosaic's format compositions and
+implementations have not received an independent security audit. Treat v0.39
+and both native previews as research and learning tools, not as the sole
 protection for irreplaceable or high-risk secrets.

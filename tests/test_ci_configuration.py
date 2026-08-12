@@ -10,6 +10,28 @@ from tools.run_native_cgroup_integration import _validated_parent, _wait_for_sup
 
 
 class CiConfigurationTests(unittest.TestCase):
+    def test_dependabot_updates_the_root_rust_workspace_weekly(self) -> None:
+        configuration = Path(".github/dependabot.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            "  - package-ecosystem: cargo\n"
+            "    directory: /\n"
+            "    schedule:\n"
+            "      interval: weekly\n",
+            configuration,
+        )
+
+    def test_ci_runs_a_pinned_rustsec_audit_with_read_only_permissions(self) -> None:
+        workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+        for required in (
+            "permissions:\n  contents: read",
+            "rustsec-audit:",
+            "name: RustSec dependency audit",
+            "timeout-minutes: 10",
+            "cargo +1.96.0 install cargo-audit --version 0.22.2 --locked",
+            "cargo +1.96.0 audit --deny warnings --file Cargo.lock",
+        ):
+            self.assertIn(required, workflow)
+
     def test_ci_uses_pinned_actions_and_read_only_permissions(self) -> None:
         workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("permissions:\n  contents: read", workflow)
@@ -92,6 +114,14 @@ class CiConfigurationTests(unittest.TestCase):
             self.assertIn(required, workflow)
         self.assertIn("name: native Windows supervisor", workflow)
         self.assertIn("runs-on: windows-latest", workflow)
+        for required in (
+            "name: native macOS core",
+            "runs-on: macos-latest",
+            "cargo +1.96.0 clippy -p mosaic-msc7-core --all-targets --locked -- -D warnings",
+            "cargo +1.96.0 test -p mosaic-msc7-core --locked",
+            "cargo +1.96.0 build -p mosaic-msc7-core --release --locked",
+        ):
+            self.assertIn(required, workflow)
 
     def test_native_cgroup_helper_accepts_only_the_fixed_direct_ci_namespace(self) -> None:
         self.assertEqual(

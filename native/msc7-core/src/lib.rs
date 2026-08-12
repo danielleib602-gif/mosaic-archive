@@ -1,7 +1,19 @@
 //! Non-stable native MSC7 compression-core laboratory preview.
 //!
-//! `M7R0` is deliberately not a stable Mosaic wire format. It is neither
-//! encrypted nor authenticated and must not be used as a compatibility fixture.
+//! `M7R0` is deliberately not a stable Mosaic wire format. Alone, it is neither
+//! encrypted nor authenticated. `M7A0` adds a non-stable scrypt and
+//! ChaCha20-Poly1305 authenticated envelope around the exact M7R0 byte stream.
+//! Neither preview format is a compatibility fixture.
+
+mod auth_format;
+mod authenticated;
+
+pub use auth_format::AUTHENTICATED_MAGIC;
+pub use authenticated::{
+    AuthenticatedDecodeOptions, AuthenticatedEncodeOptions, AuthenticatedStats,
+    DEFAULT_MAX_AUTHENTICATED_ARCHIVE_BYTES, DEFAULT_MAX_AUTHENTICATED_DATA_RECORDS,
+    MIN_AUTHENTICATED_ARCHIVE_BYTES, decode_authenticated, encode_authenticated,
+};
 
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
@@ -48,10 +60,12 @@ pub enum Error {
     Io(io::Error),
     /// Caller-supplied encode or decode limits are invalid.
     InvalidOptions(&'static str),
-    /// The input stream violates the bounded M7R0 envelope.
+    /// The input stream violates a bounded native-preview envelope.
     InvalidFormat(&'static str),
     /// A codec could not encode an internally routed record.
     Codec(&'static str),
+    /// A password or authenticated-record tag could not be verified.
+    Authentication,
 }
 
 impl fmt::Display for Error {
@@ -59,8 +73,11 @@ impl fmt::Display for Error {
         match self {
             Self::Io(error) => write!(formatter, "I/O error: {error}"),
             Self::InvalidOptions(message) => write!(formatter, "invalid options: {message}"),
-            Self::InvalidFormat(message) => write!(formatter, "invalid M7R0 stream: {message}"),
+            Self::InvalidFormat(message) => {
+                write!(formatter, "invalid native preview stream: {message}")
+            }
             Self::Codec(message) => write!(formatter, "codec error: {message}"),
+            Self::Authentication => formatter.write_str("authentication failed"),
         }
     }
 }
@@ -69,7 +86,10 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Io(error) => Some(error),
-            Self::InvalidOptions(_) | Self::InvalidFormat(_) | Self::Codec(_) => None,
+            Self::InvalidOptions(_)
+            | Self::InvalidFormat(_)
+            | Self::Codec(_)
+            | Self::Authentication => None,
         }
     }
 }
@@ -104,8 +124,8 @@ impl Default for EncodeOptions {
 /// Decoder resource ceilings.
 ///
 /// Raising these limits is safe only when the caller also controls available
-/// output storage and CPU time. They do not make the unauthenticated preview
-/// suitable for adversarial transport.
+/// output storage and CPU time. Authentication is supplied only by the outer
+/// M7A0 API; M7R0 hashes alone remain unsuitable for adversarial transport.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DecodeOptions {
     /// Maximum total decoded bytes.
@@ -118,6 +138,29 @@ pub struct DecodeOptions {
     pub max_records: u64,
     /// Maximum cumulative decoded-to-encoded ratio after an 8 MiB allowance.
     pub max_expansion_ratio: u64,
+}
+
+pub(crate) fn validate_encode_options(options: EncodeOptions) -> Result<()> {
+    if options.threads == 0 || options.threads > MAX_THREADS || options.max_input_bytes == 0 {
+        return Err(Error::InvalidOptions(
+            "thread count must be in 1..=64 and the input limit must be positive",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_decode_options(options: DecodeOptions) -> Result<()> {
+    if options.max_output_bytes == 0
+        || options.max_encoded_bytes < HEADER_SIZE as u64 + (4 + FOOTER_REST) as u64
+        || options.max_segments == 0
+        || options.max_records == 0
+        || options.max_expansion_ratio == 0
+    {
+        return Err(Error::InvalidOptions(
+            "decode resource ceilings must all be positive and fit an empty envelope",
+        ));
+    }
+    Ok(())
 }
 
 impl Default for DecodeOptions {
@@ -493,11 +536,7 @@ pub fn encode<R: Read, W: Write>(
     mut writer: W,
     options: EncodeOptions,
 ) -> Result<StreamStats> {
-    if options.threads == 0 || options.threads > MAX_THREADS || options.max_input_bytes == 0 {
-        return Err(Error::InvalidOptions(
-            "thread count must be in 1..=64 and the input limit must be positive",
-        ));
-    }
+    validate_encode_options(options)?;
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(options.threads)
         .build()
@@ -744,16 +783,7 @@ pub fn decode_with_options<R: Read, W: Write>(
     mut writer: W,
     options: DecodeOptions,
 ) -> Result<StreamStats> {
-    if options.max_output_bytes == 0
-        || options.max_encoded_bytes < HEADER_SIZE as u64 + (4 + FOOTER_REST) as u64
-        || options.max_segments == 0
-        || options.max_records == 0
-        || options.max_expansion_ratio == 0
-    {
-        return Err(Error::InvalidOptions(
-            "decode resource ceilings must all be positive and fit an empty envelope",
-        ));
-    }
+    validate_decode_options(options)?;
     let mut header = [0_u8; HEADER_SIZE];
     read_exact_format(&mut reader, &mut header, "header is truncated")?;
     if header[..4] != MAGIC
