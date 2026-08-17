@@ -54,6 +54,7 @@ class _BackendCodecError(Exception):
 def _fake_backend(*, result: dict[str, object] | None = None) -> SimpleNamespace:
     value = dict(EXPECTED_STATS if result is None else result)
     return SimpleNamespace(
+        BINDING_API_VERSION=1,
         AuthenticationError=_BackendAuthenticationError,
         FormatError=_BackendFormatError,
         OptionsError=_BackendOptionsError,
@@ -71,7 +72,9 @@ def _module():
 class NativePreviewFacadeTests(unittest.TestCase):
     def test_encode_returns_exact_frozen_m7a0_stats_and_forwards_defaults(self) -> None:
         native_preview = _module()
-        backend = _fake_backend()
+        encoded_stats = dict(EXPECTED_STATS)
+        encoded_stats["hash_verified"] = False
+        backend = _fake_backend(result=encoded_stats)
 
         with patch.object(native_preview, "_backend", backend):
             stats = native_preview.encode_native_preview_file(
@@ -82,7 +85,8 @@ class NativePreviewFacadeTests(unittest.TestCase):
 
         self.assertIsInstance(stats, native_preview.NativePreviewStats)
         self.assertTrue(dataclasses.is_dataclass(stats))
-        self.assertEqual(dataclasses.asdict(stats), EXPECTED_STATS)
+        self.assertEqual(dataclasses.asdict(stats), encoded_stats)
+        self.assertFalse(stats.hash_verified)
         with self.assertRaises(dataclasses.FrozenInstanceError):
             stats.stable = True
         backend.encode_file.assert_called_once_with(
@@ -164,6 +168,27 @@ class NativePreviewFacadeTests(unittest.TestCase):
 
         backend.inspect_file.assert_not_called()
 
+    def test_unrepresentable_native_integers_are_rejected_before_backend_entry(self) -> None:
+        native_preview = _module()
+        backend = _fake_backend()
+
+        with patch.object(native_preview, "_backend", backend):
+            with self.assertRaisesRegex(ValueError, "max_output_bytes"):
+                native_preview.inspect_native_preview_file(
+                    "archive.m7a", "password", max_output_bytes=-1
+                )
+            with self.assertRaisesRegex(ValueError, "max_segments"):
+                native_preview.inspect_native_preview_file(
+                    "archive.m7a", "password", max_segments=1 << 32
+                )
+            with self.assertRaisesRegex(ValueError, "threads"):
+                native_preview.encode_native_preview_file(
+                    "input.bin", "archive.m7a", "password", threads=1 << 80
+                )
+
+        backend.inspect_file.assert_not_called()
+        backend.encode_file.assert_not_called()
+
     def test_missing_backend_fails_closed_instead_of_falling_back(self) -> None:
         native_preview = _module()
 
@@ -172,6 +197,38 @@ class NativePreviewFacadeTests(unittest.TestCase):
             self.assertRaisesRegex(MosaicError, "native M7A0 preview backend is unavailable"),
         ):
             native_preview.decode_native_preview_file("archive.m7a", "restored.bin", "password")
+
+    def test_incompatible_backend_is_rejected_before_native_code_runs(self) -> None:
+        native_preview = _module()
+        backend = _fake_backend()
+        backend.BINDING_API_VERSION = 2
+
+        with (
+            patch.object(native_preview, "_backend", backend),
+            self.assertRaisesRegex(MosaicError, "incompatible API version"),
+        ):
+            native_preview.inspect_native_preview_file("archive.m7a", "password")
+
+        backend.inspect_file.assert_not_called()
+
+    def test_incomplete_backend_surface_is_rejected_before_native_code_runs(self) -> None:
+        native_preview = _module()
+        for field, replacement in (
+            ("inspect_file", None),
+            ("AuthenticationError", object()),
+        ):
+            backend = _fake_backend()
+            setattr(backend, field, replacement)
+
+            with (
+                self.subTest(field=field),
+                patch.object(native_preview, "_backend", backend),
+                self.assertRaisesRegex(MosaicError, "incompatible API surface"),
+            ):
+                native_preview.inspect_native_preview_file("archive.m7a", "password")
+
+            backend.encode_file.assert_not_called()
+            backend.decode_file.assert_not_called()
 
     def test_backend_errors_are_translated_without_losing_the_cause(self) -> None:
         native_preview = _module()
@@ -224,6 +281,18 @@ class NativePreviewFacadeTests(unittest.TestCase):
         with (
             patch.object(native_preview, "_backend", backend),
             self.assertRaisesRegex(MosaicError, "invalid native preview statistics"),
+        ):
+            native_preview.inspect_native_preview_file("archive.m7a", "password")
+
+    def test_backend_counters_must_partition_every_inner_record(self) -> None:
+        native_preview = _module()
+        invalid = dict(EXPECTED_STATS)
+        invalid["record_count"] = 4
+        backend = _fake_backend(result=invalid)
+
+        with (
+            patch.object(native_preview, "_backend", backend),
+            self.assertRaisesRegex(MosaicError, "record counters are inconsistent"),
         ):
             native_preview.inspect_native_preview_file("archive.m7a", "password")
 

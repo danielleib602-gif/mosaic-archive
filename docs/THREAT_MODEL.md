@@ -88,16 +88,22 @@ using `encode_authenticated` or `decode_authenticated` must stage output and
 publish it only after success; otherwise a late footer, transcript,
 trailing-data, input, or output failure can leave partial bytes in that writer.
 Authenticated inner segments may reach a direct caller's writer before the
-outer footer and physical EOF are verified; only the file CLI supplies the
-transactional publication boundary.
+outer footer and physical EOF are verified; the public Rust file API, Python
+preview facade, and both file CLIs supply the transactional publication
+boundary.
 If the Unix parent-directory synchronization fails after atomic rename, the CLI
 reports an error even though the complete destination may already be visible;
 its crash durability is then uncertain. Only failures before publication are
 guaranteed to preserve the prior destination.
 
-`M7A0` is currently single-stream only. It has no file-tree path/metadata
-surface, stable magic or codec IDs, Python/PyO3 API, permanent fixture,
-competitive evidence, independent audit, or release claim.
+`M7A0` is currently single-stream only. Its Python ABI3 facade accepts only
+regular-file paths and deliberately stays outside normal format dispatch. It
+has no file-tree path/metadata surface, stable magic or codec IDs, permanent
+fixture, competitive evidence, independent audit, or release claim. The
+binding zeroizes its Rust-owned password copy and releases the GIL, but it
+cannot erase caller-owned Python `str` or `bytes` objects. A missing or stale
+native backend must fail closed; no decoder may fall back to an unauthenticated
+format after seeing `M7A0`.
 
 ## Paths, parser, and resource limits
 

@@ -23,6 +23,11 @@ is preserved.
   password/key zeroization, and alias-safe atomic CLI file publication are
   enforced. The generic Rust writer API still requires callers to stage output
   before publication because it cannot roll back a failed `Write`.
+- Centralized authenticated regular-file operations in a public Rust API that
+  rejects direct, hard-link, and symbolic-link aliases before mutation, stages
+  same-directory output, flushes and synchronizes before atomic persistence,
+  and preserves existing destinations on all pre-publication failures. The
+  laboratory CLI and private Python extension use the same boundary.
 - Aligned each full authenticated data record by reserving its eight-byte
   private prefix inside the declared 2 MiB plaintext ceiling. A deterministic
   64 MiB incompressible diagnostic falls from the earlier 67,159,168-byte
@@ -132,9 +137,9 @@ is preserved.
 ### Documentation
 
 - Documented the `M7A0` construction, resource bounds, password-environment
-  interface, atomic file CLI, direct-library publication caveat, and explicit
-  single-stream/non-stable/non-binding boundary without changing MSC6's default
-  or the 7/10 readiness result.
+  interface, transactional Rust/Python file APIs, direct-writer publication
+  caveat, and explicit single-stream/non-stable/non-binding boundary without
+  changing MSC6's default or the 7/10 readiness result.
 - Fixed the fail-closed native launcher design: atomic cgroup placement, PID 1
   reaping, pidfd-only lifecycle control, bounded output, fixed descriptors,
   explicit host-ineligibility errors, and a separately versioned future
@@ -179,6 +184,16 @@ is preserved.
 
 ### Changed
 
+- Switched the Python distribution from pure Hatchling packaging to one locked
+  Maturin mixed project. The private `mosaic_archive._native` module uses PyO3
+  CPython 3.11+ ABI3, releases the GIL for native work, zeroizes its owned
+  password copy, preserves operating-system exception identity, and exposes
+  only authenticated regular-file encode/decode/inspect. The typed facade and
+  separate `encode-native-preview`, `inspect-native-preview`, and
+  `decode-native-preview` commands keep `M7A0` outside normal stable dispatch.
+- Added Linux, Windows, and macOS clean-install ABI3 wheel smoke jobs and made
+  PyInstaller release builds include and exercise the native extension with a
+  Unicode-path round trip and wrong-password destination-preservation check.
 - Experimental MSR2 now uses exact low-bit Gear state, eliminating wide Python
   integer work without changing a chunk boundary, and uses zstd level 1 for the
   high-entropy lane with complete framed-storage RAW fallback. On the locked

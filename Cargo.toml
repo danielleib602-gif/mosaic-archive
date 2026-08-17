@@ -1,5 +1,9 @@
 [workspace]
-members = ["native/binding-supervisor", "native/msc7-core"]
+members = [
+    "native/binding-supervisor",
+    "native/msc7-core",
+    "native/msc7-python",
+]
 resolver = "2"
 
 [workspace.package]

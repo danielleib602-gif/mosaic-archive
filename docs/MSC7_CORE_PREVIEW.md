@@ -86,7 +86,8 @@ competitive evidence. Raw timings and hashes are in
 ## Deliberate gaps
 
 `M7R0` itself has no AEAD framing or KDF. `M7A0` supplies a non-stable
-authenticated outer composition, but neither preview has a Python binding,
-file-tree metadata, stable codec identifiers, permanent compatibility fixtures,
-cross-platform attestation, or a release claim. Those belong to the later MSC7
-format-freeze and qualification work, not this compression-core experiment.
+authenticated outer composition and now has a path-only private ABI3 Python
+binding. Neither preview has file-tree metadata, stable codec identifiers,
+permanent compatibility fixtures, binding cross-platform attestation, or a
+release claim. Those belong to the later MSC7 format-freeze and qualification
+work, not this compression-core experiment.

@@ -45,7 +45,7 @@ class ReleaseBinaryTests(unittest.TestCase):
             ["pyinstaller==6.21.0"],
         )
         self.assertIn(
-            "uv sync --frozen --extra release --no-install-project",
+            "uv sync --frozen --extra release",
             workflow,
         )
         self.assertIn("uv run --frozen --no-sync pyinstaller", workflow)
@@ -67,7 +67,7 @@ class ReleaseBinaryTests(unittest.TestCase):
         self.assertNotIn("enable-cache: true", workflow)
         self.assertIn("readiness --require-automatic --json", workflow)
 
-    def test_release_jobs_never_install_the_project_with_privileged_tokens(self) -> None:
+    def test_only_unprivileged_build_job_installs_the_native_project(self) -> None:
         workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
         sync_commands = [
@@ -76,8 +76,17 @@ class ReleaseBinaryTests(unittest.TestCase):
             if "uv sync --frozen" in line
         ]
         self.assertEqual(len(sync_commands), 3)
-        for command in sync_commands:
-            self.assertIn("--no-install-project", command)
+        self.assertEqual(sync_commands.count("- run: uv sync --frozen --no-install-project"), 2)
+        self.assertIn("- run: uv sync --frozen --extra release", sync_commands)
+        build_job = workflow.split("  build:\n", maxsplit=1)[1].split(
+            "  publish:\n", maxsplit=1
+        )[0]
+        publish_job = workflow.split("  publish:\n", maxsplit=1)[1]
+        self.assertIn("uv sync --frozen --extra release", build_job)
+        self.assertNotIn("contents: write", build_job)
+        self.assertNotIn("id-token: write", build_job)
+        self.assertIn("persist-credentials: false", build_job)
+        self.assertIn("uv sync --frozen --no-install-project", publish_job)
         self.assertIn("PYTHONPATH: src", workflow)
         self.assertNotIn("uv run --frozen msc", workflow)
         self.assertGreaterEqual(

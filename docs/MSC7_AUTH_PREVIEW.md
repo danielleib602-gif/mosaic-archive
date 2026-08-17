@@ -137,14 +137,48 @@ caller must clear it after use. Environment variables are still visible to
 software with sufficient access to the running process, so this interface does
 not defend a compromised local machine.
 
-For file output, the CLI rejects exact-path, hard-link, symbolic-link, and
-redirected-standard-input aliases before mutation. It writes a sibling
-temporary file, flushes and synchronizes it, atomically persists it after the
-archive operation succeeds, and then synchronizes the parent directory on
-Unix. Wrong-password and other pre-publication failures preserve an existing
-destination. If the final Unix directory sync fails, the CLI reports an error
-after the complete destination may already be visible; crash durability is then
-uncertain and the publication cannot be rolled back.
+For file output, the shared Rust file API rejects exact-path, hard-link, and
+symbolic-link aliases before mutation. It writes a sibling temporary file,
+flushes and synchronizes it, atomically persists it after the archive operation
+succeeds, and then synchronizes the parent directory on Unix. The laboratory
+CLI retains an additional redirected-standard-input alias check for its stdin
+mode. Wrong-password and other pre-publication failures preserve an existing
+destination. If the final Unix directory sync fails, the operation reports an
+error after the complete destination may already be visible; crash durability
+is then uncertain and the publication cannot be rolled back.
+
+## Python ABI3 preview
+
+The mixed Maturin distribution contains a private
+`mosaic_archive._native` CPython 3.11+ ABI3 extension. The typed
+`mosaic_archive.native_preview` facade exposes only path-based regular-file
+operations:
+
+- `encode_native_preview_file`;
+- `inspect_native_preview_file`; and
+- `decode_native_preview_file`.
+
+The binding owns a zeroizing password copy, releases the Python GIL while Rust
+performs compression, KDF, authentication, or decode work, and delegates file
+publication to the same transactional Rust API as the laboratory CLI. Native
+authentication failures map to one generic public `AuthenticationError`;
+format, option, codec, and operating-system failures keep distinct Python
+types. The facade accepts `str` passwords as exact UTF-8 and preserves `bytes`
+without normalization. Python-owned password objects cannot be reliably erased
+by the extension.
+
+The Python CLI keeps the preview outside normal archive dispatch through
+separate `encode-native-preview`, `inspect-native-preview`, and
+`decode-native-preview` commands. They accept a hidden prompt or
+`--password-env NAME`, reject literal password arguments, and expose every
+native resource ceiling. MSC6 remains the default writer; normal decode and
+inspect do not auto-detect `M7A0` during this non-stable phase.
+
+CI builds ABI3 wheels on Linux, Windows, and macOS, installs each wheel into a
+clean environment, and exercises Unicode paths, authenticated round trip, and
+failure preservation. Tagged PyInstaller executables are configured to bundle
+the extension and run the same smoke before publication. This is packaging
+coverage for the preview, not a frozen compatibility or PyPI-publishing claim.
 
 ## Direct library caveat
 
@@ -155,14 +189,15 @@ footer, transcript, or trailing-data failure can leave bytes in a caller-owned
 writer even though the function returns an error: authenticated inner segments
 can reach that writer before the outer footer and physical EOF are verified.
 Direct users must write to a discardable or same-directory temporary
-destination and publish it only after a successful return. The native file CLI
-supplies that publication boundary.
+destination and publish it only after a successful return. The public Rust
+file functions, Python preview facade, and both CLIs supply that publication
+boundary.
 
 ## Deliberate gaps
 
-This sprint does not add a Python or PyO3 API, file-tree metadata, permanent
-codec identifiers or fixtures, a stable MSC7 magic, release packaging for the
-native laboratory binary, an attested competitive measurement, or an
-independent security review. `M7R0` remains useful as deterministic compression
-evidence; `M7A0` demonstrates the authenticated streaming composition. Neither
-is the release candidate.
+This sprint does not add file-tree metadata, permanent codec identifiers or
+fixtures, a stable MSC7 magic, normal format dispatch, PyPI trusted publishing,
+an attested competitive measurement, or an independent security review.
+`M7R0` remains useful as deterministic compression evidence; `M7A0`
+demonstrates the authenticated streaming composition and a real path-only
+Python delivery boundary. Neither is the release candidate.

@@ -48,7 +48,7 @@ class _Stats:
 
 class NativePreviewCliTests(unittest.TestCase):
     def test_encode_native_preview_uses_only_named_environment_password(self) -> None:
-        stats = _Stats()
+        stats = _Stats(hash_verified=False)
         with (
             patch.dict(cli.os.environ, {"MOSAIC_PASSWORD": "päss🔐"}),
             patch("mosaic_archive.cli.getpass.getpass") as prompt,
@@ -191,14 +191,22 @@ class NativePreviewCliTests(unittest.TestCase):
         )
 
     def test_literal_password_is_rejected_without_echoing_the_secret(self) -> None:
-        for password_argument in ("--password", "--password=must-not-escape"):
+        for password_argument in (
+            "--password",
+            "--password=must-not-escape",
+            "--pass=must-not-escape",
+            "-p",
+            "-pmust-not-escape",
+            "--pwd",
+            "-P",
+        ):
             stderr = io.StringIO()
             arguments = [
                 "inspect-native-preview",
                 "archive.m7a",
                 password_argument,
             ]
-            if password_argument == "--password":
+            if password_argument in {"--password", "-p", "--pwd", "-P"}:
                 arguments.append("must-not-escape")
 
             with self.subTest(argument=password_argument), redirect_stderr(stderr):
@@ -209,6 +217,168 @@ class NativePreviewCliTests(unittest.TestCase):
                     stderr.getvalue(),
                 )
                 self.assertNotIn("must-not-escape", stderr.getvalue())
+
+    def test_literal_password_before_native_command_is_rejected_without_echo(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            return_code = _contained_main(
+                [
+                    "--password",
+                    "must-not-escape",
+                    "inspect-native-preview",
+                    "archive.m7a",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertIn("literal password arguments are not accepted", stderr.getvalue())
+        self.assertNotIn("must-not-escape", stderr.getvalue())
+
+    def test_legacy_command_may_use_a_path_named_like_native_command(self) -> None:
+        stats = _Stats()
+        with (
+            patch("mosaic_archive.cli.encode_path", return_value=stats) as encode,
+            patch("mosaic_archive.cli._print_result"),
+        ):
+            return_code = _contained_main(
+                [
+                    "encode",
+                    "inspect-native-preview",
+                    "archive.msc",
+                    "--password",
+                    "legacy-secret",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        encode.assert_called_once()
+        self.assertEqual(
+            encode.call_args.args[:2],
+            (Path("inspect-native-preview"), Path("archive.msc")),
+        )
+
+    def test_leading_end_of_options_preserves_legacy_command_authority(self) -> None:
+        stats = _Stats()
+        with (
+            patch("mosaic_archive.cli.encode_path", return_value=stats) as encode,
+            patch("mosaic_archive.cli._print_result"),
+        ):
+            return_code = _contained_main(
+                [
+                    "--",
+                    "encode",
+                    "inspect-native-preview",
+                    "archive.msc",
+                    "--password",
+                    "legacy-secret",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        encode.assert_called_once()
+
+    def test_end_of_options_allows_dash_prefixed_archive_path(self) -> None:
+        stats = _Stats()
+        with (
+            patch.dict(cli.os.environ, {"MOSAIC_PASSWORD": "secret"}),
+            patch(
+                "mosaic_archive.cli.inspect_native_preview_file",
+                return_value=stats,
+            ) as inspect,
+            patch("mosaic_archive.cli._print_result"),
+        ):
+            return_code = _contained_main(
+                [
+                    "inspect-native-preview",
+                    "--password-env",
+                    "MOSAIC_PASSWORD",
+                    "--",
+                    "--archive",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        inspect.assert_called_once()
+        self.assertEqual(inspect.call_args.args[0], Path("--archive"))
+
+    def test_leading_and_command_sentinels_allow_password_named_path(self) -> None:
+        stats = _Stats()
+        with (
+            patch.dict(cli.os.environ, {"MOSAIC_PASSWORD": "secret"}),
+            patch(
+                "mosaic_archive.cli.inspect_native_preview_file",
+                return_value=stats,
+            ) as inspect,
+            patch("mosaic_archive.cli._print_result"),
+        ):
+            return_code = _contained_main(
+                [
+                    "--",
+                    "inspect-native-preview",
+                    "--password-env",
+                    "MOSAIC_PASSWORD",
+                    "--",
+                    "--password",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(inspect.call_args.args[0], Path("--password"))
+
+    def test_surplus_literal_password_after_sentinel_is_rejected_without_echo(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            return_code = _contained_main(
+                [
+                    "inspect-native-preview",
+                    "archive.m7a",
+                    "--",
+                    "--password",
+                    "must-not-escape",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertIn("literal password arguments are not accepted", stderr.getvalue())
+        self.assertNotIn("must-not-escape", stderr.getvalue())
+
+    def test_every_native_parse_failure_is_contained_without_echoing_values(self) -> None:
+        for suspicious_argument in ("/password", "password=must-not-escape"):
+            stderr = io.StringIO()
+            arguments = [
+                "inspect-native-preview",
+                "archive.m7a",
+                suspicious_argument,
+            ]
+            if suspicious_argument == "/password":
+                arguments.append("must-not-escape")
+
+            with self.subTest(argument=suspicious_argument), redirect_stderr(stderr):
+                return_code = _contained_main(arguments)
+
+            self.assertEqual(return_code, 2)
+            self.assertIn("invalid native preview arguments", stderr.getvalue())
+            self.assertNotIn("must-not-escape", stderr.getvalue())
+
+    def test_unrepresentable_native_limit_is_contained(self) -> None:
+        stderr = io.StringIO()
+        with (
+            patch.dict(cli.os.environ, {"MOSAIC_PASSWORD": "secret"}),
+            redirect_stderr(stderr),
+        ):
+            return_code = _contained_main(
+                [
+                    "inspect-native-preview",
+                    "archive.m7a",
+                    "--password-env",
+                    "MOSAIC_PASSWORD",
+                    "--max-output-bytes",
+                    "-1",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertIn("max_output_bytes", stderr.getvalue())
 
     def test_missing_or_empty_password_environment_variable_is_contained(self) -> None:
         for environment in ({}, {"MOSAIC_PASSWORD": ""}):

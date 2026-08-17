@@ -23,17 +23,21 @@
 - The opt-in `--format solid` path writes the experimental MSR2 container with
   bounded authenticated frames, compact encrypted metadata, solid compression
   lanes, Gear content-defined chunking, and cross-file deduplication.
-- The standalone native laboratory now has an explicit authenticated
-  single-stream vertical slice. `M7A0` wraps the exact `M7R0` core stream in
-  bounded scrypt and ChaCha20-Poly1305 records and a mandatory transcript
-  footer. `encode-auth` and `decode-auth` use alias-safe sibling temporary
-  output and atomic publication; `inspect-auth` verifies the complete archive
-  to a sink. This is a non-stable native preview, not the supported Python CLI
-  or an MSC7 fixture.
-- The current CI configuration gives `mosaic-msc7-core` a dedicated macOS job
-  for pinned-toolchain format, strict Clippy, test, and release-build checks.
-  This is a configured hosted gate, not a claim that the current unmerged tree
-  has already passed that job or that the laboratory binary is release-packaged.
+- The native laboratory now has an explicit authenticated single-stream
+  vertical slice. `M7A0` wraps the exact `M7R0` core stream in bounded scrypt
+  and ChaCha20-Poly1305 records and a mandatory transcript footer. A shared
+  Rust regular-file API provides alias-safe sibling temporary output and
+  atomic publication. The laboratory CLI and a private CPython 3.11+ ABI3
+  extension both use that boundary; the typed Python facade and its three
+  explicit preview commands stay outside stable archive dispatch. This is a
+  non-stable preview, not an MSC7 fixture.
+- The current CI configuration gives the Rust workspace pinned-toolchain
+  format, strict Clippy, tests, and release-build checks, plus a dedicated
+  Linux/Windows/macOS ABI3 wheel matrix. Each wheel is installed into a clean
+  environment and must complete an authenticated round trip and preserve an
+  existing destination on failure. Release PyInstaller builds bundle the
+  extension and run the same smoke. These are configured hosted gates until the
+  current tree passes them.
 - Linux, Windows, and macOS binary builds are smoke-tested in CI. The
   `v0.39.0` release includes checksum-verified native binaries, keyless
   GitHub/Sigstore build provenance, and an exact-source review bundle.
@@ -194,6 +198,16 @@ The remaining 18,560-byte overhead over the source is 0.027656%, below the
 diagnostic `ceil(input/2000)` threshold. This is local non-binding size
 evidence; no M7A0 timing or competitive result is claimed.
 
+The authenticated core is now reachable from installed Python builds without
+duplicating the file-safety logic. `mosaic-msc7-python` is a private CPython
+3.11+ ABI3 extension; `mosaic_archive.native_preview` adds frozen typed stats,
+strict backend identity/schema validation, generic authentication errors,
+Unicode paths, complete resource-limit forwarding, and fail-closed backend
+loading. Native work releases the GIL. The separate Python preview CLI accepts
+a hidden prompt or named environment variable and rejects literal password
+arguments. MSC6 remains the normal/default writer, and ordinary decode/inspect
+do not auto-detect `M7A0`.
+
 The v0.32 scorecard in
 `.ecc/benchmarks/msc-v0.32-gear-cdc.json` compares five contemporaneous hosted
 Ubuntu runs per revision. Median MSR2 encode time improved from 0.617936 seconds
@@ -268,18 +282,19 @@ an attested prerelease candidate before external review begins.
 
 ## Verification snapshot
 
-The current tree collects 567 Python unit/integration tests. Local Windows runs
-pass 497 and skip 70 Linux-capability-specific cases. The last protected-main
+The current tree collects 603 Python unit/integration tests. Local Windows runs
+pass 533 and skip 70 Linux-capability-specific cases. The last protected-main
 Linux snapshot passed 557 and skipped 3; hosted PR CI remains the authority for
 the next Linux count. CI measures statement and branch
 coverage across every package module on Linux, where the cgroup-v2 and sealed-
 memfd paths execute. The last protected-main result is 84.79% against a required
 80%, with no package module omitted. A Windows-only coverage run is
 intentionally not the release gate because those Linux-kernel paths cannot
-execute there. The native Rust workspace now has 38 portable compression-core,
-authenticated-envelope, and laboratory-CLI tests plus 7 binding-supervisor
-tests; all 45 pass locally on Windows. Linux retains its additional opt-in
-real-cgroup paths. The configured macOS native-core job and hosted Linux CI
+execute there. The portable Rust workspace now executes 46 compression-core,
+authenticated-envelope, file-API, and laboratory-CLI tests plus 7 binding-
+supervisor tests; all 53 pass locally on Windows. The installed-extension suite
+separately exercises the PyO3 ABI. Linux retains its
+additional opt-in real-cgroup paths. The configured macOS native-core job and hosted Linux CI
 remain authoritative for those platforms.
 Ruff, strict mypy, Bandit, dependency audit, bytecode
 compilation, source/wheel builds, and package-metadata validation pass. The
@@ -321,10 +336,10 @@ bundle, and GitHub attestation have been verified as documented in
    specified in `docs/NATIVE_LAUNCHER_DESIGN.md`;
 2. acquire and externally approve all six immutable public corpus bundles,
    finish aggregate member manifests/recipes, and commit the real lock;
-3. extend the authenticated single-stream `M7A0` vertical slice into the
-   additive MSC7 file/tree format, freeze qualified codec identifiers and
-   fixtures, and add the PyO3 binding against the preregistered single-profile
-   contract;
+3. extend the authenticated path-only `M7A0` vertical slice into the additive
+   MSC7 file/tree format, including an encrypted canonical manifest,
+   identity-bound traversal, safe extraction, atomic directory publication,
+   frozen qualified codec identifiers, and permanent fixtures;
 4. run all 48 contract cases, publish all 2,640 content-addressed raw records,
    and add schema-v4 tag binding only after the candidate actually passes;
 5. freeze and publish a new exact-commit attested candidate after the current

@@ -46,6 +46,16 @@ fn assert_alias_rejected(error: Error) {
     }
 }
 
+fn assert_non_regular_rejected(error: Error) {
+    match error {
+        Error::Io(error) => {
+            assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+            assert!(error.to_string().contains("regular file"));
+        }
+        other => panic!("non-regular path should be an invalid-input I/O error, got {other}"),
+    }
+}
+
 fn make_archive_bytes(input: &[u8]) -> Result<Vec<u8>> {
     let mut archive = Vec::new();
     encode_authenticated(input, &mut archive, PASSWORD, encode_options())?;
@@ -172,6 +182,87 @@ fn invalid_encode_options_preserve_existing_destination_and_leave_no_temp_residu
 }
 
 #[test]
+fn directories_are_rejected_before_output_side_effects() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let input = directory.path().join("input.bin");
+    let output = directory.path().join("output.m7a");
+    let existing_directory = directory.path().join("existing-directory");
+    fs::write(&input, b"regular input")?;
+    fs::create_dir(&existing_directory)?;
+    let entries_before = directory_entries(directory.path())?;
+
+    let input_error =
+        encode_authenticated_file(&existing_directory, &output, PASSWORD, encode_options())
+            .expect_err("an input directory must be rejected before it is opened as codec input");
+    assert_non_regular_rejected(input_error);
+
+    let inspect_error = inspect_authenticated_file(
+        &existing_directory,
+        PASSWORD,
+        AuthenticatedDecodeOptions::default(),
+    )
+    .expect_err("an input directory must be rejected before inspection");
+    assert_non_regular_rejected(inspect_error);
+
+    let output_error =
+        encode_authenticated_file(&input, &existing_directory, PASSWORD, encode_options())
+            .expect_err("an existing output directory must be rejected before temp creation");
+    assert_non_regular_rejected(output_error);
+
+    assert!(!output.exists());
+    assert_eq!(directory_entries(directory.path())?, entries_before);
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn unix_special_files_are_rejected_before_open_or_temp_creation() -> Result<()> {
+    use std::os::unix::net::UnixListener;
+
+    let directory = tempfile::tempdir()?;
+    let regular = directory.path().join("regular.bin");
+    let output = directory.path().join("output.m7a");
+    let socket = directory.path().join("special.socket");
+    fs::write(&regular, b"regular input")?;
+    let _listener = UnixListener::bind(&socket)?;
+    let entries_before = directory_entries(directory.path())?;
+
+    let input_error = encode_authenticated_file(&socket, &output, PASSWORD, encode_options())
+        .expect_err("a socket input must be rejected without opening it as codec input");
+    assert_non_regular_rejected(input_error);
+
+    let output_error = encode_authenticated_file(&regular, &socket, PASSWORD, encode_options())
+        .expect_err("an existing socket output must be rejected before temp creation");
+    assert_non_regular_rejected(output_error);
+
+    assert!(!output.exists());
+    assert_eq!(directory_entries(directory.path())?, entries_before);
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn non_writable_regular_destination_is_replaceable_when_parent_permits() -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = tempfile::tempdir()?;
+    let input = directory.path().join("input.bin");
+    let output = directory.path().join("readonly-output.m7a");
+    let contents = b"the destination file itself need not be writable".repeat(4_096);
+    fs::write(&input, &contents)?;
+    fs::write(&output, b"old destination")?;
+    fs::set_permissions(&output, fs::Permissions::from_mode(0o444))?;
+
+    encode_authenticated_file(&input, &output, PASSWORD, encode_options())?;
+    let inspected =
+        inspect_authenticated_file(&output, PASSWORD, AuthenticatedDecodeOptions::default())?;
+
+    assert_eq!(inspected.core.original_bytes, contents.len() as u64);
+    assert_ne!(fs::read(&output)?, b"old destination");
+    Ok(())
+}
+
+#[test]
 fn direct_input_output_aliases_are_rejected_without_modification() -> Result<()> {
     let directory = tempfile::tempdir()?;
     let input = directory.path().join("same-input.bin");
@@ -261,10 +352,10 @@ fn symlink_input_output_aliases_are_rejected_without_modification() -> Result<()
     fs::write(&input, &original)?;
     if let Err(error) = create_file_symlink(&input, &output_alias) {
         if cfg!(windows)
-            && matches!(
+            && (matches!(
                 error.kind(),
                 io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
-            )
+            ) || error.raw_os_error() == Some(1314))
         {
             return Ok(());
         }

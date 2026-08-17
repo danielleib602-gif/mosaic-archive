@@ -9,8 +9,9 @@ This crate implements two deliberately non-stable native previews:
 
 Neither identifier is the stable MSC7 format, a compatibility fixture, binding
 competitive evidence, or a release-ready archive. The crate currently handles
-one byte stream or regular file, not a file tree. It does not alter MSC1–MSC6,
-the MSC6 default writer, or the Python CLI.
+one byte stream or regular file, not a file tree. It does not alter MSC1–MSC6 or
+the MSC6 default writer. A separate private ABI3 crate exposes only the
+authenticated regular-file API through explicit Python preview commands.
 
 The stream uses Mosaic Gear CDC (16/64/256 KiB), an 8 MiB backward SHA-256
 deduplication window, deterministic feature routing, and ordered 8 MiB
@@ -65,3 +66,10 @@ callers must stage output and publish it themselves after a successful return.
 On Unix, a parent-directory sync error can be reported after the complete file
 has already been renamed into place; that case means durability is uncertain,
 not that publication was rolled back.
+
+The public `encode_authenticated_file`, `decode_authenticated_file`, and
+`inspect_authenticated_file` functions centralize that regular-file boundary
+for the laboratory CLI and `mosaic-msc7-python` binding. The binding releases
+the GIL for native work, owns a zeroizing password copy, and returns exact outer
+and inner statistics. Its Python facade and CLI remain explicitly non-stable;
+they do not enter MSC1–MSC6 magic dispatch.

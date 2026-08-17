@@ -295,17 +295,22 @@ class AcquisitionPlanLoadingTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as temp_dir:
                 path = _write_plan(Path(temp_dir))
                 real_fstat = os.fstat
+                real_lstat = os.lstat
+                baseline_ctime_ns = real_lstat(path).st_ctime_ns
                 fstat_calls = 0
+
+                def stable_lstat(target: os.PathLike[str] | str) -> Any:
+                    return StatWithCtime(real_lstat(target), baseline_ctime_ns)
 
                 def drift_ctime(descriptor: int) -> Any:
                     nonlocal fstat_calls
                     metadata = real_fstat(descriptor)
                     fstat_calls += 1
                     if fstat_calls == 1:
-                        return metadata
+                        return StatWithCtime(metadata, baseline_ctime_ns)
                     return StatWithCtime(
                         metadata,
-                        metadata.st_ctime_ns + fstat_calls,
+                        baseline_ctime_ns + fstat_calls,
                     )
 
                 with (
@@ -318,6 +323,11 @@ class AcquisitionPlanLoadingTests(unittest.TestCase):
                         corpus_prep.os,
                         "fstat",
                         side_effect=drift_ctime,
+                    ),
+                    mock.patch.object(
+                        corpus_prep.os,
+                        "lstat",
+                        side_effect=stable_lstat,
                     ),
                 ):
                     if emulate_windows:

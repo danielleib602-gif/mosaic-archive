@@ -1,9 +1,18 @@
 # Release binaries and provenance
 
 Mosaic Archive publishes native one-file command-line executables for Linux,
-Windows, and macOS. Each version tag builds independently on the matching
-GitHub-hosted operating system, runs `msc --version`, and publishes the resulting
-executables, a deterministic source-review bundle, and a `SHA256SUMS` file.
+Windows, and macOS. For tags created from this tree, the workflow builds
+independently on the matching GitHub-hosted operating system, runs
+`msc --version`, and exercises an
+authenticated native-preview encode/inspect/decode plus wrong-password output
+preservation before publishing the resulting executables, a deterministic
+source-review bundle, and a `SHA256SUMS` file.
+
+Pull-request CI separately builds the private CPython 3.11+ ABI3 extension as a
+platform wheel on Linux, Windows, and macOS, installs each wheel into a clean
+environment, and runs the same native-preview smoke. Those wheels are build
+verification artifacts, not part of the current immutable release inventory or
+a PyPI publication claim.
 
 ## Verify a download
 

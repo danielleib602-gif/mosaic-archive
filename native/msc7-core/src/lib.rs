@@ -7,12 +7,16 @@
 
 mod auth_format;
 mod authenticated;
+mod file_api;
 
 pub use auth_format::AUTHENTICATED_MAGIC;
 pub use authenticated::{
     AuthenticatedDecodeOptions, AuthenticatedEncodeOptions, AuthenticatedStats,
     DEFAULT_MAX_AUTHENTICATED_ARCHIVE_BYTES, DEFAULT_MAX_AUTHENTICATED_DATA_RECORDS,
     MIN_AUTHENTICATED_ARCHIVE_BYTES, decode_authenticated, encode_authenticated,
+};
+pub use file_api::{
+    decode_authenticated_file, encode_authenticated_file, inspect_authenticated_file,
 };
 
 use std::collections::{HashMap, VecDeque};

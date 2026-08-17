@@ -34,11 +34,14 @@ exact-commit measurements, not a claim of universal superiority or a stable
 MSC7 archive. The separate [M7A0 authenticated preview](docs/MSC7_AUTH_PREVIEW.md)
 now wraps the exact native core stream in bounded scrypt and
 ChaCha20-Poly1305 records with a mandatory authenticated transcript footer and
-atomic CLI file publication. It is a single-stream, non-stable engineering
-slice with no new benchmark claim. Raw `M7R0` samples are committed in
+transactional file publication. A private CPython 3.11+ ABI3 extension now
+exposes that regular-file slice through explicit Python API and CLI preview
+commands; it still does not enter stable archive dispatch. It is a
+single-stream, non-stable engineering slice with no new benchmark claim. Raw
+`M7R0` samples are committed in
 `.ecc/benchmarks/msc-v0.41-low-bit-zstd-native-core.json`.
 
-## What v0.39 does
+## What the current tree does
 
 - accepts an arbitrary file or folder and produces an encrypted `.msc` archive;
 - finds stable content-defined boundaries with a deterministic Gear hash;
@@ -73,9 +76,9 @@ slice with no new benchmark claim. Raw `M7R0` samples are committed in
 - generates a deterministic, SHA-256-verified public benchmark corpus spanning
   text, structured records, numeric data, duplicates, random bytes,
   precompressed bytes, and empty inputs;
-- runs the complete test suite across Python 3.11 and 3.13 on Linux, Windows,
-  and macOS, with separate lint, type, coverage, dependency-audit, and build
-  gates;
+- runs the complete test suite across Python 3.11 and 3.13 on Linux and
+  Windows, Python 3.14 on Linux, and Python 3.13 on macOS, with separate lint,
+  type, coverage, dependency-audit, and build gates;
 - records a scheduled benchmark artifact each month so performance changes can
   be compared against an identical generated corpus;
 - commits permanent encrypted decoder fixtures for MSC1 through MSC6 so current
@@ -98,6 +101,9 @@ slice with no new benchmark claim. Raw `M7R0` samples are committed in
   tar+gzip, tar+zstd, and 7-Zip on the identical generated corpus;
 - builds smoke-tested native Linux, Windows, and macOS executables and attaches
   keyless Sigstore/SLSA provenance plus SHA-256 checksums to tagged releases;
+- builds the private native extension as a CPython 3.11+ ABI3 wheel on Linux,
+  Windows, and macOS, installs each wheel into a clean environment, and runs a
+  real authenticated preview round trip plus failure-preservation check;
 - builds deterministic source-review bundles from exact Git objects, hashes
   every tracked payload, and binds the reviewed source bundle into release
   checksums and provenance;
@@ -112,6 +118,10 @@ Install a tagged source checkout with `pip`:
 python -m pip install .
 msc --version
 ```
+
+Source builds compile the private native extension and therefore require the
+pinned Rust 1.96 toolchain. The standalone release executables do not require a
+separate Python or Rust installation.
 
 Tagged releases also build smoke-tested single-file executables for Linux,
 Windows, and macOS. Check their SHA-256 manifest and GitHub build provenance as
@@ -155,9 +165,28 @@ uv run msc readiness --json
 
 ### Native authenticated preview
 
-The developer-only `mosaic-msc7-lab` binary exposes `M7A0` through separate
-commands; it is not wired into the supported Python `msc` format dispatch. Set
-a temporary environment variable and clear it after use:
+Installed builds expose the single-regular-file `M7A0` slice through explicit
+preview commands. They are intentionally separate from `msc encode`, `decode`,
+and `inspect`: MSC6 remains the default and `M7A0` is not magic-dispatched as a
+stable format. Set a temporary environment variable and clear it after use:
+
+```console
+$env:MOSAIC_M7A0_PASSWORD = "use-a-long-unique-passphrase"
+uv run msc encode-native-preview input.bin output.m7a --password-env MOSAIC_M7A0_PASSWORD
+uv run msc inspect-native-preview output.m7a --password-env MOSAIC_M7A0_PASSWORD --json
+uv run msc decode-native-preview output.m7a restored.bin --password-env MOSAIC_M7A0_PASSWORD
+Remove-Item Env:MOSAIC_M7A0_PASSWORD
+```
+
+The typed `mosaic_archive.native_preview` module provides the same
+`encode_native_preview_file`, `inspect_native_preview_file`, and
+`decode_native_preview_file` operations. It validates the native identity and
+exact statistics schema, translates native failures into Mosaic exceptions,
+and fails closed if the private extension is unavailable. Long-running Rust
+work releases the Python GIL.
+
+Native developers can exercise the same shared transactional file API through
+the laboratory binary:
 
 ```console
 $env:MOSAIC_M7A0_PASSWORD = "use-a-long-unique-passphrase"
@@ -167,10 +196,13 @@ cargo run --release -p mosaic-msc7-core --bin mosaic-msc7-lab -- decode-auth --p
 Remove-Item Env:MOSAIC_M7A0_PASSWORD
 ```
 
-Authenticated encode/decode require a real output file. The CLI stages and
-atomically publishes that file only after success. `inspect-auth` fully decodes
-and authenticates to a sink; `benchmark-auth` is a memory-buffered diagnostic,
-not binding performance evidence. Decode rejects archive KDF costs above
+Authenticated encode/decode require regular-file paths. The shared Rust file
+API stages and atomically publishes output only after success, rejects aliases,
+and preserves an existing destination on pre-publication failures. The Python
+CLI accepts a hidden prompt or `--password-env NAME`; it rejects literal
+password arguments. Inspect fully decodes and authenticates to a sink. The
+native `benchmark-auth` command remains a memory-buffered diagnostic, not
+binding performance evidence. Decode rejects archive KDF costs above
 `log2(N)=17` by default; `--max-kdf-log-n` can select a policy from 14 through
 18.
 See the [authenticated-preview specification and
@@ -573,9 +605,9 @@ its 275,859-byte result. MC21 and fixed-width MSR2 metadata remain readable.
   size;
 - the simple codecs prioritize clarity and correctness over mature-compressor
   performance;
-- `M7A0` is a native, non-stable single-stream preview with no Python/PyO3
-  integration, file-tree metadata, permanent compatibility fixture, release
-  packaging, independent review, or Competitive Contract claim;
+- `M7A0` is a non-stable single-stream preview with a path-only native Python
+  integration, but no file-tree metadata, permanent compatibility fixture,
+  stable format dispatch, independent review, or Competitive Contract claim;
 - the package is still pre-1.0, while MSC6 decoder semantics and existing mode
   identifiers are frozen for the 1.0 format line.
 
