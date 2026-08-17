@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling>=1.27"]
-build-backend = "hatchling.build"
+requires = ["maturin==1.11.5"]
+build-backend = "maturin"
 
 [project]
 name = "mosaic-archive"
@@ -9,6 +9,7 @@ description = "Experimental general-purpose adaptive encrypted archive format"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Mosaic Archive contributors" }]
 keywords = ["archive", "compression", "deduplication", "encryption"]
 classifiers = [
@@ -41,8 +42,13 @@ release = [
 [project.scripts]
 msc = "mosaic_archive.cli:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/mosaic_archive"]
+[tool.maturin]
+manifest-path = "native/msc7-python/Cargo.toml"
+python-source = "src"
+module-name = "mosaic_archive._native"
+bindings = "pyo3"
+locked = true
+strip = true
 
 [tool.ruff]
 line-length = 100

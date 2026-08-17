@@ -46,12 +46,16 @@ The native laboratory now contains two explicit pre-format identifiers. `M7R0`
 is the working deterministic compression-core envelope. `M7A0` wraps that exact
 stream in bounded scrypt and ChaCha20-Poly1305 records and a mandatory
 authenticated transcript footer. The authenticated native CLI stages file
-output and atomically publishes only after the complete operation succeeds.
+output and atomically publishes only after the complete operation succeeds. A
+private CPython 3.11+ ABI3 extension and typed facade expose the same
+transactional regular-file operations through separate Python preview
+commands.
 
-This checkpoint validates the streaming composition; it does not freeze the
-decision. `M7A0` is single-stream only and has no file-tree metadata, supported
-Python/PyO3 surface, permanent format fixtures, release packaging, independent
-review, or binding scorecard. Its magic and algorithm identifiers are
+This checkpoint validates the streaming composition and a real path-only
+Python delivery boundary; it does not freeze the decision. `M7A0` is
+single-stream only and has no file-tree metadata, stable archive dispatch,
+permanent format fixtures, independent review, or binding scorecard. Its magic
+and algorithm identifiers are
 explicitly non-stable. The eventual MSC7 candidate may retain concepts proved
 here, but receives stable identifiers only after its format and qualification
 work finishes.
@@ -64,7 +68,8 @@ conversion. MSC7 is opt-in throughout the 0.x preview period. Supported Python
 `decode` and `inspect` will use magic-based autodetection only after the native
 format, file/tree surface, and Python binding are ready. The current `M7A0`
 commands remain separate in `mosaic-msc7-lab` and do not enter the MSC1-through-
-MSC6 compatibility API.
+MSC6 compatibility API. The explicit Python commands likewise remain outside
+normal encode/decode/inspect dispatch during this phase.
 
 The package does not switch its default writer to MSC7 merely because an
 implementation exists. The switch and the 1.0 release require permanent MSC7

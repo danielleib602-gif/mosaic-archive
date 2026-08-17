@@ -1,13 +1,14 @@
 use std::env;
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::time::Instant;
 
 use mosaic_msc7_core::{
     AuthenticatedDecodeOptions, AuthenticatedEncodeOptions, AuthenticatedStats, DecodeOptions,
-    EncodeOptions, StreamStats, decode, decode_authenticated, decode_with_options, encode,
-    encode_authenticated,
+    EncodeOptions, StreamStats, decode, decode_authenticated, decode_authenticated_file,
+    decode_with_options, encode, encode_authenticated, encode_authenticated_file,
+    inspect_authenticated_file,
 };
 use same_file::Handle;
 use tempfile::NamedTempFile;
@@ -109,15 +110,29 @@ fn parse_threads(args: &mut Vec<String>) -> Result<usize, String> {
     Ok(value)
 }
 
-fn reject_unknown_options(args: &[String]) -> Result<(), String> {
+fn is_literal_password_argument(argument: &str) -> bool {
+    if argument == "--password-env" {
+        return false;
+    }
+    let option = argument.split('=').next().unwrap_or(argument);
+    let lowercase = option.to_ascii_lowercase();
+    lowercase.starts_with("-p") || lowercase.starts_with("--p")
+}
+
+fn reject_literal_password_arguments(args: &[String]) -> Result<(), String> {
     if args
         .iter()
-        .any(|argument| argument == "--password" || argument.starts_with("--password="))
+        .any(|argument| is_literal_password_argument(argument))
     {
         return Err(
             "literal password arguments are not accepted; use --password-env NAME".to_owned(),
         );
     }
+    Ok(())
+}
+
+fn reject_unknown_options(args: &[String]) -> Result<(), String> {
+    reject_literal_password_arguments(args)?;
     if let Some(argument) = args
         .iter()
         .find(|argument| argument.starts_with('-') && argument.as_str() != "-")
@@ -224,19 +239,47 @@ fn required_file_paths<'a>(
     Ok((input_path, output_path))
 }
 
+fn invalid_file_type(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, message)
+}
+
+fn open_regular_input(path: &Path) -> io::Result<File> {
+    if !fs::metadata(path)?.is_file() {
+        return Err(invalid_file_type("input must identify a regular file"));
+    }
+    let file = File::open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(invalid_file_type("input must identify a regular file"));
+    }
+    Ok(file)
+}
+
 fn input(path: Option<&str>) -> io::Result<Box<dyn Read>> {
     match path {
         None | Some("-") => Ok(Box::new(io::stdin().lock())),
-        Some(path) => Ok(Box::new(BufReader::new(File::open(path)?))),
+        Some(path) => Ok(Box::new(BufReader::new(open_regular_input(Path::new(
+            path,
+        ))?))),
     }
 }
 
 fn ensure_distinct_output(path: &Path, source: &Handle) -> io::Result<()> {
-    let destination = match OpenOptions::new().write(true).open(path) {
-        Ok(file) => file,
+    let metadata = match fs::metadata(path) {
+        Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(error) => return Err(error),
     };
+    if !metadata.is_file() {
+        return Err(invalid_file_type(
+            "existing output must identify a regular file",
+        ));
+    }
+    let destination = OpenOptions::new().read(true).open(path)?;
+    if !destination.metadata()?.is_file() {
+        return Err(invalid_file_type(
+            "existing output must identify a regular file",
+        ));
+    }
     if *source == Handle::from_file(destination.try_clone()?)? {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -263,7 +306,7 @@ fn with_io<T>(
 ) -> Result<T, DynError> {
     let source_file = match input_path {
         None | Some("-") => None,
-        Some(path) => Some(File::open(path)?),
+        Some(path) => Some(open_regular_input(Path::new(path))?),
     };
     let file_output = output_path.is_some_and(|path| path != "-");
     let source_identity = if file_output {
@@ -302,6 +345,12 @@ fn with_io<T>(
         value
     };
     temporary.as_file().sync_all()?;
+    ensure_distinct_output(
+        destination,
+        source_identity
+            .as_ref()
+            .expect("file output has a source identity"),
+    )?;
     temporary
         .persist(destination)
         .map_err(|error| error.error)?;
@@ -413,6 +462,7 @@ fn run() -> Result<(), DynError> {
         println!("{}", usage());
         return Ok(());
     }
+    reject_literal_password_arguments(&args)?;
     let command = args.remove(0);
     match command.as_str() {
         "encode" => {
@@ -455,20 +505,29 @@ fn run() -> Result<(), DynError> {
             let (input_path, output_path) = required_file_paths(&args, "encode-auth")?;
             let password = password_from_env(&password_env_name)?;
             let started = Instant::now();
-            let stats = with_io(input_path, Some(output_path), |source, destination| {
-                Ok(encode_authenticated(
-                    source,
-                    destination,
+            let options = AuthenticatedEncodeOptions {
+                core: EncodeOptions {
+                    threads,
+                    max_input_bytes,
+                },
+                kdf_log_n,
+            };
+            let stats = match input_path {
+                Some(path) if path != "-" => encode_authenticated_file(
+                    Path::new(path),
+                    Path::new(output_path),
                     password.as_slice(),
-                    AuthenticatedEncodeOptions {
-                        core: EncodeOptions {
-                            threads,
-                            max_input_bytes,
-                        },
-                        kdf_log_n,
-                    },
-                )?)
-            })?;
+                    options,
+                )?,
+                _ => with_io(input_path, Some(output_path), |source, destination| {
+                    Ok(encode_authenticated(
+                        source,
+                        destination,
+                        password.as_slice(),
+                        options,
+                    )?)
+                })?,
+            };
             print_authenticated_stats(
                 "encode-auth",
                 &stats,
@@ -502,14 +561,22 @@ fn run() -> Result<(), DynError> {
             let (input_path, output_path) = required_file_paths(&args, "decode-auth")?;
             let password = password_from_env(&password_env_name)?;
             let started = Instant::now();
-            let stats = with_io(input_path, Some(output_path), |source, destination| {
-                Ok(decode_authenticated(
-                    source,
-                    destination,
+            let stats = match input_path {
+                Some(path) if path != "-" => decode_authenticated_file(
+                    Path::new(path),
+                    Path::new(output_path),
                     password.as_slice(),
                     options,
-                )?)
-            })?;
+                )?,
+                _ => with_io(input_path, Some(output_path), |source, destination| {
+                    Ok(decode_authenticated(
+                        source,
+                        destination,
+                        password.as_slice(),
+                        options,
+                    )?)
+                })?,
+            };
             print_authenticated_stats(
                 "decode-auth",
                 &stats,
@@ -553,12 +620,18 @@ fn run() -> Result<(), DynError> {
                 return Err("inspect-auth accepts at most INPUT".into());
             }
             let password = password_from_env(&password_env_name)?;
-            let stats = decode_authenticated(
-                input(args.first().map(String::as_str))?,
-                io::sink(),
-                password.as_slice(),
-                options,
-            )?;
+            let input_path = args.first().map(String::as_str);
+            let stats = match input_path {
+                Some(path) if path != "-" => {
+                    inspect_authenticated_file(Path::new(path), password.as_slice(), options)?
+                }
+                _ => decode_authenticated(
+                    input(input_path)?,
+                    io::sink(),
+                    password.as_slice(),
+                    options,
+                )?,
+            };
             print_authenticated_inspection(&stats);
         }
         "benchmark" => {
@@ -805,8 +878,23 @@ mod tests {
         assert!(reject_unknown_options(&literal_password).is_err());
 
         let attempted_secret = "must-not-appear-in-the-error";
-        let error = reject_unknown_options(&[format!("--password={attempted_secret}")])
-            .expect_err("literal password must be rejected");
+        for literal_argument in [
+            format!("--password={attempted_secret}"),
+            format!("--password-env={attempted_secret}"),
+            format!("--pass={attempted_secret}"),
+            format!("--pwd={attempted_secret}"),
+            format!("-p{attempted_secret}"),
+            format!("-P{attempted_secret}"),
+        ] {
+            let error = reject_unknown_options(&[literal_argument])
+                .expect_err("literal password must be rejected");
+            assert!(!error.contains(attempted_secret));
+            assert!(error.contains("literal password arguments are not accepted"));
+        }
+
+        let pre_command = vec![format!("--password={attempted_secret}")];
+        let error = reject_literal_password_arguments(&pre_command)
+            .expect_err("a password-like command token must be rejected before dispatch");
         assert!(!error.contains(attempted_secret));
     }
 
@@ -822,6 +910,24 @@ mod tests {
                 .expect("one path is the required output"),
             (None, "archive.m7a")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stdin_route_rejects_fifo_output_before_opening_or_running_codec() -> Result<(), DynError> {
+        let directory = tempfile::tempdir()?;
+        let fifo = directory.path().join("blocked-output.fifo");
+        let status = Command::new("mkfifo").arg(&fifo).status()?;
+        assert!(status.success(), "mkfifo failed");
+        let fifo_text = fifo.to_str().expect("temporary path is UTF-8");
+
+        let error = with_io(None, Some(fifo_text), |_, _| -> Result<(), DynError> {
+            panic!("codec action must not run for a special-file output")
+        })
+        .expect_err("FIFO output must fail before it is opened");
+
+        assert!(error.to_string().contains("regular file"));
+        Ok(())
     }
 
     #[test]

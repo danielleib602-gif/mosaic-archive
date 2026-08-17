@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import getpass
+import io
 import json
 import os
 import sys
 from collections.abc import Mapping
+from contextlib import redirect_stderr
 from pathlib import Path
 from typing import Any, cast
 
@@ -16,6 +18,38 @@ from mosaic_archive.archive_api import decode_path, encode_path, inspect_path
 from mosaic_archive.benchmark import benchmark_path
 from mosaic_archive.compatibility import current_policy
 from mosaic_archive.exceptions import MosaicError
+from mosaic_archive.native_preview import (
+    DEFAULT_KDF_LOG_N as NATIVE_DEFAULT_KDF_LOG_N,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_ARCHIVE_BYTES as NATIVE_DEFAULT_MAX_ARCHIVE_BYTES,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_DATA_RECORDS as NATIVE_DEFAULT_MAX_DATA_RECORDS,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_ENCODED_BYTES as NATIVE_DEFAULT_MAX_ENCODED_BYTES,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_EXPANSION_RATIO as NATIVE_DEFAULT_MAX_EXPANSION_RATIO,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_INPUT_BYTES as NATIVE_DEFAULT_MAX_INPUT_BYTES,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_OUTPUT_BYTES as NATIVE_DEFAULT_MAX_OUTPUT_BYTES,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_RECORDS as NATIVE_DEFAULT_MAX_RECORDS,
+)
+from mosaic_archive.native_preview import (
+    DEFAULT_MAX_SEGMENTS as NATIVE_DEFAULT_MAX_SEGMENTS,
+)
+from mosaic_archive.native_preview import (
+    decode_native_preview_file,
+    encode_native_preview_file,
+    inspect_native_preview_file,
+)
 from mosaic_archive.release_readiness import evaluate_release_readiness
 from mosaic_archive.resource_limits import (
     DEFAULT_MAX_FRAME_COUNT,
@@ -23,6 +57,21 @@ from mosaic_archive.resource_limits import (
     DEFAULT_MAX_OUTPUT_SIZE,
 )
 from mosaic_archive.stream_archive import ProgressEvent
+
+_NATIVE_PREVIEW_COMMANDS = frozenset(
+    {
+        "encode-native-preview",
+        "decode-native-preview",
+        "inspect-native-preview",
+    }
+)
+_LEGACY_COMMANDS = frozenset(
+    {"encode", "decode", "inspect", "benchmark", "compatibility", "readiness"}
+)
+_NATIVE_LITERAL_PASSWORD_ERROR = (
+    "literal password arguments are not accepted; use --password-env NAME"
+)
+_NATIVE_ARGUMENT_ERROR = "invalid native preview arguments; use --help for usage"
 
 
 def _add_password_options(parser: argparse.ArgumentParser) -> None:
@@ -35,6 +84,67 @@ def _add_password_options(parser: argparse.ArgumentParser) -> None:
         "--password-env",
         metavar="NAME",
         help="read the archive password from environment variable NAME",
+    )
+
+
+def _add_native_password_options(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--password", help=argparse.SUPPRESS)
+    group.add_argument(
+        "--password-env",
+        metavar="NAME",
+        help="read the preview password from environment variable NAME",
+    )
+
+
+def _add_native_decode_limit_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-output-bytes",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_OUTPUT_BYTES,
+        help="maximum restored bytes (default: 8 GiB)",
+    )
+    parser.add_argument(
+        "--max-encoded-bytes",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_ENCODED_BYTES,
+        help="maximum inner M7R0 bytes (default: 8 GiB plus 16 MiB)",
+    )
+    parser.add_argument(
+        "--max-segments",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_SEGMENTS,
+        help="maximum inner segment count (default: 131072)",
+    )
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_RECORDS,
+        help="maximum inner record count (default: 2000000)",
+    )
+    parser.add_argument(
+        "--max-expansion-ratio",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_EXPANSION_RATIO,
+        help="maximum cumulative inner expansion ratio (default: 16384)",
+    )
+    parser.add_argument(
+        "--max-archive-bytes",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_ARCHIVE_BYTES,
+        help="maximum complete M7A0 bytes (default: 8 GiB plus 80 MiB)",
+    )
+    parser.add_argument(
+        "--max-data-records",
+        type=int,
+        default=NATIVE_DEFAULT_MAX_DATA_RECORDS,
+        help="maximum authenticated data records (default: 1000000)",
+    )
+    parser.add_argument(
+        "--max-kdf-log-n",
+        type=int,
+        default=NATIVE_DEFAULT_KDF_LOG_N,
+        help="maximum accepted scrypt log2(N), from 14 to 18 (default: 17)",
     )
 
 
@@ -139,6 +249,16 @@ def _password_from_args(arguments: argparse.Namespace) -> str:
     return cast(str, password)
 
 
+def _native_password_from_args(arguments: argparse.Namespace) -> str:
+    if arguments.password is not None:
+        raise ValueError(_NATIVE_LITERAL_PASSWORD_ERROR)
+    if arguments.password_env is not None and (
+        not arguments.password_env or any(char in arguments.password_env for char in "\x00=")
+    ):
+        raise ValueError("password environment variable names may not contain NUL or '='")
+    return _password_from_args(arguments)
+
+
 def _jsonable(value: Any) -> Any:
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return {
@@ -217,6 +337,44 @@ def build_parser() -> argparse.ArgumentParser:
     _add_password_options(inspect_parser)
     _add_decode_limit_options(inspect_parser)
     inspect_parser.add_argument("--json", action="store_true")
+
+    native_encode_parser = subparsers.add_parser(
+        "encode-native-preview",
+        help="encode one file with the non-stable authenticated M7A0 native preview",
+        allow_abbrev=False,
+    )
+    native_encode_parser.add_argument("input", type=Path)
+    native_encode_parser.add_argument("output", type=Path)
+    _add_native_password_options(native_encode_parser)
+    native_encode_parser.add_argument("--threads", type=int, default=1)
+    native_encode_parser.add_argument(
+        "--kdf-log-n", type=int, default=NATIVE_DEFAULT_KDF_LOG_N
+    )
+    native_encode_parser.add_argument(
+        "--max-input-bytes", type=int, default=NATIVE_DEFAULT_MAX_INPUT_BYTES
+    )
+    native_encode_parser.add_argument("--json", action="store_true")
+
+    native_decode_parser = subparsers.add_parser(
+        "decode-native-preview",
+        help="authenticate and restore one non-stable M7A0 preview file",
+        allow_abbrev=False,
+    )
+    native_decode_parser.add_argument("archive", type=Path)
+    native_decode_parser.add_argument("output", type=Path)
+    _add_native_password_options(native_decode_parser)
+    _add_native_decode_limit_options(native_decode_parser)
+    native_decode_parser.add_argument("--json", action="store_true")
+
+    native_inspect_parser = subparsers.add_parser(
+        "inspect-native-preview",
+        help="fully authenticate and explain one non-stable M7A0 preview file",
+        allow_abbrev=False,
+    )
+    native_inspect_parser.add_argument("archive", type=Path)
+    _add_native_password_options(native_inspect_parser)
+    _add_native_decode_limit_options(native_inspect_parser)
+    native_inspect_parser.add_argument("--json", action="store_true")
 
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="measure an encode/decode round trip"
@@ -300,7 +458,11 @@ def _run(arguments: argparse.Namespace) -> None:
             arguments.json,
         )
         return
-    password = _password_from_args(arguments)
+    password = (
+        _native_password_from_args(arguments)
+        if arguments.command in _NATIVE_PREVIEW_COMMANDS
+        else _password_from_args(arguments)
+    )
     progress = None
     if arguments.command in {"encode", "decode"}:
         show_progress = arguments.progress
@@ -341,6 +503,42 @@ def _run(arguments: argparse.Namespace) -> None:
             max_frame_count=arguments.max_frame_count,
             max_legacy_archive_size=arguments.max_legacy_archive_size,
         )
+    elif arguments.command == "encode-native-preview":
+        result = encode_native_preview_file(
+            arguments.input,
+            arguments.output,
+            password,
+            threads=arguments.threads,
+            kdf_log_n=arguments.kdf_log_n,
+            max_input_bytes=arguments.max_input_bytes,
+        )
+    elif arguments.command == "decode-native-preview":
+        result = decode_native_preview_file(
+            arguments.archive,
+            arguments.output,
+            password,
+            max_output_bytes=arguments.max_output_bytes,
+            max_encoded_bytes=arguments.max_encoded_bytes,
+            max_segments=arguments.max_segments,
+            max_records=arguments.max_records,
+            max_expansion_ratio=arguments.max_expansion_ratio,
+            max_archive_bytes=arguments.max_archive_bytes,
+            max_data_records=arguments.max_data_records,
+            max_kdf_log_n=arguments.max_kdf_log_n,
+        )
+    elif arguments.command == "inspect-native-preview":
+        result = inspect_native_preview_file(
+            arguments.archive,
+            password,
+            max_output_bytes=arguments.max_output_bytes,
+            max_encoded_bytes=arguments.max_encoded_bytes,
+            max_segments=arguments.max_segments,
+            max_records=arguments.max_records,
+            max_expansion_ratio=arguments.max_expansion_ratio,
+            max_archive_bytes=arguments.max_archive_bytes,
+            max_data_records=arguments.max_data_records,
+            max_kdf_log_n=arguments.max_kdf_log_n,
+        )
     elif arguments.command == "benchmark":
         result = benchmark_path(
             arguments.input,
@@ -360,8 +558,77 @@ def _run(arguments: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    arguments_list = list(sys.argv[1:] if argv is None else argv)
+
+    def is_literal_password_option(argument: str) -> bool:
+        option = argument.partition("=")[0]
+        return option != "--password-env" and option.lower().startswith(("-p", "--p"))
+
+    command_probe_index = 1 if arguments_list[:1] == ["--"] else 0
+    first_argument_is_legacy_command = bool(
+        len(arguments_list) > command_probe_index
+        and arguments_list[command_probe_index] in _LEGACY_COMMANDS
+    )
+    native_command_index = (
+        None
+        if first_argument_is_legacy_command
+        else next(
+            (
+                index
+                for index, argument in enumerate(arguments_list)
+                if argument in _NATIVE_PREVIEW_COMMANDS
+            ),
+            None,
+        )
+    )
+    sentinel_index = (
+        None
+        if native_command_index is None
+        else next(
+            (
+                index
+                for index, argument in enumerate(arguments_list)
+                if index > native_command_index and argument == "--"
+            ),
+            None,
+        )
+    )
+    scan_end = (
+        sentinel_index
+        if native_command_index is not None
+        and sentinel_index is not None
+        and native_command_index < sentinel_index
+        else len(arguments_list)
+    )
+    if native_command_index is not None and any(
+        is_literal_password_option(argument) for argument in arguments_list[:scan_end]
+    ):
+        print(f"msc: error: {_NATIVE_LITERAL_PASSWORD_ERROR}", file=sys.stderr)
+        return 2
     parser = build_parser()
-    arguments = parser.parse_args(argv)
+    parser_arguments = arguments_list[1:] if arguments_list[:1] == ["--"] else arguments_list
+    contains_literal_password_token = native_command_index is not None and any(
+        is_literal_password_option(argument) for argument in arguments_list
+    )
+    if native_command_index is not None:
+        # Native parse failures never replay raw argv because an unknown token
+        # can itself contain a secret. Successful parsing still permits a
+        # legitimate dash-prefixed path after ``--``.
+        try:
+            with redirect_stderr(io.StringIO()):
+                arguments = parser.parse_args(parser_arguments)
+        except SystemExit as error:
+            if error.code == 2:
+                message = (
+                    _NATIVE_LITERAL_PASSWORD_ERROR
+                    if contains_literal_password_token
+                    else _NATIVE_ARGUMENT_ERROR
+                )
+                print(f"msc: error: {message}", file=sys.stderr)
+                return 2
+            raise
+    else:
+        arguments = parser.parse_args(parser_arguments)
     try:
         _run(arguments)
     except (MosaicError, OSError, ValueError) as error:

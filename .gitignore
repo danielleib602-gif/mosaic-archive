@@ -10,3 +10,6 @@ build/
 target/
 .ci-corpus/
 *.msc
+src/mosaic_archive/_native*.pyd
+src/mosaic_archive/_native*.so
+src/mosaic_archive/_native*.dylib

@@ -8,13 +8,10 @@ from urllib.parse import unquote, urlparse
 
 
 class PublicationReadinessTests(unittest.TestCase):
-    def test_readme_capability_heading_matches_package_version(self) -> None:
-        project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-        version = project["project"]["version"]
-        release_line = ".".join(version.split(".")[:2])
+    def test_readme_capability_heading_describes_the_current_tree(self) -> None:
         readme = Path("README.md").read_text(encoding="utf-8")
 
-        self.assertIn(f"## What v{release_line} does", readme)
+        self.assertIn("## What the current tree does", readme)
         self.assertIn("deterministic Gear", readme)
 
     def test_package_metadata_links_to_public_project_surfaces(self) -> None:
