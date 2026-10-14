@@ -39,7 +39,7 @@ jobs:
           benchmark-corpus published-benchmark --release 0.39.0
           --source-commit ${{ github.event.pull_request.head.sha || github.sha }}
           --kdf-log-n 14 --repeats 5 --format solid
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: mosaic-benchmark-v0.39.0-${{ github.sha }}
           path: |
